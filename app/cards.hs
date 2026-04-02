@@ -10,3 +10,7 @@ data Card = Card Rank Suit
 
 instance Show Card where
   show (Card r s) = show r ++ " of " ++ show s
+
+
+hand = [Card]
+
