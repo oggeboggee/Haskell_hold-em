@@ -7,12 +7,12 @@ hand1 :: Hand
 hand1 = [ Card (Num 2) Hearts, Card Jack Spades]
 -----------------------
 
-
  -- | All different suits
-data Suit = Hearts | Spades | Diamonds | Clubs deriving (Show, Eq)
+data Suit = Clubs | Diamonds | Hearts | Spades 
+  deriving (Show, Eq, Ord)
 
 -- | All different ranks
-data Rank =  Num Int | Jack | Queen | King | Ace deriving (Show, Eq)
+data Rank =  Num Int | Jack | Queen | King | Ace deriving (Show, Eq, Ord)
 
  -- | Card has an rank and a suit
 data Card = Card Rank Suit deriving (Eq)
@@ -49,3 +49,6 @@ suit (Card _ s) = s
 -- | Extract the size of an hand
 size :: Hand -> Int
 size hand = length hand
+
+
+
