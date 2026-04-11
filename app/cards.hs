@@ -1,21 +1,41 @@
 {- Card related data-types -}
 
+module Cards where
+
 
 -----------------------
 ------For testing -----
 hand1 :: Hand
 hand1 = [ Card (Num 2) Hearts, Card Jack Spades]
+
+hand2 :: Hand
+hand2 = [ Card (Num 2) Hearts, Card Jack Spades, Card (Num 5) Clubs]
 -----------------------
 
 
  -- | All different suits
-data Suit = Hearts | Spades | Diamonds | Clubs deriving (Show, Eq)
+data Suit = Hearts | Spades | Diamonds | Clubs deriving (Show, Eq, Ord)
 
 -- | All different ranks
-data Rank =  Num Int | Jack | Queen | King | Ace deriving (Show, Eq)
+data Rank =  Num Int | Jack | Queen | King | Ace deriving (Show, Eq, Ord)
 
  -- | Card has an rank and a suit
-data Card = Card Rank Suit deriving (Eq)
+data Card = Card Rank Suit deriving (Eq, Ord)
+
+
+ -- | Combinations
+data Combination =  HighCard
+                  | Pair 
+                  | TwoPairs 
+                  | ThreeOfAKind 
+                  | Straight 
+                  | Flush 
+                  | FullHouse 
+                  | Quads 
+                  | StraightFlush
+                  deriving (Show, Eq, Ord)
+
+                  
 
  -- | to show the cards in a nice way
 instance Show Card where
@@ -49,3 +69,11 @@ suit (Card _ s) = s
 -- | Extract the size of an hand
 size :: Hand -> Int
 size hand = length hand
+
+
+
+-- | TODO
+-- *  Num int in data Rank should only be able to be 2-10
+
+-- *  We need to be able to compare cards to sort them for the combinaton determination,
+--    but if data Card have Ord, then both Rank and Suit should have Ord, but Suits does not carry any value i n texas hold em
