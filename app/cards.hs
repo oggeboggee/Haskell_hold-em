@@ -11,12 +11,19 @@ hand1 = [ Card (Num 2) Hearts, Card Jack Spades]
 hand2 :: Hand
 hand2 = [ Card (Num 2) Hearts, Card Jack Spades, Card (Num 5) Clubs]
 
--- | sorted
+
 hand3 :: Hand
 hand3 = [ Card (Num 2) Spades, Card (Num 5) Clubs, Card (Num 2) Clubs, Card Jack Spades ]
 
+-- | sorted
 hand4 :: Hand
 hand4 = [ Card (Num 2) Spades,  Card (Num 2) Clubs, Card (Num 2) Hearts, Card (Num 5) Clubs, Card Jack Spades ]
+
+hand5 :: Hand
+hand5 = [Card (Num 10) Hearts , Card Jack Hearts, Card Queen Hearts, Card King Hearts, Card Ace Hearts]
+
+hand6 :: Hand
+hand6 = [Card Queen Hearts, Card Queen Spades, Card King Hearts, Card King Spades, Card Ace Hearts ]
 -----------------------
 -----------------------
 
