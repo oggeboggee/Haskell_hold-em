@@ -10,6 +10,10 @@ hand1 = [ Card (Num 2) Hearts, Card Jack Spades]
 
 hand2 :: Hand
 hand2 = [ Card (Num 2) Hearts, Card Jack Spades, Card (Num 5) Clubs]
+
+-- | sorted
+hand3 :: Hand
+hand3 = [ Card (Num 2) Spades, Card (Num 2) Clubs, Card Jack Spades, Card (Num 5) Clubs]
 -----------------------
 
 
