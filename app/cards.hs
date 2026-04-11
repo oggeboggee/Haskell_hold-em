@@ -13,7 +13,11 @@ hand2 = [ Card (Num 2) Hearts, Card Jack Spades, Card (Num 5) Clubs]
 
 -- | sorted
 hand3 :: Hand
-hand3 = [ Card (Num 2) Spades, Card (Num 2) Clubs, Card Jack Spades, Card (Num 5) Clubs]
+hand3 = [ Card (Num 2) Spades, Card (Num 5) Clubs, Card (Num 2) Clubs, Card Jack Spades ]
+
+hand4 :: Hand
+hand4 = [ Card (Num 2) Spades,  Card (Num 2) Clubs, Card (Num 2) Hearts, Card (Num 5) Clubs, Card Jack Spades ]
+-----------------------
 -----------------------
 
 
@@ -81,3 +85,8 @@ size hand = length hand
 
 -- *  We need to be able to compare cards to sort them for the combinaton determination,
 --    but if data Card have Ord, then both Rank and Suit should have Ord, but Suits does not carry any value i n texas hold em
+
+-- * We might put a value to each of the ranks ( Num 10 is value 10, Jack is value 11 etc.). It 
+--   might be easier to implement Straight in combination. It might also be useful if we want to
+--   extend with other card-games later (the game "Casino" for example when the values is vital
+--   for the game).
