@@ -20,4 +20,4 @@ main = do
         }
 
     gameLoop initialTable
---text
+--textt
