@@ -1,6 +1,10 @@
 module Main where
 
 import TexasLogic
+    ( Table(Table, phase, players, deck, board),
+      Player(Player),
+      GamePhase(DealHands),
+      gameLoop )
 import Cards
 
 
