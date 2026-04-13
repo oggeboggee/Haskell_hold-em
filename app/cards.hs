@@ -1,6 +1,5 @@
 module App.Cards where
 
-{- Card related data-types -}
 
 
 -----------------------
@@ -100,6 +99,35 @@ removeCard (x:xs) = xs
 drawCard :: Deck -> (Card, Deck)
 drawCard [] = error "Deck empty"
 drawCard (x:xs) = (x, removeCard xs)
+
+-- TODO:
+-- shuffleDeck
+
+-- Take a Card out of a deck, where the index of the card 
+-- correlate with a double between 0 and 1.
+pick :: Double -> Deck -> Card
+pick x deck = deck !! round ((fromIntegral (length deck - 1)) * x)
+
+-- It removes the first card that matches a given card from the deck (a list of cards).
+-- if it don't match they keep it and continue
+remove:: Card -> Deck -> Deck
+remove _ [] = []
+remove x (y:ys)
+  | x == y    = ys
+  | otherwise = y : remove x ys
+
+-- Shuffle comment under runShuffle
+shuffle :: [Double] -> Deck -> Deck
+shuffle _ []        = []
+shuffle (r:rs) deck =
+  let card  = pick r deck
+      deck' = remove card deck
+  in card : shuffle rs deck'
+
+-- runShuffle :: IO Deck
+-- runShuffle = do
+--   Rand ds <- generate arbitrary
+--   return (shuffle ds fullDeck)
 
 
 
