@@ -3,9 +3,10 @@ module App.TexasLogic where
 
 import App.Cards
 
-------------------------------
+------------------------------------------------------------
 -- | Chips and the pot is represented as Int
 type Chip = Int
+type Bet = Chip
 type Pot = Int
 
 -- | Represent if a player have big, samll or no blind
@@ -28,11 +29,12 @@ data GamePhase =
 -- | Data type for a player
 data Player = Player
             {
-            name   :: String,
-            hand   :: Hand,
-            chips  :: Chip,
-            folded :: Bool,
-            blind  :: Blind
+            name         :: String,
+            hand         :: Hand,
+            chips        :: Chip,
+            commitedChip :: Chip,
+            folded       :: Bool,
+            blind        :: Blind
             }
     deriving (Show)
 
@@ -40,16 +42,16 @@ data Player = Player
 data Table = Table
             {
                 players      :: [Player],
-                playerTurn   :: Int,
+                highBet      :: Bet,
                 deck         :: Deck,
-                board        :: CommunityCard
+                board        :: CommunityCard,
                 phase        :: GamePhase,
-                pot          :: Pot,
-                dealPosition :: Int
+                pot          :: Pot
+                --dealPosition :: Int
             }
     deriving (Show)
 
-------------------------------
+------------------------------------------------------------
 -- | Progress the phase to the next phase
 nextPhase :: GamePhase -> GamePhase
 nextPhase p = case p of
@@ -78,4 +80,11 @@ nextPhase p = case p of
     * Bet
         * Add to Pot
           
+    Need a system for looking at who have made an action
+        and who can still make an action
+        Something to keep track of whos turn it is
+        If someone raise, players who already made an 
+            action need to make a new action
+            
+    Also need something that calculates the lowest bet someone can make
 -}

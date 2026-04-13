@@ -1,11 +1,12 @@
 module App.Cards where
 
-
-
 -----------------------
 ------ For testing -----
 hand1 :: Hand
 hand1 = [ Card (Num 2) Hearts, Card Jack Spades]
+
+hand2 :: Hand
+hand2 = [ Card (Num 6) Hearts, Card Ace Diamonds]
 
 card1 :: Card
 card1 = Card (Num 2) Hearts
@@ -38,6 +39,7 @@ instance Show Rank where
  -- | Card has an rank and a suit
 data Card = Card Rank Suit 
   deriving (Eq)
+
 -- | To compere two cards
 instance Ord Card where
   compare (Card r1 s1) (Card r2 s2) = 
@@ -66,7 +68,7 @@ type CommunityCard = [Card]
 -- | Deck is a list of cards
 type Deck = [Card]
 
------------------------
+----------------------------------------------
 -- Functions --
 
 -- | Get functions:
@@ -82,7 +84,7 @@ suit (Card _ s) = s
 size :: Hand -> Int
 size hand = length hand
 
------------------------
+----------------------------------------------
 -- | Creates a new deck with 52 cards
 fullDeck :: Deck
 fullDeck = [Card r s | r <- allRank, s <- allSuit]
@@ -90,40 +92,38 @@ fullDeck = [Card r s | r <- allRank, s <- allSuit]
     allRank = [Num r | r <- [2..10]] ++ [Jack, Queen, King, Ace]
     allSuit = [Clubs, Diamonds, Hearts, Spades]
 
--- | Remove the first card from a deck
-removeCard :: Deck -> Deck
-removeCard []     = []
-removeCard (x:xs) = xs
 
 -- | If deck is not empty, draw a card from a deck and remove it from the deck
-drawCard :: Deck -> (Card, Deck)
-drawCard [] = error "Deck empty"
-drawCard (x:xs) = (x, removeCard xs)
+drawCard :: Deck -> Maybe (Card, Deck)
+drawCard [] = Nothing
+drawCard (x:xs) = Just (x, xs)
 
--- TODO:
--- shuffleDeck
+
+-- It removes the first card that matches a given card from the deck.
+-- if it don't match they keep it and continue
+removeCard:: Card -> Deck -> Deck
+removeCard _ [] = []
+removeCard x (y:ys)
+  | x == y    = ys
+  | otherwise = y : removeCard x ys
+
 
 -- Take a Card out of a deck, where the index of the card 
 -- correlate with a double between 0 and 1.
 pick :: Double -> Deck -> Card
 pick x deck = deck !! round ((fromIntegral (length deck - 1)) * x)
 
--- It removes the first card that matches a given card from the deck (a list of cards).
--- if it don't match they keep it and continue
-remove:: Card -> Deck -> Deck
-remove _ [] = []
-remove x (y:ys)
-  | x == y    = ys
-  | otherwise = y : remove x ys
 
--- Shuffle comment under runShuffle
+-- | Pick a random card and put in to a new deck, 
+  -- repeat until original deck is empty
 shuffle :: [Double] -> Deck -> Deck
 shuffle _ []        = []
-shuffle (r:rs) deck =
-  let card  = pick r deck
-      deck' = remove card deck
-  in card : shuffle rs deck'
+shuffle (x:xs) deck =
+  let card  = pick x deck
+      deck' = removeCard card deck
+  in card : shuffle xs deck'
 
+-- | No QuickCheck :(
 -- runShuffle :: IO Deck
 -- runShuffle = do
 --   Rand ds <- generate arbitrary
