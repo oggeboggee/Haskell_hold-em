@@ -1,4 +1,4 @@
-module Cards where
+module App.Cards where
 
 {- Card related data-types -}
 
@@ -50,19 +50,14 @@ instance Show Card where
 
 formatedRank :: Rank -> String
 formatedRank (Num n) = show n
-
-formatedRank Jack    = "J"
-formatedRank Queen  = "Q"
-formatedRank King    = "K"
-formatedRank Ace    = "A"
+formatedRank rank    = show rank
 
 formatedSuit :: Suit -> String
 formatedSuit s 
-            | s == Spades   = "\9824"
-            | s == Hearts   = "\9829"
+            | s == Spades = "\9824"
+            | s == Hearts = "\9829"
             | s == Diamonds = "\9830"
-            | s == Clubs    = "\9827"
-            | otherwise     = ""
+            | s == Clubs = "\9827"
 
 -----------------------
  -- | Hand is a list of cards
@@ -99,13 +94,16 @@ fullDeck = [Card r s | r <- allRank, s <- allSuit]
 -- | Remove the first card from a deck
 removeCard :: Deck -> Deck
 removeCard []     = []
-removeCard (x:xs) = x : removeCard xs
+removeCard (x:xs) = xs
 
 -- | If deck is not empty, draw a card from a deck and remove it from the deck
 drawCard :: Deck -> (Card, Deck)
 drawCard [] = error "Deck empty"
 drawCard (x:xs) = (x, removeCard xs)
 
-dealCards :: Deck -> Int -> (Hand, Deck)
+-- | Deal cards by splitting deck
+dealCards :: Deck -> Int -> ([Card], Deck)
 dealCards deck n = splitAt n deck
+
+
 

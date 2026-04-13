@@ -1,23 +1,16 @@
 module Main where
 
-import TexasLogic
-    ( Table(Table, phase, players, deck, board),
-      Player(Player),
-      GamePhase(DealHands),
-      gameLoop )
 import Cards
+import TexasLogic
 
 
 main :: IO ()
 main = do
-    putStrLn "Welcome to Haskell Hold'em!"
+    let p1 = Player "P1" []
+    let p2 = Player "P2" []
 
-    let initialTable = Table {
-            players = [Player "Alice" []],
-            deck = fullDeck,
-            board = [],
-            phase = DealHands
-        }
+    let deck = fullDeck
 
-    gameLoop initialTable
---textt
+    let startingTable = Table {
+
+    }
