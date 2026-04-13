@@ -1,4 +1,4 @@
-module App.Cards where
+module Cards where
 
 {- Card related data-types -}
 
@@ -20,7 +20,7 @@ card3 = Card King Diamonds
 
  -- | All different suits
 data Suit = Clubs | Diamonds | Hearts | Spades 
-  deriving (Show, Eq, Ord)
+  deriving (Eq, Ord)
 
 -----------------------
 -- | All different ranks
@@ -35,6 +35,13 @@ instance Show Rank where
     King  -> "K"
     Ace   -> "A"
 
+instance Show Suit where
+  show s = case s of
+    Spades -> "S"
+    Hearts -> "H"
+    Diamonds -> "D"
+    Clubs -> "C"
+
 -----------------------
  -- | Card has an rank and a suit
 data Card = Card Rank Suit 
@@ -46,18 +53,22 @@ instance Ord Card where
 
  -- | to show the cards in a nice way
 instance Show Card where
-  show (Card r s) = " " ++ formatedRank r ++ {-" of " ++-} formatedSuit s
+  show (Card r s) = show r ++ show s
 
-formatedRank :: Rank -> String
-formatedRank (Num n) = show n
-formatedRank rank    = show rank
+-- formatedRank :: Rank -> String
+-- formatedRank (Num n) = show n
+-- formatedRank Clubs    = "C"
+-- formatedRank Diamonds = "D"
+-- formatedRank Hearts   = "H"
+-- formatedRank Spades   = "S"
 
-formatedSuit :: Suit -> String
-formatedSuit s 
-            | s == Spades = "\9824"
-            | s == Hearts = "\9829"
-            | s == Diamonds = "\9830"
-            | s == Clubs = "\9827"
+-- formatedSuit :: Suit -> String
+-- formatedSuit s 
+--             | s == Spades = "\9824"
+--             | s == Hearts = "\9829"
+--             | s == Diamonds = "\9830"
+--             | s == Clubs = "\9827"
+--             | otherwise = ""
 
 -----------------------
  -- | Hand is a list of cards
@@ -94,7 +105,7 @@ fullDeck = [Card r s | r <- allRank, s <- allSuit]
 -- | Remove the first card from a deck
 removeCard :: Deck -> Deck
 removeCard []     = []
-removeCard (x:xs) = xs
+removeCard (x:xs) = x : removeCard xs
 
 -- | If deck is not empty, draw a card from a deck and remove it from the deck
 drawCard :: Deck -> (Card, Deck)

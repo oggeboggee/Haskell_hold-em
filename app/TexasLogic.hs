@@ -1,6 +1,6 @@
 module TexasLogic where
 
-import App.Cards
+import Cards
 
 ------------------------------
 -- | Chips and the pot is represented as Int
@@ -15,7 +15,7 @@ data Blind =
 
 -- | All phases of the game
 data GamePhase = 
-            Dealhands
+            DealHands
             | PreFlop
             | Flop
             | Turn
@@ -27,11 +27,11 @@ data GamePhase =
 data Player = Player
             {
             name :: String,
-            hand :: Hand,
+            hand :: Hand
             --chips :: Chip,
             --folded :: Bool,
             --blind :: Blind
-            }
+            } deriving (Show)
 
 -- | The table represent the gamestate
 data Table = Table
@@ -39,33 +39,33 @@ data Table = Table
                 players :: [Player],
                 deck :: Deck,
                 board :: CommunityCard,
-                phase :: GamePhase,
+                phase :: GamePhase
                 --pot :: Pot,
                 --dealPosition :: Int
-            }
+            } deriving (Show)
 
 ------------------------------
 -- | Progress the phase to the next phase
 nextPhase :: GamePhase -> GamePhase
 nextPhase p = case p of
-    Dealhands   -> PreFlop
+    DealHands   -> PreFlop
     PreFlop     -> Flop
     Flop        -> Turn
     Turn        -> River
     River       -> Showdown
-    Showdown    -> Dealhands
+    Showdown    -> DealHands
 
 -- | Updating what happens during each phase (dealing cards, showing community cards, etc.) and moves phase to next phase
 gameStep :: Table -> Table
 gameStep table = case phase table of
     DealHands ->
-        let (hand1, deck1) = dealCards (deck t) 2
-            (hand2, deck2) = dealCards deck1 2
+        let (h1, deck1) = dealCards (deck table) 2
+            (h2, deck2) = dealCards deck1 2
 
             [player1, player2] = players table
 
-            player1' = player1 {hand = hand1}
-            player2' = player2 {hand = hand2}
+            player1' = player1 {hand = h1}
+            player2' = player2 {hand = h2}
         in table { players = [player1', player2'],
                    deck = deck2,
                    phase = nextPhase (phase table)
@@ -102,7 +102,9 @@ gameLoop :: Table -> IO ()
 gameLoop table = do
     print table
     let newTable = gameStep table
-    gameLoop newTable
+    let newTable' = gameStep newTable
+    let newTable'' = gameStep newTable'
+    print newTable''
  
 
               

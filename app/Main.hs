@@ -9,7 +9,7 @@ main = do
     putStrLn "Welcome to Haskell Hold'em!"
 
     let initialTable = Table {
-        players = [Player "Bob" []],
+        players = [Player "Bob" [], Player "Sam" []],
         deck = fullDeck,
         board = [],
         phase = DealHands
