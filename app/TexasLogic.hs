@@ -1,4 +1,3 @@
-
 module TexasLogic where
 
 import App.Cards
@@ -67,9 +66,9 @@ gameStep table = case phase table of
 
             player1' = player1 {hand = hand1}
             player2' = player2 {hand = hand2}
-        in table { players = [player', player2'],
+        in table { players = [player1', player2'],
                    deck = deck2,
-                   phase = nextPhase (phase table )
+                   phase = nextPhase (phase table)
                
                  }
     PreFlop -> table {
@@ -86,20 +85,24 @@ gameStep table = case phase table of
     Turn ->
        let (turn, newDeck) = dealCards (deck table) 1
        in table { board = board table ++ turn,
-                  deck = newDeck
+                  deck = newDeck,
                   phase = nextPhase (phase table)
                 }
 
     River ->
        let (river, newDeck) = dealCards (deck table) 1
        in table { board = board table ++ river,
-                  deck = newDeck
+                  deck = newDeck,
                   phase = nextPhase (phase table)
                 }
 
     Showdown -> table -- Here we have more betting logic, showing hands to all players?
 
-    --test text
+gameLoop :: Table -> IO ()
+gameLoop table = do
+    print table
+    let newTable = gameStep table
+    gameLoop newTable
  
 
               

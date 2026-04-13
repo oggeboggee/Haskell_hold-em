@@ -6,11 +6,13 @@ import TexasLogic
 
 main :: IO ()
 main = do
-    let p1 = Player "P1" []
-    let p2 = Player "P2" []
+    putStrLn "Welcome to Haskell Hold'em!"
 
-    let deck = fullDeck
-
-    let startingTable = Table {
-
+    let initialTable = Table {
+        players = [Player "Bob" []],
+        deck = fullDeck,
+        board = [],
+        phase = DealHands
     }
+
+    gameLoop initialTable

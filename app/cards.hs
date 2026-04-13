@@ -105,5 +105,7 @@ drawCard (x:xs) = (x, removeCard xs)
 dealCards :: Deck -> Int -> ([Card], Deck)
 dealCards deck n = splitAt n deck
 
+--text
+
 
 
