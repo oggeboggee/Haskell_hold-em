@@ -15,9 +15,9 @@ data Card = Card Rank Suit deriving (Eq, Ord)
 
  -- | Combinations
 data Combination =  HighCard
-                  | Pair 
-                  | TwoPairs 
-                  | ThreeOfAKind 
+                  | Pair           
+                  | TwoPairs       
+                  | ThreeOfAKind   
                   | Straight 
                   | Flush 
                   | FullHouse 
