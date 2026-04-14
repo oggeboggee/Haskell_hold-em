@@ -1,5 +1,7 @@
-{- Logic for the the different actions a player can make -}
 module Actions where
+
+{- Logic for the the different actions a player can make -}
+
 
 
 import App.TexasLogic
