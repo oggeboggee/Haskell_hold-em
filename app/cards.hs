@@ -48,9 +48,9 @@ instance Show Rank where
 instance Show Suit where
   show s = case s of
     Spades -> "♠"
-    Hearts -> "H"
-    Diamonds -> "D"
-    Clubs -> "C"
+    Hearts -> "♥"
+    Diamonds -> "♦"
+    Clubs -> "♣"
 
 -----------------------
  -- | Card has an rank and a suit

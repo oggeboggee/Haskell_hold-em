@@ -41,7 +41,9 @@ data Table = Table
                 board :: CommunityCard,
                 phase :: GamePhase
                 --pot :: Pot,
-                --dealPosition :: Int
+                --dealerPosition :: Int
+                --smallBlindPosition :: Int,
+                --bigBlindPosition :: Int
             } deriving (Show)
 
 ------------------------------
@@ -56,10 +58,11 @@ nextPhase p = case p of
     Showdown    -> DealHands
 
 -- | Updating what happens during each phase (dealing cards, showing community cards, etc.) and moves phase to next phase
+-- This is all hardcoded for now but will change later.
 gameStep :: Table -> Table
 gameStep table = case phase table of
-    DealHands ->
-        let (h1, deck1) = dealCards (deck table) 2
+    DealHands -> dealHandsStep table
+        {- let (h1, deck1) = dealCards (deck table) 2
             (h2, deck2) = dealCards deck1 2
 
             [player1, player2] = players table
@@ -70,7 +73,7 @@ gameStep table = case phase table of
                    deck = deck2,
                    phase = nextPhase (phase table)
                
-                 }
+                 } -}
     PreFlop -> table {
         phase = nextPhase (phase table)
     }
@@ -97,6 +100,25 @@ gameStep table = case phase table of
                 }
 
     Showdown -> table -- Here we have more betting logic, showing hands to all players?
+
+
+dealHands :: [Player] -> Deck -> ([Player], Deck)
+dealHands [] deck = ([], deck) --basecase, when no more players left return the deck.
+dealHands (p1:players) deck = 
+    let (deltHand, deck1) = dealCards deck 2
+        p1'           = p1 {hand = deltHand}
+        (players', deck2)  = dealHands players deck1
+    in (p1' : players', deck2)
+    -- This is same as hardcoded but made now for not just 2 players but any and all players.
+
+dealHandsStep :: Table -> Table
+dealHandsStep table = let (players', deckAfterDeltHAnds) = dealHands (players table) (deck table)
+    in
+        table {
+            players = players',
+            deck = deckAfterDeltHAnds,
+            phase = nextPhase (phase table)
+        } 
 
 
 -- Temporary gameloop as a starting point
