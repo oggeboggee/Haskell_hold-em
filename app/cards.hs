@@ -34,7 +34,8 @@ instance Show Rank where
     Two -> "2"
     Three -> "3"
     Four -> "4"
-    Five -> "6"
+    Five -> "5"
+    Six -> "6"
     Seven -> "7"
     Eight -> "8"
     Nine -> "9"
@@ -46,7 +47,7 @@ instance Show Rank where
 
 instance Show Suit where
   show s = case s of
-    Spades -> "\x2660"
+    Spades -> "♠"
     Hearts -> "H"
     Diamonds -> "D"
     Clubs -> "C"
