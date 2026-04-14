@@ -62,7 +62,7 @@ nextPhase p = case p of
     River       -> Showdown
     Showdown    -> Dealhands
 
--- | Take a list with all players and a list of player 
+-- | Take a list with all players and a list of player
     -- that have not yet acted, and return the next player
 -- nextPlayer :: [Player] -> [Player] -> Player
 -- nextPlayer allPlayers []     = allPlayers!!0

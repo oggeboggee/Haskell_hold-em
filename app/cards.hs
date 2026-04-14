@@ -1,5 +1,7 @@
 module App.Cards where
 
+import System.Random
+-- import QuickCheck
 -----------------------
 ------ For testing -----
 hand1 :: Hand
@@ -99,36 +101,39 @@ drawCard [] = Nothing
 drawCard (x:xs) = Just (x, xs)
 
 
--- It removes the first card that matches a given card from the deck.
--- if it don't match they keep it and continue
+----------------------------------------------
+-- | Removes the first card that matches a given card from the deck.
 removeCard:: Card -> Deck -> Deck
 removeCard _ [] = []
 removeCard x (y:ys)
   | x == y    = ys
   | otherwise = y : removeCard x ys
 
-
--- Take a Card out of a deck, where the index of the card 
--- correlate with a double between 0 and 1.
+-- |Use a double between 0-1 to find a index 
 pick :: Double -> Deck -> Card
 pick x deck = deck !! round ((fromIntegral (length deck - 1)) * x)
 
-
--- | Pick a random card and put in to a new deck, 
-  -- repeat until original deck is empty
+-- | Pick a random card using a double(for index) and put it in a new deck
 shuffle :: [Double] -> Deck -> Deck
-shuffle _ []        = []
-shuffle (x:xs) deck =
-  let card  = pick x deck
-      deck' = removeCard card deck
-  in card : shuffle xs deck'
+shuffle _ [] = []
+shuffle (x:xs) deck = card : shuffle xs deck'
+  where
+    card  = pick x deck
+    deck' = removeCard card deck
 
--- | No QuickCheck :(
--- runShuffle :: IO Deck
--- runShuffle = do
---   Rand ds <- generate arbitrary
---   return (shuffle ds fullDeck)
+-- | Generate a list with random doubles
+randomDoubles :: Int -> StdGen -> ([Double], StdGen)
+randomDoubles 0 gen = ([], gen)
+randomDoubles n gen = ((x:xs), gen2)
+  where
+    (x, gen1)  = randomR (0.0,1.0) gen
+    (xs, gen2) = randomDoubles (n-1) gen1
 
-
+-- | Create a new random genarator and shuffle a full deck
+runShuffle :: IO Deck
+runShuffle = do
+  gen <- newStdGen
+  let (doubles, _) = randomDoubles 52 gen
+  return (shuffle doubles fullDeck)
 
 
