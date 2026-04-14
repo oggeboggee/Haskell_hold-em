@@ -98,6 +98,8 @@ gameStep table = case phase table of
 
     Showdown -> table -- Here we have more betting logic, showing hands to all players?
 
+
+-- Temporary gameloop as a starting point
 gameLoop :: Table -> IO ()
 gameLoop table = do
     print table

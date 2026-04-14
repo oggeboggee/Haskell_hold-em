@@ -5,7 +5,7 @@ module Cards where
 
 -----------------------
 ------ For testing -----
-hand1 :: Hand
+{- hand1 :: Hand
 hand1 = [ Card (Num 2) Hearts, Card Jack Spades]
 
 card1 :: Card
@@ -16,6 +16,7 @@ card2 = Card (Num 2) Spades
 
 card3 :: Card
 card3 = Card King Diamonds
+-}
 -----------------------
 
  -- | All different suits
@@ -24,12 +25,20 @@ data Suit = Clubs | Diamonds | Hearts | Spades
 
 -----------------------
 -- | All different ranks
-data Rank =  Num Int | Jack | Queen | King | Ace 
+data Rank =  One | Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten | Jack | Queen | King | Ace 
   deriving (Eq, Ord)
 
 instance Show Rank where
   show r = case r of
-    Num n -> show n
+    One -> "1"
+    Two -> "2"
+    Three -> "3"
+    Four -> "4"
+    Five -> "6"
+    Seven -> "7"
+    Eight -> "8"
+    Nine -> "9"
+    Ten -> "10"
     Jack  -> "J"
     Queen -> "Q"
     King  -> "K"
@@ -37,7 +46,7 @@ instance Show Rank where
 
 instance Show Suit where
   show s = case s of
-    Spades -> "S"
+    Spades -> "\x2660"
     Hearts -> "H"
     Diamonds -> "D"
     Clubs -> "C"
@@ -99,7 +108,7 @@ size hand = length hand
 fullDeck :: Deck
 fullDeck = [Card r s | r <- allRank, s <- allSuit]
   where
-    allRank = [Num r | r <- [2..10]] ++ [Jack, Queen, King, Ace]
+    allRank = [One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
     allSuit = [Clubs, Diamonds, Hearts, Spades]
 
 -- | Remove the first card from a deck
