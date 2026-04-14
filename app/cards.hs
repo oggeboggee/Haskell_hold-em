@@ -2,7 +2,9 @@ module Cards where
 
 {- Card related data-types -}
 
+import System.Random
 
+import Types
 
 -----------------------
 ------ For testing -----
@@ -26,53 +28,7 @@ hand6 :: Hand
 hand6 = [Card Queen Hearts, Card Queen Spades, Card King Hearts, Card King Spades, Card Ace Hearts ]
 -----------------------
 -----------------------
-
-
- -- | All different suits
-data Suit = Hearts | Spades | Diamonds | Clubs deriving (Show, Eq, Ord)
-
--- | All different ranks
-data Rank =  Num Int | Jack | Queen | King | Ace deriving (Show, Eq, Ord)
-
- -- | Card has an rank and a suit
-data Card = Card Rank Suit deriving (Eq, Ord)
-
-
- -- | Combinations
-data Combination =  HighCard
-                  | Pair 
-                  | TwoPairs 
-                  | ThreeOfAKind 
-                  | Straight 
-                  | Flush 
-                  | FullHouse 
-                  | Quads 
-                  | StraightFlush
-                  deriving (Show, Eq, Ord)
-
-                  
-
- -- | to show the cards in a nice way
-instance Show Card where
-  show (Card r s) = " " ++ formatedRank r ++ " of " ++ formatedSuit s
-
-formatedRank :: Rank -> String
-formatedRank (Num n) = show n
-formatedRank rank    = show rank
-
-formatedSuit :: Suit -> String
-formatedSuit s 
-            | s == Spades = "\9824"
-            | s == Hearts = "\9829"
-            | s == Diamonds = "\9830"
-            | s == Clubs = "\9827"
-
- -- | Hand is a list of cards
-type Hand = [Card]
-
--- | Deck is a list of cards
-type Deck = [Card]
-
+-- | Get functions for cards
 -- | Extract the rank of a card
 rank :: Card -> Rank
 rank (Card r _) = r
@@ -85,18 +41,6 @@ suit (Card _ s) = s
 size :: Hand -> Int
 size hand = length hand
 
-
-
--- | TODO
--- *  Num int in data Rank should only be able to be 2-10
-
--- *  We need to be able to compare cards to sort them for the combinaton determination,
---    but if data Card have Ord, then both Rank and Suit should have Ord, but Suits does not carry any value i n texas hold em
-
--- * We might put a value to each of the ranks ( Num 10 is value 10, Jack is value 11 etc.). It 
---   might be easier to implement Straight in combination. It might also be useful if we want to
---   extend with other card-games later (the game "Casino" for example when the values is vital
---   for the game).
 
 ----------------------------------------------
 -- | Creates a new deck with 52 cards
@@ -114,6 +58,7 @@ drawCard (x:xs) = Just (x, xs)
 
 
 ----------------------------------------------
+-- | Help function for shuffle
 -- | Removes the first card that matches a given card from the deck.
 removeCard:: Card -> Deck -> Deck
 removeCard _ [] = []
@@ -121,6 +66,7 @@ removeCard x (y:ys)
   | x == y    = ys
   | otherwise = y : removeCard x ys
 
+-- |Help function for shuffle
 -- |Use a double between 0-1 to find a index 
 pick :: Double -> Deck -> Card
 pick x deck = deck !! round ((fromIntegral (length deck - 1)) * x)
@@ -141,7 +87,7 @@ randomDoubles n gen = ((x:xs), gen2)
     (x, gen1)  = randomR (0.0,1.0) gen
     (xs, gen2) = randomDoubles (n-1) gen1
 
--- | Create a new random genarator and shuffle a full deck
+-- | Create a new shuffled deck
 runShuffle :: IO Deck
 runShuffle = do
   gen <- newStdGen
