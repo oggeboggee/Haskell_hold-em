@@ -1,4 +1,3 @@
-
 module App.TexasLogic where
 
 import App.Cards
