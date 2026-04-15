@@ -2,10 +2,8 @@ module Actions where
 
 {- Logic for the the different actions a player can make -}
 
-
-
-import App.TexasLogic
-import App.Cards
+import Types
+import Cards
 
 {-
 data Action = 
@@ -14,6 +12,7 @@ data Action =
     | Bet Int
     | Raise Int
     | Call
+    | AllIn
  -}  
 
 -- | Change a players fold-status to True
@@ -23,30 +22,37 @@ fold player = player {folded = True}
 -- | Pass the turn to the next player
 -- check :: Player -> Player
 
-
 -- | Increase the pot with a certain amout
-playerBet :: Player -> Int -> Int -> (Player, Int)
-playerBet player chip pot = 
-    (player {chips = (chips player)-chip}, 
-    (pot + chip))
+placeBet :: Player -> Bet -> Table -> (Player, Table)
+placeBet player bet pot = 
+    (player {chips         = (chips player)-bet,
+             commitedChips = (commitedChips player)+bet}, 
+     table  {pot = (pot table) + bet})
     
 
 -- | Up previous bet 
 -- raise :: Chip -> Pot
 
 -- | Match bet to go to next phase
-call :: Player -> Bet -> Table -> (Player, Table)
-call player bet table = 
-    (player {chips = (chips player)-lowBet, 
-      commitedChip = (commitedChip player)+lowBet},
-     table  {pot = (pot table) + lowBet})
+call :: Player -> Table -> (Player, Table)
+call player table = placeBet player lowBet table
     where
-        lowBet = (highBet table) - (commitedChip player)
+        lowBet = lowestBet table player
 
+
+-- | Helper function to calculate lowest bet a player can make
+lowestBet :: Table -> Player -> Bet
+lowestBet table player = (highBet table) - (commitedChips player)
+
+-- | A player put all chips in to a pot
 allIn :: Player -> Table -> (Player, Table)
-allIn player table = 
-    (player {chips = 0, commitedChip = (commitedChip player) + (chips player)},
-     table {pot = (pot table) + (chips player)})
+allIn player table = placeBet allin table
+    where 
+        allin = (chips player)
+
+-- allIn player table = 
+--     (player {chips = 0, commitedChip = (commitedChips player) + (chips player)},
+--      table {pot = (pot table) + (chips player)})
 
 
 

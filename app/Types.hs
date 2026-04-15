@@ -90,12 +90,12 @@ data GamePhase =
 -- | Data type for a player
 data Player = Player
             {
-            name         :: String,
-            hand         :: Hand,
-            chips        :: Chip,
-            commitedChip :: Chip,
-            folded       :: Bool,
-            blind        :: Blind
+            name          :: String,
+            hand          :: Hand,
+            chips         :: Chip,
+            commitedChips :: Chip,
+            folded        :: Bool,
+            blind         :: Blind
             }
     deriving (Show)
 

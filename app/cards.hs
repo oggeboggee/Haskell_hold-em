@@ -17,7 +17,6 @@ hand2 = [ Card (Num 2) Hearts, Card Jack Spades, Card (Num 5) Clubs]
 hand3 :: Hand
 hand3 = [ Card (Num 2) Spades, Card (Num 5) Clubs, Card (Num 2) Clubs, Card Jack Spades ]
 
--- | sorted
 hand4 :: Hand
 hand4 = [ Card (Num 2) Spades,  Card (Num 2) Clubs, Card (Num 2) Hearts, Card (Num 5) Clubs, Card Jack Spades ]
 
@@ -79,6 +78,7 @@ shuffle (x:xs) deck = card : shuffle xs deck'
     card  = pick x deck
     deck' = removeCard card deck
 
+-- | Help function for runShuffle
 -- | Generate a list with random doubles
 randomDoubles :: Int -> StdGen -> ([Double], StdGen)
 randomDoubles 0 gen = ([], gen)
