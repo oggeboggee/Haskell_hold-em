@@ -35,6 +35,7 @@ hand5 = [Card Ten Hearts , Card Jack Hearts, Card Queen Hearts, Card King Hearts
 hand6 :: Hand --Flush
 hand6 = [Card Three Hearts, Card Ten Hearts , Card Jack Spades, Card Queen Hearts, Card King Hearts, Card Ace Hearts]
 
+
 hand7 :: Hand
 hand7 = [Card Queen Hearts, Card Queen Spades, Card King Hearts, Card King Spades, Card Ace Hearts ]
 
@@ -67,6 +68,19 @@ hand15 = [Card Two Hearts, Card Two Spades, Card Two Diamonds, Card Two Clubs, C
 
 hand16 :: Hand -- Quads
 hand16 = [Card Two Hearts, Card Two Spades, Card Two Diamonds, Card Two Clubs, Card King Hearts, Card King Spades, Card King Clubs, Card King Diamonds]
+
+hand17 :: Hand -- Straight (5 cards)
+hand17 = [Card Three Hearts, Card Four Hearts, Card Five Hearts, Card Six Hearts, Card Seven Spades]
+
+hand18 :: Hand -- Straight (5 cards (all in row))
+hand18 = [Card Three Hearts, Card Four Hearts, Card Five Hearts, Card Six Hearts, Card Seven Spades, Card Eight Spades]
+
+hand19 :: Hand --Flush
+hand19 = [Card Three Hearts, Card Ten Hearts , Card Jack Hearts, Card Queen Hearts, Card King Hearts, Card Ace Hearts]
+
+hand20 :: Hand -- Straight Flush
+hand20 = [Card Three Hearts, Card Four Hearts, Card Five Hearts, Card Six Hearts, Card Seven Hearts]
+
 ----------------------------
 ----------------------------
 
@@ -202,21 +216,32 @@ indexOfThreeOfAKind cards = [firstIndex, firstIndex +1, firstIndex+2]
 
 -------------- End three of a kind --------------
 -------------------- Straight -------------------
-{-
+
 hasStraight :: [Card] -> (Bool, Maybe Rank, Maybe [Int])
 hasStraight cards
-     | hasStraightBool cards = (True, Just (rankStraight cards), Just (indexStraight cards))
+     | length straightList >= 1 = (True,
+                                   Just (rank (last(last(straightList)))),
+                                   Just (getIndex (last straightList) cards))
      | otherwise            = (False, Nothing, Nothing)
+          where
+               straightList = allStraights cards
 
 
-hasStraight :: [Card] -> Bool
-hasStraight cards
-    | length noDuplicates < 5 = False
-    |  
-    where
-        rankHand     = sortRankHandList cards
-        noDuplicates = nub rankHand
--}
+allStraights :: [Card] -> [[Card]] 
+allStraights (x:xs)
+     | length (x:xs) < 5 = []
+     | straightTester (take 5 (sortRankHandList (x:xs))) == True = (take 5 (x:xs)) : allStraights xs
+     | otherwise = allStraights xs
+
+
+straightTester :: [Rank] -> Bool
+straightTester []  = True
+straightTester [_] = True
+straightTester (x:y:xs)
+     | (rankValue x ==  rankValue y - 1) = straightTester (y:xs)
+     | otherwise = False
+
+
 
 ------------------ End Straight -----------------
 ---------------------- Flush --------------------
@@ -244,7 +269,7 @@ indexOfFlush cards = getIndex cards sortedAfterRank
           flushGroups       = filter ((>=5) . length) groupedBySuit
           highestRankOfSuit = (take 5 (reverse (concat flushGroups)))
           sortedAfterRank   = switch highestRankOfSuit
-          
+
 
 
 switch :: [(Suit, Rank)] -> [Card]
@@ -330,20 +355,32 @@ indexOfQuads cards = [firstIndex, firstIndex +1, firstIndex+2, firstIndex+3]
 
 
 hasStraightFlush :: [Card] -> (Bool, Maybe Rank, Maybe [Int])
-hasStraightFlush cards = undefined
+hasStraightFlush cards
+          | hasFlushBool cards == False                     = (False, Nothing, Nothing)
+          | length (allStraights cards) == 0                  = (False, Nothing, Nothing)
+          | length (allStraights handWithSameSuit) >= 1       = (True, 
+                                                               Just (rank (last(last (allStraights handWithSameSuit)))),
+                                                               Just (getIndex (last straightList) cards)
+                                                               )
+          | otherwise                                       = (False, Nothing, Nothing)
+          where
+               handWithSameSuit = getCardFromIndex cards (allIndexOfFlush cards)
+               straightList     = allStraights cards
+
+
+getCardFromIndex :: [Card] -> [Int] -> [Card]
+getCardFromIndex cards indexes =
+  [ cards !! i | i <- indexes ]
+
+allIndexOfFlush :: [Card] -> [Int]
+allIndexOfFlush cards = getIndex cards (switch (concat flushGroups))
+     where
+          sortedTupleList   = sort (tupleList cards)
+          groupedBySuit     = groupBy ((==) `on` fst) (sortOn fst sortedTupleList)
+          flushGroups       = filter ((>=5) . length) groupedBySuit
+          
 
 --------------- End Straight Flush --------------
-
-
-
-
-
-
-
-
-
-
-
 
 
 
