@@ -1,15 +1,49 @@
 module Types where
 
-
 ---------------------------------------------------------------------
 -----------------------
  -- | All different suits
 data Suit = Hearts | Spades | Diamonds | Clubs 
------------------------
-    deriving (Show, Eq, Ord)
+    deriving (Eq, Ord)
+
+instance Show Suit where
+    show s = case s of
+        Spades -> "\9824"
+        Hearts -> "\9829"
+        Diamonds -> "\9830"
+        Clubs -> "\9827"
+
 -- | All different ranks
-data Rank =  Num Int | Jack | Queen | King | Ace 
-    deriving (Show, Eq, Ord)
+data Rank =  Two 
+            | Three 
+            | Four 
+            | Five 
+            | Six 
+            | Seven 
+            | Eight 
+            | Nine 
+            | Ten 
+            | Jack 
+            | Queen 
+            | King 
+            | Ace 
+  deriving (Eq, Ord)
+
+instance Show Rank where
+  show r = case r of
+    Two -> "2"
+    Three -> "3"
+    Four -> "4"
+    Five -> "5"
+    Six -> "6"
+    Seven -> "7"
+    Eight -> "8"
+    Nine -> "9"
+    Ten -> "10"
+    Jack  -> "J"
+    Queen -> "Q"
+    King  -> "K"
+    Ace   -> "A"
 
 -----------------------
  -- | Card has an rank and a suit
@@ -18,27 +52,12 @@ data Card = Card Rank Suit deriving
                   
  -- | to show the cards in a nice way
 instance Show Card where
-  show (Card r s) = formatedRank r ++ formatedSuit s
+  show (Card r s) = show r ++ show s
 
 -- | To compere two cards
 instance Ord Card where
   compare (Card r1 s1) (Card r2 s2) = 
       if r1 == r2 then compare s1 s2 else compare r1 r2
-
-formatedRank :: Rank -> String
-formatedRank (Num n) = show n
-formatedRank rank    = case rank of
-                        Jack -> "J"
-                        Queen -> "Q"
-                        King -> "K"
-                        Ace -> "A"
-
-formatedSuit :: Suit -> String
-formatedSuit s 
-            | s == Spades = "\9824"
-            | s == Hearts = "\9829"
-            | s == Diamonds = "\9830"
-            | s == Clubs = "\9827"
 
 ---------------------------------------------------------------------
 -- | Hand is the two cards a player have on hand
@@ -60,7 +79,6 @@ data Combination =  HighCard
                   | StraightFlush
                   deriving (Show, Eq, Ord)
 
-
 ---------------------------------------------------------------------
 -- | Chips and the pot is represented as Int
 type Chip = Int
@@ -73,7 +91,7 @@ data Blind =
     NoBlind
     | SmallBlind
     | BigBlind
-    deriving (Show)
+    deriving (Show, Eq)
 
 ---------------------------------------------------------------------
 -- | All phases of the game
@@ -97,13 +115,15 @@ data Player = Player
             folded        :: Bool,
             blind         :: Blind
             }
-    deriving (Show)
+    deriving (Show, Eq)
 
 ---------------------------------------------------------------------
 -- | The table represent the gamestate
 data Table = Table
             {
             players      :: [Player],
+            playerTurn   :: (String, Int),
+            -- activePlayer :: [Player]
             highBet      :: Bet,
             deck         :: Deck,
             board        :: CommunityCard,
@@ -112,3 +132,5 @@ data Table = Table
             --dealPosition :: Int
             }
     deriving (Show)
+
+

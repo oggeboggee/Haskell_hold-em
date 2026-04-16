@@ -9,19 +9,19 @@ import Types
 -----------------------
 ------ For testing -----
 hand1 :: Hand
-hand1 = [ Card (Num 2) Hearts, Card Jack Spades]
+hand1 = [ Card Two Hearts, Card Jack Spades]
 
 hand2 :: Hand
-hand2 = [ Card (Num 2) Hearts, Card Jack Spades, Card (Num 5) Clubs]
+hand2 = [ Card Two Hearts, Card Jack Spades, Card Five Clubs]
 
 hand3 :: Hand
-hand3 = [ Card (Num 2) Spades, Card (Num 5) Clubs, Card (Num 2) Clubs, Card Jack Spades ]
+hand3 = [ Card Two Spades, Card Five Clubs, Card Two Clubs, Card Jack Spades ]
 
 hand4 :: Hand
-hand4 = [ Card (Num 2) Spades,  Card (Num 2) Clubs, Card (Num 2) Hearts, Card (Num 5) Clubs, Card Jack Spades ]
+hand4 = [ Card Two Spades,  Card Two Clubs, Card Two Hearts, Card Five Clubs, Card Jack Spades ]
 
 hand5 :: Hand
-hand5 = [Card (Num 10) Hearts , Card Jack Hearts, Card Queen Hearts, Card King Hearts, Card Ace Hearts]
+hand5 = [Card Ten Hearts , Card Jack Hearts, Card Queen Hearts, Card King Hearts, Card Ace Hearts]
 
 hand6 :: Hand
 hand6 = [Card Queen Hearts, Card Queen Spades, Card King Hearts, Card King Spades, Card Ace Hearts ]
@@ -46,8 +46,11 @@ size hand = length hand
 fullDeck :: Deck
 fullDeck = [Card r s | r <- allRank, s <- allSuit]
   where
-    allRank = [Num r | r <- [2..10]] ++ [Jack, Queen, King, Ace]
+    allRank = [Two, Three, Four, Five, Six, Seven, 
+                Eight, Nine, Ten, Jack, Queen, King, Ace]
     allSuit = [Clubs, Diamonds, Hearts, Spades]
+
+    --allRank = [Num r | r <- [2..10]] ++ [Jack, Queen, King, Ace]
 
 
 -- | If deck is not empty, draw a card from a deck and remove it from the deck
