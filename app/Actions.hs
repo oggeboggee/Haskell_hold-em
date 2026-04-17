@@ -26,14 +26,14 @@ nextPlayerTurn = do
 --------------------------------------------------------------
 --------------------------------------------------------------
 -- | State monad function to place a bet
-placeBet :: Player -> Bet -> State Table ()
-placeBet player bet = do
-    table <- get
-    let players' = [if (name p) == (name player )
-                    then decChips p bet 
-                    else p | p <- (players table)]
-        pot'     = (pot table) + bet
-    put table {players = players', pot = pot'}
+-- placeBet :: Player -> Bet -> State Table ()
+-- placeBet player bet = do
+--     table <- get
+--     let players' = [if (name p) == (name player )
+--                     then decChips p bet 
+--                     else p | p <- (players table)]
+--         pot'     = (pot table) + bet
+--     put table {players = players', pot = pot'}
 
 --------------------------------------------------------------
 --------------------------------------------------------------
@@ -53,8 +53,8 @@ incPot' bet = do
     put table {pot = (pot table) + bet}
 
 -- Transfer a bet from a player to the table pot
-placeBet' :: Player -> Bet -> State Table ()
-placeBet' player bet = do
+placeBet :: Player -> Bet -> State Table ()
+placeBet player bet = do
     decChips' player bet
     incPot' bet
 
@@ -108,7 +108,7 @@ allIn player = do
 
 --------------------------------------------------------------
 --------------------------------------------------------------
---- Some pure utility functions
+-- Some pure utility functions
 -- Dont consider negative numbers
 nextPlayer :: Int -> [Player] -> (Player, Int)
 nextPlayer x players 
@@ -119,8 +119,8 @@ nextPlayer x players
     
 -- | Pure function, decrease the amount of chips a player have by a certain amount
 decChips :: Player -> Bet -> Player
-decChips player bet = player {chips = (chips player)-bet,
-                             commitedChips = (commitedChips player)+bet}
+decChips player bet = player {chips         = (chips player)-bet,
+                              commitedChips = (commitedChips player)+bet}
 
 -- | increase the amount of chips a player have by a certain amount
 incChip :: Player -> Pot -> Player
