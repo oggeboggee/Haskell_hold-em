@@ -15,18 +15,9 @@ nextPhase p = case p of
     Showdown    -> Dealhands
 
 ------------------------------------------------------------
--- | Calculate the lowest bet a player can make 
---lowestBet :: Table -> Player -> bet
-
--- | Calculate the highest commitedBet among players
-highBet :: Table -> Bet
-highBet table = (highBet table)
-
-
 -- | Change blind status to given blind
 -- changeBlind :: Player -> Blind -> Player
 -- changeBlind player blind = player {blind player = blind}
-
 
 -- | Change who have the blinds !! DOES NOT WORK YET
 -- progressBlind :: [Player] -> [Player]

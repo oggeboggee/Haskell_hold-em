@@ -45,7 +45,7 @@ instance Show Rank where
     King  -> "K"
     Ace   -> "A"
 
------------------------
+---------------------------------------------------------------------
  -- | Card has an rank and a suit
 data Card = Card Rank Suit deriving 
     (Eq)
@@ -115,22 +115,34 @@ data Player = Player
             folded        :: Bool,
             blind         :: Blind
             }
-    deriving (Show, Eq)
+    deriving (Eq)
 
+instance Show Player where
+    show p = "Name:" ++ show (name p) ++
+           " Hand:" ++ show (hand p) ++ 
+           " Chips:" ++ show (chips p) ++
+           " Commited:" ++ show (commitedChips p) ++
+           " Folded:" ++ show (folded p) ++
+           " Blind:" ++ show (blind p) ++ "\n"
 ---------------------------------------------------------------------
 -- | The table represent the gamestate
 data Table = Table
             {
-            players      :: [Player],
-            playerTurn   :: (String, Int),
-            -- activePlayer :: [Player]
-            highBet      :: Bet,
-            deck         :: Deck,
-            board        :: CommunityCard,
-            phase        :: GamePhase,
-            pot          :: Pot
+            players       :: [Player],
+            playerTurn    :: (Player, Int),
+            activePlayers :: [Player],
+            highBet       :: Bet,
+            deck          :: Deck,
+            board         :: CommunityCard,
+            phase         :: GamePhase,
+            pot           :: Pot
             --dealPosition :: Int
             }
-    deriving (Show)
-
+    -- deriving (Show)
+instance Show Table where
+    show t = show (players t) ++ 
+            " Playerturn:" ++ show (name (fst (playerTurn t))) ++
+            " \nHighbet:" ++ show (highBet t) ++
+            " \nPot:" ++ show (pot t)
+           
 
