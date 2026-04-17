@@ -1,5 +1,5 @@
 module Types where
-
+import Control.Monad.State
 ---------------------------------------------------------------------
 -----------------------
  -- | All different suits
@@ -96,13 +96,24 @@ data Blind =
 ---------------------------------------------------------------------
 -- | All phases of the game
 data GamePhase = 
-            Dealhands
+            DealHands
             | PreFlop
             | Flop
             | Turn
             | River
             | Showdown
     deriving (Show)
+
+---------------------------------------------------------------------
+-- | Table positions a player can be in.
+data TablePosition =
+    Dealer
+    | SB
+    | BB
+    | UTG
+    | CutOff
+    deriving (Show, Eq)
+
 
 ---------------------------------------------------------------------
 -- | Data type for a player
@@ -113,7 +124,9 @@ data Player = Player
             chips         :: Chip,
             commitedChips :: Chip,
             folded        :: Bool,
-            blind         :: Blind
+            checked       :: Bool,
+            blind         :: Blind,
+            position      :: TablePosition
             }
     deriving (Eq)
 
@@ -136,7 +149,9 @@ data Table = Table
             board         :: CommunityCard,
             phase         :: GamePhase,
             pot           :: Pot
-            --dealPosition :: Int
+            --dealerPosition :: Int
+            --smallBlindPosition :: Int,
+            --bigBlindPosition :: Int
             }
     -- deriving (Show)
 instance Show Table where

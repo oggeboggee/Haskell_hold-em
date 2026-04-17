@@ -40,7 +40,7 @@ suit (Card _ s) = s
 fullDeck :: Deck
 fullDeck = [Card r s | r <- allRank, s <- allSuit]
   where
-    allRank = [One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
+    allRank = [Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
     allSuit = [Clubs, Diamonds, Hearts, Spades]
 
 
@@ -96,7 +96,7 @@ runShuffle = do
   let (doubles, _) = randomDoubles 52 gen
   return (shuffle doubles fullDeck)
 
-  
+
 --------------------------------------------------------------
 --------------------------------------------------------------
 

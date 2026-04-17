@@ -1,10 +1,4 @@
-module Actions 
-        (fold,
-         check,
-         raise,
-         call,
-         allIn)
-        where
+module Actions where
 
 {- Logic for the the different actions a player can make -}
 
@@ -143,7 +137,7 @@ lowestBet table player = (highBet table) - (commitedChips player)
 
 
 
-
+{-
 --------------------------------------------------------------
 --------------------------------------------------------------
 -- | Manual testing:
@@ -161,3 +155,4 @@ playerlist = [player1, player2, player3]
 
 table1 :: Table
 table1 = Table playerlist (playerlist!!0, 0) playerlist 50 fullDeck [] Flop 75
+-}
