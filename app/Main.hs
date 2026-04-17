@@ -6,6 +6,7 @@ import TexasLogic
 
 
 main :: IO ()
+<<<<<<< HEAD
 main = do
     hSetEncoding stdout utf8
     --hSetEncoding stderr utf8
@@ -19,3 +20,7 @@ main = do
     }
 
     gameLoop initialTable
+=======
+main = putStrLn "Hello, welcome to Haskell Hold' Em!"
+    
+>>>>>>> origin
