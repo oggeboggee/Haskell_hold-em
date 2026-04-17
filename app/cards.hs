@@ -123,8 +123,8 @@ drawCard [] = error "Deck empty"
 drawCard (x:xs) = (x, removeCard xs)
 
 -- | Deal cards by splitting deck
-dealCards :: Deck -> Int -> ([Card], Deck)
-dealCards deck n = splitAt n deck
+--dealCards :: Deck -> Int -> ([Card], Deck)
+--dealCards deck n = splitAt n deck --needs to be shuffled, check if n is bigger than the length of deck.
 
 --text
 

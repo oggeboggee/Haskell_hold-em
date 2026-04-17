@@ -1,7 +1,7 @@
 module TexasLogic where
 
 import Cards
-
+import Control.Monad.State
 ------------------------------
 -- | Chips and the pot is represented as Int
 type Chip = Int
@@ -73,7 +73,7 @@ gameStep table = case phase table of
                    deck = deck2,
                    phase = nextPhase (phase table)
                
-                 } -}
+scm-history-item:c%3A%5CUsers%5Cuni%5CHaskell_hold-em?%7B%22repositoryId%22%3A%22scm0%22%2C%22historyItemId%22%3A%22784b8b8be3f6e9c6ca7b0dc405675b37cefda057%22%2C%22historyItemParentId%22%3A%22ebf9774dc8d01d1afff6ec32d2efaea6e5d9cf57%22%2C%22historyItemDisplayId%22%3A%22784b8b8%22%7D                 } -}
     PreFlop -> table {
         phase = nextPhase (phase table)
     }
@@ -101,7 +101,7 @@ gameStep table = case phase table of
 
     Showdown -> table -- Here we have more betting logic, showing hands to all players?
 
-
+{-
 dealHands :: [Player] -> Deck -> ([Player], Deck)
 dealHands [] deck = ([], deck) --basecase, when no more players left return the deck.
 dealHands (p1:players) deck = 
@@ -111,6 +111,8 @@ dealHands (p1:players) deck =
     in (p1' : players', deck2)
     -- This is same as hardcoded but made now for not just 2 players but any and all players.
 
+-- Now we can give players their hands using the above function and update the table with
+-- players who now have their hands and then the deck after this has been delt.
 dealHandsStep :: Table -> Table
 dealHandsStep table = let (players', deckAfterDeltHAnds) = dealHands (players table) (deck table)
     in
@@ -119,6 +121,21 @@ dealHandsStep table = let (players', deckAfterDeltHAnds) = dealHands (players ta
             deck = deckAfterDeltHAnds,
             phase = nextPhase (phase table)
         } 
+-}
+-- monad deal cards
+dealCards :: Int -> State Table [Card]
+dealCards n = do
+    table <- get
+    let (deltCards, newDeck) = splitAt n (deck table)
+    put table { deck = newDeck }
+    return cards
+
+--- Attempt at state monad version
+-- this is a Put
+dealHands2 :: State Table ()
+dealHands2 = do
+    table <- get
+    (players', deck') = 
 
 
 -- Temporary gameloop as a starting point
