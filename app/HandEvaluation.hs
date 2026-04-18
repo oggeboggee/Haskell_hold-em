@@ -92,6 +92,10 @@ hand22 :: Hand -- Pair
 hand22 = [Card Two Hearts, Card Four Hearts, Card Six Hearts, Card Six Clubs, Card Seven Hearts, Card Jack Hearts, Card Queen Hearts]
 
 
+
+
+
+
 ----------------------------
 ----------------------------
 
@@ -163,10 +167,11 @@ sizeByGroup cards = map (length) (groupAfterRank cards)
 -- | [Int]      =  indexes of the Card that belongs to the pair    
 
 
-highCard :: [Card] -> (Bool, Maybe Rank, Maybe [Rank], Maybe [Card])
-highCard []    = (False, Nothing, Nothing, Nothing)
+highCard :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
+highCard []    = (False, Nothing, Nothing, Nothing, Nothing)
 highCard cards = (True,                               -- <-- Bool if the hand has HighCard
-                  Just (rankHand!!0),                 -- <-- Best rank of the given combination
+                  Just (HighCard),
+                  Just [(rankHand!!0)],                 -- <-- Best rank of the given combination
                   Just (take 5 rankHand),             -- <-- kickers rank in descending order
                   Just (take 5 $ reverse cards)       -- <-- The 5 card that are used for the combination
                      )
@@ -180,15 +185,16 @@ highCard cards = (True,                               -- <-- Bool if the hand ha
 -- | can give wrong answer if it is called with card that have better combination than pair
 
 
-pair :: [Card] -> (Bool, Maybe Rank, Maybe [Rank], Maybe [Card])
-pair []             = (False, Nothing, Nothing, Nothing)
+pair :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
+pair []             = (False, Nothing, Nothing, Nothing, Nothing)
 pair cards
      | hasPairBool cards = (True,                                       -- <-- Bool if the hand have the combination
-                            Just (rankOfPair cards),                    -- <-- Best rank of the given combination
+                            Just Pair,
+                            Just [(rankOfPair cards)],                    -- <-- Best rank of the given combination
                             Just (reverse $ (sortRankHandList kick)),   -- <-- kickers rank in descending order
                             Just ((pairCards cards) ++ kick)            -- <-- The 5 card that are used for the combination
                             )
-     | otherwise   = (False, Nothing, Nothing, Nothing)
+     | otherwise   = (False, Nothing, Nothing, Nothing, Nothing)
      where
           kick = kickers (removeCards (pairCards cards) cards) 3 
 
@@ -219,15 +225,16 @@ pairCards cards = [cards!!indexOfPair, cards!!(indexOfPair+1)]
 -------------------- twoPair --------------------
 
 
-twoPair :: [Card] -> (Bool, Maybe [Rank], Maybe [Rank], Maybe [Card])
+twoPair :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
 twoPair cards
-     | length cards <= 3    = (False, Nothing, Nothing, Nothing)
+     | length cards <= 3    = (False, Nothing, Nothing, Nothing, Nothing)
      | hasTwoPairBool cards = (True,                                       -- <-- Bool if the hand have the combination
+                              Just TwoPairs,
                               Just (reverse $ rankOfHighestPairs cards),   -- <-- Best rank of the given combination
                               Just (sortRankHandList kick),                -- <-- kickers rank in descending order
                               Just (kick ++ twoPairsCards cards)           -- <-- The 5 card that are used for the combination
                               )
-     | otherwise            = (False, Nothing, Nothing, Nothing)
+     | otherwise            = (False, Nothing, Nothing, Nothing, Nothing)
           where
                kick = kickers (removeCards twoPairCardss cards) 1
                twoPairCardss = twoPairsCards cards
@@ -261,15 +268,16 @@ twoPairsCards cards = [cards!!indexFPair,
 ----------------- End Two Pair ------------------
 ---------------- Three of a kind ----------------
 
-threeOfAKind :: [Card] -> (Bool, Maybe Rank, Maybe [Rank], Maybe [Card])
+threeOfAKind :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
 threeOfAKind cards
-     | length cards < 3 = (False, Nothing, Nothing, Nothing)
+     | length cards < 3 = (False, Nothing, Nothing, Nothing, Nothing)
      | hasThreeOfAKindBool cards = (True,                                     -- <-- Bool if the hand have the combination
-                                    Just (rankThreeOfAKind cards),            -- <-- Best rank of the given combination
+                                    Just ThreeOfAKind,
+                                    Just [(rankThreeOfAKind cards)],            -- <-- Best rank of the given combination
                                     Just (reverse $ sortRankHandList kick),             -- <-- kickers rank in descending order
                                     Just (kick ++ (cardsThreeOfAKind cards))  -- <-- The 5 card that are used for the combination
                                     )
-     | otherwise            = (False, Nothing, Nothing, Nothing)       
+     | otherwise            = (False, Nothing, Nothing, Nothing, Nothing)       
           where
             kick = kickers (removeCards triCards cards) 2
             triCards = cardsThreeOfAKind cards
@@ -300,15 +308,16 @@ cardsThreeOfAKind cards = [ cards!!firstIndex,
 -------------- End three of a kind --------------
 -------------------- Straight -------------------
 
-hasStraight :: [Card] -> (Bool, Maybe Rank, Maybe [Rank], Maybe [Card])
-hasStraight cards
-     | length cards < 5 = (False, Nothing, Nothing, Nothing)
+straight :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
+straight cards
+     | length cards < 5 = (False, Nothing, Nothing, Nothing, Nothing)
      | length (allStraights cards) >= 1 = (True,                       -- <-- Bool if the hand have the combination
-                                   Just (rank (last(straightCards))),  -- <-- Best rank of the given combination
+                                   Just Straight,
+                                   Just [(rank (last(straightCards)))],  -- <-- Best rank of the given combination
                                    Nothing,                            -- <-- kickers rank in descending order
                                    Just (straightCards)                -- <-- The 5 card that are used for the combination
                                    )
-     | otherwise            = (False, Nothing, Nothing, Nothing)
+     | otherwise            = (False, Nothing, Nothing, Nothing, Nothing)
           where
                straightCards = last (allStraights cards)
 
@@ -348,14 +357,15 @@ rankValueAceLow r = case r of
 ------------------ End Straight -----------------
 ---------------------- Flush --------------------
 
-hasFlush :: [Card] -> (Bool, Maybe Rank, Maybe [Rank], Maybe [Card])
-hasFlush cards
-     | length cards < 5 = (False, Nothing, Nothing, Nothing)
+flush :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
+flush cards
+     | length cards < 5 = (False, Nothing, Nothing, Nothing, Nothing)
      | hasFlushBool cards = (True,                               -- <-- Bool if the hand have the combination
+                             Just Flush,
                              Nothing,                            -- <-- Best rank of the given combination
                              Nothing,                            -- <-- kickers rank in descending order
                              Just flushCards )                   -- <-- The 5 card that are used for the combination
-     | otherwise          = (False, Nothing, Nothing, Nothing)      
+     | otherwise          = (False, Nothing, Nothing, Nothing, Nothing)      
           where
                indexes = indexOfFlush cards
                flushCards = [cards!!i | i <- indexes]      
@@ -391,16 +401,17 @@ switch ((s1,r1):xs) =  (Card r1 s1) : switch xs
 -------------------- Full House -----------------
 
 
-hasFullHouse :: [Card] -> (Bool, Maybe [Rank], Maybe [Rank], Maybe [Card])
-hasFullHouse cards
+fullHouse :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
+fullHouse cards
      | hasFullHouseBool cards = (True,                                         -- <-- Bool if the hand have the combination
+                                Just FullHouse,
                                 Just [(rankThreeOfAKind cards), bestRankPair], -- <-- Best rank of the given combination
                                  Nothing,                                      -- <-- kickers rank in descending order
                                  Just ([cards!!bestPairIndex',                 -- <-- The 5 card that are used for the combination
                                         cards!!(bestPairIndex' + 1)] ++ 
                                         cardsThreeOfAKind cards)) 
 
-     | otherwise            = (False, Nothing, Nothing, Nothing)
+     | otherwise            = (False, Nothing, Nothing, Nothing, Nothing)
      where
           bestPairIndex' = bestPairIndex cards
           bestRankPair = rank (cards!!(bestPairIndex'))
@@ -430,14 +441,15 @@ bestPairIndex cards = sum (drop 1 (dropWhile (/=2) (reverse mpHand)))
 ------------------ End Full House ---------------
 ---------------------- Quads --------------------
 
-hasQuads :: [Card] -> (Bool, Maybe Rank, Maybe [Rank], Maybe [Card])
-hasQuads cards
+quads :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
+quads cards
      | hasQuadsBool cards = (True,                             -- <-- Bool if the hand have the combination
-                             Just (rankQuads cards),           -- <-- Best rank of the given combination
+                             Just Quads,
+                             Just [(rankQuads cards)],           -- <-- Best rank of the given combination
                              Just (sortRankHandList kick),     -- <-- kickers rank in descending order
                              Just (kick ++ cardOfQuads cards)  -- <-- The 5 card that are used for the combination
                              )                              
-     | otherwise            = (False, Nothing, Nothing, Nothing)
+     | otherwise            = (False, Nothing, Nothing, Nothing, Nothing)
           where
                kick = kickers (removeCards (cardOfQuads cards) (cards)) 1
 
@@ -469,16 +481,17 @@ cardOfQuads cards = [ cards!!(firstIndex),
 ----------------- Straight Flush ----------------
 
 
-hasStraightFlush :: [Card] -> (Bool, Maybe Rank, Maybe [Rank], Maybe [Card])
-hasStraightFlush cards
-          | hasFlushBool cards == False                       = (False, Nothing, Nothing, Nothing)
-          | length (allStraights cards) == 0                  = (False, Nothing, Nothing, Nothing)
+straightFlush :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
+straightFlush cards
+          | hasFlushBool cards == False                       = (False, Nothing, Nothing, Nothing, Nothing)
+          | length (allStraights cards) == 0                  = (False, Nothing, Nothing, Nothing, Nothing)
           | length (allStraights handWithSameSuit) >= 1       = (True,                                                          -- <-- Bool if the hand have the combination
-                                                               Just (rank (last(last (allStraights handWithSameSuit)))),        -- <-- Best rank of the given combination
+                                                               Just (StraightFlush),
+                                                               Just [(rank (last(last (allStraights handWithSameSuit))))],        -- <-- Best rank of the given combination
                                                                Nothing,                                                         -- <-- kickers rank in descending order
                                                                Just (last straightList) -- <-- The 5 card that are used for the combination
                                                                 )                                       
-          | otherwise                                       = (False, Nothing, Nothing, Nothing)
+          | otherwise                                       = (False, Nothing, Nothing, Nothing, Nothing)
           where
                handWithSameSuit = getCardFromIndex cards (allIndexOfFlush cards)   -- Creates a  
                straightList     = allStraights cards
@@ -499,7 +512,30 @@ allIndexOfFlush cards = getIndex cards (switch (concat flushGroups))
           
 
 --------------- End Straight Flush --------------
------------------ HandStrength ------------------
+------------------- Best Hand -------------------
+
+
+bestHand :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
+bestHand cards
+     | getBool (straightFlush cards) = straightFlush cards
+     | getBool (quads cards        ) = quads cards
+     | getBool (fullHouse cards    ) = fullHouse cards
+     | getBool (straight cards     ) = straight cards     
+     | getBool (flush cards        ) = flush cards
+     | getBool (straight cards     ) = straight cards
+     | getBool (threeOfAKind cards ) = threeOfAKind cards
+     | getBool (twoPair cards      ) = twoPair cards
+     | getBool (pair cards         ) = pair cards
+     | otherwise                    = highCard cards  
+
+
+ -- | call with for example (flush hand19) 
+ -- | for extracting of the bool-returnvalue 
+getBool :: (Bool, a, b, c, d) -> Bool
+getBool (b, _, _, _, _) = b
+
+
+----------------- End Best Hand -----------------
 
 
 
