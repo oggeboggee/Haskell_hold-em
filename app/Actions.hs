@@ -52,6 +52,9 @@ placeBet player bet = do
     decChips' player bet
     incPot' bet
 
+--- Thought: In placeBet we are doing get and put on the table twice, is this inefficient?
+--- 
+
 
 --------------------------------------------------------------
 -------------- All Actions a player can make -----------------

@@ -1,5 +1,12 @@
 module Types where
 import Control.Monad.State
+
+--------------------------------------------
+-- | https://cstml.github.io/2021/07/22/State-Monad.html
+-- | We can use StateT to get access to IO inside the state monad.
+-- I'll declare a new data type to see how this works
+type Game = StateT Table IO ()
+
 ---------------------------------------------------------------------
 -----------------------
  -- | All different suits
@@ -126,7 +133,7 @@ data Player = Player
             folded        :: Bool,
             checked       :: Bool,
             blind         :: Blind,
-            position      :: TablePosition
+            --position      :: TablePosition
             }
     deriving (Eq)
 
@@ -142,16 +149,16 @@ instance Show Player where
 data Table = Table
             {
             players       :: [Player],
-            playerTurn    :: (Player, Int),
+            --playerTurn    :: (Player, Int), -- We have this with dealerposition.
             activePlayers :: [Player],
             highBet       :: Bet,
             deck          :: Deck,
             board         :: CommunityCard,
             phase         :: GamePhase,
             pot           :: Pot
-            --dealerPosition :: Int
-            --smallBlindPosition :: Int,
-            --bigBlindPosition :: Int
+            dealerPosition :: Int
+            smallBlindPosition :: Int,
+            bigBlindPosition :: Int
             }
     -- deriving (Show)
 instance Show Table where

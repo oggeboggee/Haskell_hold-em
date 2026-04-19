@@ -26,32 +26,68 @@ nextPhase p = case p of
 -- This is all hardcoded for now but will change later.
 gameStep :: State Table ()
 gameStep = do
-    DealHands <- dealHandsStep 
+    table <- get
+    case phase table of
 
-    PreFlop <- preFlopStep
+        DealHands -> dealHandsStep 
+
+        PreFlop -> preFlopStep
         -- First betting rounds, player can bet, fold, call, raise. (logic we don't have yet)
-    Flop <- dealCommunityCards
+        Flop -> dealCommunityCards
 
-    Turn <- dealCommunityCards
+        Turn -> dealCommunityCards
 
-    River <- dealCommunityCards
+        River -> dealCommunityCards
 
-    Showdown <- table -- Here we have more betting logic, showing hands to all players?
+        Showdown -> table -- Here we have more betting logic, showing hands to all players?
 
 
----------------------------------------------------------------
----------- Code to initialise the blinds of the game ----------
+
+
+
 -- | Initialisation of the blinds of the game.
-
-
-
 initiateBlinds :: State Table ()
 intiateBlinds = do
+    table <- get
+    -- We need to know where the SB and BB is.
+    let sbPlayer = (smallBlindPosition table)
+        bbPlayer = (bigBlindPosition table)
+        playersList = (players table)
+
+        sb = 50
+        bb = 100 -- We can later on introduce logic that increases blind amount per round
+
+    placeBet (playersList !! sbPlayer) sb
+    placeBet (playersList !! bbPlayer) bb
+
+    
 
 
 
 
 
+startOfGame :: Table -> Bool
+startOfGame table | (table phase) == DealHands = True
+                  | (table phase) == _         = False
+
+
+resetGameState :: State Table Table
+
+
+-- | Move where the dealer,SB, and BB are on the table. Mod helps us wrap around.
+moveDealer :: State Table ()
+moveDealer = do
+    table <- get
+    let numPlayers = length (players table)
+        newDealerPosition     = ((dealerPosition table) + 1) `mod` numPlayers
+        newSmallBlindPosition = ((newDealerPosition table) + 1) `mod` numPlayers
+        newBigBlindPosition   = ((newSmallBlindPosition table) + 1) `mod` numPlayers
+
+    modify (\table -> table 
+        { dealerPosition     = newDealerPosition,
+          smallBlindPosition = newSmallBlindPosition,
+          bigBlindPosition   = newBigBlindPosition
+        })
 
 
 
@@ -138,6 +174,14 @@ movebutton = do
     let playersAtTable = length (players table)
 
 
+
+{-
+winner :: State Table Player
+    winner = do
+        table <- get
+        playersList <- gets players
+        nonFoldedPlayers = mapM (\players -> )
+-}
 
 
 -- Temporary gameloop as a starting point
