@@ -66,15 +66,20 @@ fold player = do
     table <- get
     let players' = [if (name p) == (name player) 
                     then p {folded = True} 
-                    else p| p <- (players table)]
-    put table {players = players'}
-    nextPlayerTurn
+                    else p | p <- (players table)]
+        active' = filter (not . folded) players'
+    put table 
+        { players = players',
+          activePlayers = active'}
+    --nextPlayerTurn
+
+
 
 ---------------------------------------    
 -- | Pass the turn to the next player
 check :: Player -> State Table ()
 check player = do 
-    nextPlayerTurn
+    --nextPlayerTurn
 ---------------------------------------    
 
 -- | Take an int for how much to raise, then adds the lowest bet
@@ -83,7 +88,7 @@ raise player raiseamout = do
     table <- get
     let bet = raiseamout + lowestBet table player
     placeBet player bet
-    nextPlayerTurn
+    --nextPlayerTurn
 
 ---------------------------------------
 -- | A player bet the lowest amount they can to get to next phase
@@ -92,14 +97,14 @@ call player = do
     table <- get
     let lowBet = lowestBet table player
     placeBet player lowBet
-    nextPlayerTurn
+    --nextPlayerTurn
 
 ---------------------------------------
 -- | Bet all chips
 allIn :: Player -> State Table ()
 allIn player = do
     placeBet player (chips player)
-    nextPlayerTurn
+    --nextPlayerTurn
 --------------------------------------------------------------
 --------------------------------------------------------------
 
@@ -138,7 +143,7 @@ lowestBet table player = (highBet table) - (commitedChips player)
 
 
 
-
+--- We need to apply an action to the game
 
 {-
 --------------------------------------------------------------

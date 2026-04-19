@@ -152,6 +152,7 @@ data Table = Table
             --playerTurn    :: (Player, Int), -- We have this with dealerposition.
             activePlayers :: [Player],
             highBet       :: Bet,
+            bets          :: [Bet]
             deck          :: Deck,
             board         :: CommunityCard,
             phase         :: GamePhase,

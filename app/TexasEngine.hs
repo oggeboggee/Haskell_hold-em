@@ -42,6 +42,11 @@ gameStep = do
         Showdown -> table -- Here we have more betting logic, showing hands to all players?
 
 
+-- | Remake with StateT IO
+
+
+
+
 
 
 
@@ -50,22 +55,18 @@ initiateBlinds :: State Table ()
 intiateBlinds = do
     table <- get
     -- We need to know where the SB and BB is.
-    let sbPlayer = (smallBlindPosition table)
-        bbPlayer = (bigBlindPosition table)
+    let sbPlayerPos = (smallBlindPosition table)
+        bbPlayerPos = (bigBlindPosition table)
         playersList = (players table)
 
-        sb = 50
-        bb = 100 -- We can later on introduce logic that increases blind amount per round
+        sbPlayer = (playersList !! sbPlayer) 50
+        bbPlayer = (playersList !! bbPlayer) 100 -- We can later on introduce logic that increases blind amount per round
 
-    placeBet (playersList !! sbPlayer) sb
-    placeBet (playersList !! bbPlayer) bb
+
+
+
 
     
-
-
-
-
-
 startOfGame :: Table -> Bool
 startOfGame table | (table phase) == DealHands = True
                   | (table phase) == _         = False
@@ -80,8 +81,8 @@ moveDealer = do
     table <- get
     let numPlayers = length (players table)
         newDealerPosition     = ((dealerPosition table) + 1) `mod` numPlayers
-        newSmallBlindPosition = ((newDealerPosition table) + 1) `mod` numPlayers
-        newBigBlindPosition   = ((newSmallBlindPosition table) + 1) `mod` numPlayers
+        newSmallBlindPosition = ((newDealerPosition) + 1) `mod` numPlayers
+        newBigBlindPosition   = ((newSmallBlindPosition) + 1) `mod` numPlayers
 
     modify (\table -> table 
         { dealerPosition     = newDealerPosition,
@@ -89,6 +90,13 @@ moveDealer = do
           bigBlindPosition   = newBigBlindPosition
         })
 
+-- | Decided the next player to 
+nextPlayerToAct :: Int -> [Player] -> Int
+nextPlayerToAct i activePlayers = next
+    where next = (i + 1) `mod` (length activePlayers)
+
+
+    
 
 
 
@@ -109,7 +117,7 @@ dealCards n = do
 --   the cards as the players hand, then put the list of players now with updated hands back
 --   into the table.
 dealHands :: State Table ()
-dealHands2 = do
+dealHands = do
     table <- get
     playerList <- gets players
     playerList' <- mapM (\player -> do
@@ -168,10 +176,6 @@ moveToNextPhase = modify (\table -> table { phase = nextPhase (phase table) })
 
 
 
-moveButton :: State Table Table
-movebutton = do
-    table <- get
-    let playersAtTable = length (players table)
 
 
 
