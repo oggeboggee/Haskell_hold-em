@@ -471,15 +471,15 @@ getFinalCards (_ , _, _, _, c) = c
 hand0 :: Hand
 hand0 = [Card Two Hearts, Card Four Spades ]
 
-hand1 :: Hand
-hand1 = [ Card Two Hearts, Card Jack Spades]
+--hand1 :: Hand
+--hand1 = [ Card Two Hearts, Card Jack Spades]
 
-hand2 :: Hand
-hand2 = [ Card Two Hearts, Card Jack Spades, Card Five Clubs]
+--hand2 :: Hand
+--hand2 = [ Card Two Hearts, Card Jack Spades, Card Five Clubs]
 
 
-hand3 :: Hand
-hand3 = [ Card Two Spades, Card Five Clubs, Card Two Clubs, Card Jack Spades ]
+--hand3 :: Hand
+--hand3 = [ Card Two Spades, Card Five Clubs, Card Two Clubs, Card Jack Spades ]
 
 
 hand3s :: Hand

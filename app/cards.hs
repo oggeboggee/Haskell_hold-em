@@ -5,6 +5,7 @@ module Cards
        drawCard,
        shuffle,
        runShuffle,
+       rankValue,
        hand1,
        hand2,
        hand3)
@@ -16,8 +17,6 @@ import System.Random
 
 import Types
 
-
-import Types
 
 
 rankValue :: Rank -> Int
@@ -56,7 +55,7 @@ rank (Card r _) = r
 suit :: Card -> Suit
 suit (Card _ s) = s
 
-<<<<<<< HEAD
+
 
 --------------------------------------------------------------
 --------------------------------------------------------------
@@ -116,14 +115,14 @@ runShuffle = do
 
 --------------------------------------------------------------
 ------------------------ For testing -------------------------
---hand1 :: Hand
---hand1 = [ Card Two Hearts, Card Jack Spades]
+hand1 :: Hand
+hand1 = [ Card Two Hearts, Card Jack Spades]
 
---hand2 :: Hand
---hand2 = [ Card Two Diamonds, Card Jack Spades]
+hand2 :: Hand
+hand2 = [ Card Two Diamonds, Card Jack Spades]
 
---hand3 :: Hand
---hand3 = [ Card Ten Spades, Card King Clubs]
+hand3 :: Hand
+hand3 = [ Card Ten Spades, Card King Clubs]
 
 -- hand4 :: Hand
 -- hand4 = [ Card Two Spades,  Card Two Clubs, Card Two Hearts, Card Five Clubs, Card Jack Spades ]
