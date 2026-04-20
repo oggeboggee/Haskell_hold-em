@@ -49,7 +49,8 @@ instance Show Rank where
  -- | Card has an rank and a suit
 data Card = Card Rank Suit deriving 
     (Eq)
-                  
+
+
  -- | to show the cards in a nice way
 instance Show Card where
   show (Card r s) = show r ++ show s
@@ -144,5 +145,4 @@ instance Show Table where
             " Playerturn:" ++ show (name (fst (playerTurn t))) ++
             " \nHighbet:" ++ show (highBet t) ++
             " \nPot:" ++ show (pot t)
-           
 
