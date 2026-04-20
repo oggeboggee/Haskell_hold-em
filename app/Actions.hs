@@ -5,9 +5,10 @@ module Actions where
 import Types
 import Cards ( fullDeck, hand1, hand2, hand3 )
 
-import Control.Monad.State ( MonadState(get, put), State )
+import Control.Monad.State
 
-    
+
+ {-   
 --------------------------------------------------------------
 --------------------------------------------------------------
 -- | Change whos turn it is
@@ -16,7 +17,7 @@ nextPlayerTurn = do
     table <- get
     let nextplayer = nextPlayer (snd (playerTurn table)) (activePlayers table)
     put table {playerTurn = nextplayer}
-
+-}
 --------------------------------------------------------------
 --------------------------------------------------------------
 -- | State monad function to place a bet
@@ -28,7 +29,7 @@ nextPlayerTurn = do
 --                     else p | p <- (players table)]
 --         pot'     = (pot table) + bet
 --     put table {players = players', pot = pot'}
-
+{-
 --------------------------------------------------------------
 --------------------------------------------------------------
 -- | New variation with more State monad use
@@ -51,11 +52,36 @@ placeBet :: Player -> Bet -> State Table ()
 placeBet player bet = do
     decChips' player bet
     incPot' bet
+    -}
 
 --- Thought: In placeBet we are doing get and put on the table twice, is this inefficient?
 --- 
 
+-- placeBet that works with Gaem() 
+placeBet :: Int -> Bet -> Game()
+placeBet playerIndex bet = do
+    modify (\table ->
+        let playersAtTable = (players table)
+            currentPlayer = playersAtTable !! playerIndex
+            updatedPlayer = currentPlayer
+                { chips = (chips currentPlayer) - bet,
+                  commitedChips = (commitedChips currentPlayer) + bet
+                }
+            playersAtTableUpdated = replacePlayer playerIndex updatedPlayer playersAtTable
 
+        in table
+            { players = playersAtTableUpdated,
+              pot = (pot table) + bet,
+              bets = bet : (bets table)
+            }
+        )
+
+
+-- | We need a function to take a player at a specific index in a list, and then replace with the updated player
+--   
+replacePlayer :: Int -> Player -> [Player] -> [Player]
+replacePlayer playerIndex updatedPlayer playerList = take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
+{-
 --------------------------------------------------------------
 -------------- All Actions a player can make -----------------
 -- All actions end by passing the turn
@@ -77,8 +103,8 @@ fold player = do
 
 ---------------------------------------    
 -- | Pass the turn to the next player
-check :: Player -> State Table ()
-check player = do 
+--check :: Player -> State Table ()
+--check player = do 
     --nextPlayerTurn
 ---------------------------------------    
 
@@ -163,4 +189,6 @@ playerlist = [player1, player2, player3]
 
 table1 :: Table
 table1 = Table playerlist (playerlist!!0, 0) playerlist 50 fullDeck [] Flop 75
+-}
+
 -}
