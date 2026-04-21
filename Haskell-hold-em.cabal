@@ -36,10 +36,10 @@ license-file:       LICENSE
 
 -- The package author(s).
 author:
-    Oskar Eriksson, Axel Nygren, Jonathan Pearson, Filip Kornhammar
+    Oskar Eriksson, Axel Nygren, Jonathan Pearson
 
 -- An email address to which users can send suggestions, bug reports, and patches.
-maintainer:         filipkor@chalmers.se
+maintainer:         nobody@chalmers.se
 
 -- A copyright notice.
 -- copyright:
@@ -73,10 +73,12 @@ executable Haskell-hold-em
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
+
     build-depends:    base >=4.18.3.0 && <5,
                       random ^>=1.2,
                       mtl ^>=2.3
                       --quickcheck ^>= 2.18.0.0
+
     -- Directories containing source files.
     hs-source-dirs:   app
 

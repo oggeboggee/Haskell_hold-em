@@ -1,3 +1,4 @@
+
 module Cards 
       (rank,
        suit,
@@ -11,13 +12,14 @@ module Cards
        hand3)
       where
 
+
 {- Card related data-types -}
 
 import System.Random
-
 import Types
 
-
+-----------------------
+-- Functions --
 
 rankValue :: Rank -> Int
 rankValue r = case r of
@@ -36,16 +38,17 @@ rankValue r = case r of
   Ace   -> 14
 
 
-
-
 --data Card = Card Rank Suit deriving (Eq, Ord)
-
 
 
 --instance Show Card where
 --  show (Card r s) = show r ++ show s
 
 
+-- | Get functions:
+--------------------------------------------------------------
+--------------------------------------------------------------
+-------------------- Get functions for cards -----------------
 
 -- | Extract the rank of a card
 rank :: Card -> Rank
@@ -63,15 +66,23 @@ suit (Card _ s) = s
 fullDeck :: Deck
 fullDeck = [Card r s | r <- allRank, s <- allSuit]
   where
-    allRank = [Two, Three, Four, Five, Six, Seven, 
-                Eight, Nine, Ten, Jack, Queen, King, Ace]
+    allRank = [Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King, Ace]
     allSuit = [Clubs, Diamonds, Hearts, Spades]
 
+
 ---------------------------------------
+
 -- | If deck is not empty, draw a card from a deck and remove it from the deck
 drawCard :: Deck -> Maybe (Card, Deck)
 drawCard [] = Nothing
 drawCard (x:xs) = Just (x, xs)
+
+
+-- | Deal cards by splitting deck
+--dealCards :: Deck -> Int -> ([Card], Deck)
+--dealCards deck n = splitAt n deck --needs to be shuffled, check if n is bigger than the length of deck.
+
+--text
 
 ---------------------------------------
 -- | Help function for shuffle
@@ -110,6 +121,8 @@ runShuffle = do
   gen <- newStdGen
   let (doubles, _) = randomDoubles 52 gen
   return (shuffle doubles fullDeck)
+
+
 --------------------------------------------------------------
 --------------------------------------------------------------
 

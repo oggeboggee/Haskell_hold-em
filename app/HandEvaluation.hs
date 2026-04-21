@@ -549,3 +549,4 @@ hand22 = [Card Two Hearts, Card Four Hearts, Card Six Hearts, Card Six Clubs, Ca
 
 hand23 :: Hand --Nothing (High Card)
 hand23 = [Card Two Hearts, Card Four Hearts, Card Six Hearts, Card Eight Clubs, Card Ten Clubs, Card Jack Diamonds, Card Ace Diamonds]
+

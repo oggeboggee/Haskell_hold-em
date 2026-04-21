@@ -1,4 +1,12 @@
 module Types where
+import Control.Monad.State
+
+--------------------------------------------
+-- | https://cstml.github.io/2021/07/22/State-Monad.html
+-- | We can use StateT to get access to IO inside the state monad.
+-- I'll declare a new data type to see how this works.
+-- We can use liftIO for now to get a working game in the terminal.
+type Game = StateT Table IO
 
 ---------------------------------------------------------------------
 -----------------------
@@ -8,10 +16,10 @@ data Suit = Hearts | Spades | Diamonds | Clubs
 
 instance Show Suit where
     show s = case s of
-        Spades -> "\9824"
-        Hearts -> "\9829"
-        Diamonds -> "\9830"
-        Clubs -> "\9827"
+        Spades -> "S"
+        Hearts -> "H"
+        Diamonds -> "D"
+        Clubs -> "C"
 
 -- | All different ranks
 data Rank =  Two 
@@ -97,13 +105,24 @@ data Blind =
 ---------------------------------------------------------------------
 -- | All phases of the game
 data GamePhase = 
-            Dealhands
+            DealHands
             | PreFlop
             | Flop
             | Turn
             | River
             | Showdown
     deriving (Show)
+
+---------------------------------------------------------------------
+-- | Table positions a player can be in.
+data TablePosition =
+    Dealer
+    | SB
+    | BB
+    | UTG
+    | CutOff
+    deriving (Show, Eq)
+
 
 ---------------------------------------------------------------------
 -- | Data type for a player
@@ -114,7 +133,9 @@ data Player = Player
             chips         :: Chip,
             commitedChips :: Chip,
             folded        :: Bool,
+            checked       :: Bool,
             blind         :: Blind
+            --position      :: TablePosition
             }
     deriving (Eq)
 
@@ -130,19 +151,22 @@ instance Show Player where
 data Table = Table
             {
             players       :: [Player],
-            playerTurn    :: (Player, Int),
+            --playerTurn    :: (Player, Int), -- We have this with dealerposition.
             activePlayers :: [Player],
             highBet       :: Bet,
+            bets          :: [Bet],
             deck          :: Deck,
             board         :: CommunityCard,
             phase         :: GamePhase,
-            pot           :: Pot
-            --dealPosition :: Int
+            pot           :: Pot,
+            dealerPosition :: Int,
+            smallBlindPosition :: Int,
+            bigBlindPosition :: Int
             }
     -- deriving (Show)
 instance Show Table where
     show t = show (players t) ++ 
-            " Playerturn:" ++ show (name (fst (playerTurn t))) ++
+    --        " Playerturn:" ++ show (name (fst (playerTurn t))) ++
             " \nHighbet:" ++ show (highBet t) ++
             " \nPot:" ++ show (pot t)
 
