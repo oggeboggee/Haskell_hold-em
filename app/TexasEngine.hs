@@ -166,9 +166,7 @@ roundOver table =
     let playerList' = (activePlayers table)
         hb          = (highBet table)   
     in  length playerList' == 1 
-        || all (\p -> (commitedChips p) == hb && checked p) playerList'
-
-
+        || all (\p -> (commitedChips p) == hb || checked p) playerList'
 
 
 
@@ -181,9 +179,6 @@ firstPlayerToBet table = case phase table of
 
 
 
-
-
-    
 --startOfGame :: Table -> Bool
 --startOfGame table | (table phase) == DealHands = True
 --                  | (table phase) == _         = False
