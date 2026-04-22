@@ -105,6 +105,10 @@ performAction action playerPos = do
         Raise x -> raise playerPos x
         AllIn   -> allIn playerPos
 
+
+
+
+
 --------------------------------------------------------------
 
 -- | Change a players fold-status to True
@@ -220,6 +224,33 @@ convertAction userInput hb =
         _ | "raise " `isPrefixOf` s -> if all isDigit amount then Just (Raise (read amount)) else Nothing
                                         where amount = (drop 6 s) 
         _ -> Nothing
+
+
+
+applyPureAction :: Table -> Action -> Int -> Table
+applyPureAction table action playerIndex =
+    case action of
+        Fold -> pureFold table playerIndex
+
+        Check -> call to pureFold logic
+
+        etc..
+
+pureFold :: Table -> Int -> Table
+pureFold table playerIndex =
+    let allPlayers = (players table)
+        currentPlayer = allPlayers !! playerIndex
+        currentPlayer' = currentPlayer { folded = True }
+        allPlayers' = replacePlayer playerIndex currentPlayer' allPlayers
+    in table { players = allPlayers'}
+
+
+performAction2 :: Action -> Int -> Game ()
+performAction2 action playerIndex = do
+    modify (\table -> applyPureAction table action playerIndex)
+
+-- So, do we use pure -> StateT or pure -> State -> StateT?
+
 
 
 -- https://zvon.org/other/haskell/Outputprelude/read_f.html    
