@@ -108,6 +108,7 @@ performAction action playerPos = do
 --------------------------------------------------------------
 
 -- | Change a players fold-status to True
+{-
 --fold :: Int -> State Table ()
 fold :: Int -> Game()
 fold playerPos = do
@@ -119,7 +120,19 @@ fold playerPos = do
         active' = filter (not . folded) players'
     put table 
         { players = players',
-          activePlayers = active'} -- 
+          activePlayers = active'} --
+-}           
+
+pureFold :: Table -> Int -> Table
+pureFold table playerIndex =
+    let allPlayers = (players table)
+        currentPlayer = allPlayers !! playerIndex
+        currentPlayer' = currentPlayer { folded = True }
+        allPlayers' = replacePlayer playerIndex currentPlayer' allPlayers
+    in table { players = allPlayers'}
+
+fold :: Int -> Game ()
+fold playerIndex = modify (\table -> pureFold table playerIndex)
     
 
 ---------------------------------------    
@@ -179,8 +192,7 @@ getPlayerAction playerIndex = do
                            then "Fold, Check, Raise <x>, All In"
                            else "Fold, Call, Raise <x>, All In"
     
-    liftIO $ do
-        putStrLn ((name player) ++ " - Your available actions: " ++ availableActions)
+    liftIO $ putStrLn ((name player) ++ " - Your available actions: " ++ availableActions)
 
     input <- liftIO getLine
 
