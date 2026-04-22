@@ -6,6 +6,7 @@ import Types
 import Cards ( fullDeck, hand1, hand2, hand3 )
 
 import Control.Monad.State
+import Data.Bits (Bits(xor))
 
 
  {-   
@@ -34,30 +35,29 @@ nextPlayerTurn = do
 --------------------------------------------------------------
 -- | New variation with more State monad use
 -- Helper function that decrease a players chips and change the state
-decChips' :: Player -> Bet -> State Table ()
-decChips' player bet = do
-    table <- get
-    put table {players = [if (name p) == (name player)
-                          then decChips p bet  
-                          else p | p <- (players table)]}
+-- decChips' :: Player -> Bet -> State Table ()
+-- decChips' player bet = do
+--     table <- get
+--     put table {players = [if (name p) == (name player)
+--                           then decChips p bet  
+--                           else p | p <- (players table)]}
 
+-- -- Helper function that increase a tables pot and change the state
+-- incPot' :: Chip -> State Table ()
+-- incPot' bet = do
+--     table <- get
+--     put table {pot = (pot table) + bet}
 
--- Helper function that increase a tables pot and change the state
-incPot' :: Chip -> State Table ()
-incPot' bet = do
-    table <- get
-    put table {pot = (pot table) + bet}
+-- saveBet :: Bet -> State Table ()
+-- saveBet bet = do
+--     modify (\table -> table {bets = bet : bets table})
 
-saveBet :: Bet -> State Table ()
-saveBet bet = do
-    modify (\table -> table {bets = bet : bets table})
-
--- Transfer a bet from a player to the table pot
-placeBet' :: Player -> Bet -> State Table ()
-placeBet' player bet = do
-    decChips' player bet
-    incPot' bet
-    saveBet bet
+-- -- Transfer a bet from a player to the table pot
+-- placeBet' :: Player -> Bet -> State Table ()
+-- placeBet' player bet = do
+--     decChips' player bet
+--     incPot' bet
+--     saveBet bet
     
 
 --- Thought: In placeBet we are doing get and put on the table twice, is this inefficient?
@@ -92,52 +92,67 @@ replacePlayer playerIndex updatedPlayer playerList =
 --------------------------------------------------------------
 -------------- All Actions a player can make -----------------
 -- All actions end by passing the turn
+performAction :: Action -> Int -> State Table ()
+performAction action playerPos = do 
+    case action of
+        Check   -> check
+        Fold    -> fold playerPos
+        Call    -> call playerPos
+        Raise x -> raise playerPos x
+        AllIn   -> allIn playerPos
+
+--------------------------------------------------------------
 
 -- | Change a players fold-status to True
--- fold :: Player -> State Table ()
--- fold player = do
---     table <- get
---     let players' = [if (name p) == (name player) 
---                     then p {folded = True}
---                     else p | p <- (players table)]
---         active' = filter (not . folded) players'
---     put table 
---         { players = players',
---           activePlayers = active'}
-    --nextPlayerTurn
-
-
+fold :: Int -> State Table ()
+fold playerPos = do
+    table <- get
+    let player   = players table!!playerPos
+        players' = [if name p == name player 
+                    then p {folded = True}
+                    else p | p <- players table]
+        active' = filter (not . folded) players'
+    put table 
+        { players = players',
+          activePlayers = active'}
+    
 
 ---------------------------------------    
--- | Pass the turn to the next player
---check :: Player -> State Table ()
---check player = do 
-    --nextPlayerTurn
+-- | Pass the turn to the next player -- Might not need this
+check :: State Table ()
+check = do 
+    table <- get
+    put table
+    
 ---------------------------------------    
 
 -- | Take an int for how much to raise, then adds the lowest bet
--- raise :: Player -> Bet -> State Table ()
--- raise player raiseamout = do
---     table <- get
---     let bet = raiseamout + lowestBet table player
---     placeBet player bet
-    --nextPlayerTurn
+raise :: Int -> Bet -> State Table ()
+raise playerPos raiseamout = do
+    table <- get
+    let player = players table!!playerPos
+        bet = raiseamout + lowestBet table player
+    placeBet playerPos bet
+    
 
 ---------------------------------------
 -- | A player bet the lowest amount they can to get to next phase
--- call :: Player -> State Table ()
--- call player = do
---     table <- get
---     let lowBet = lowestBet table player
---     placeBet player lowBet
-    --nextPlayerTurn
+call :: Int -> State Table ()
+call playerPos = do
+    table <- get
+    let player = players table!!playerPos
+        lowBet = lowestBet table player
+    placeBet playerPos lowBet
+    
 
 ---------------------------------------
 -- | Bet all chips
--- allIn :: Player -> State Table ()
--- allIn player = do
---     placeBet player (chips player)
-    --nextPlayerTurn
+allIn :: Int -> State Table ()
+allIn playerPos = do
+    table <- get
+    let player = players table!!playerPos
+    placeBet playerPos (chips player)
+    
 --------------------------------------------------------------
 --------------------------------------------------------------
 

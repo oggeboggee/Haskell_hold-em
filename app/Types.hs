@@ -174,10 +174,10 @@ instance Show Table where
 ---------------------------------------------------------------------
 
 -- Data type for all the different types of actions a player can make
-data Actions = 
+data Action = 
     Check
     | Fold
     | Call
-    | Raise
+    | Raise Int
     | AllIn
 

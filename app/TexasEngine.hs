@@ -32,7 +32,7 @@ gameRound = do
     resetGameState
 
     liftIO $ putStrLn "Initiating blinds.."
-    initiateBlindsIO -- Change this to initiateBlindsIO
+    state (runState initiateBlinds) -- Change this to initiateBlindsIO
 
     liftIO $ putStrLn "Dealing hands.."
     dealHands
