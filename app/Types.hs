@@ -170,3 +170,14 @@ instance Show Table where
             " \nHighbet:" ++ show (highBet t) ++
             " \nPot:" ++ show (pot t)
 
+
+---------------------------------------------------------------------
+
+-- Data type for all the different types of actions a player can make
+data Actions = 
+    Check
+    | Fold
+    | Call
+    | Raise
+    | AllIn
+
