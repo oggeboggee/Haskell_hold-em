@@ -78,7 +78,8 @@ placeBet playerIndex bet = do
         in table
             { players = playersAtTableUpdated,
               pot = (pot table) + bet,
-              bets = bet : (bets table)
+              bets = bet : (bets table),
+              highBet = max (highBet table) bet
             }
         )
 
@@ -114,7 +115,7 @@ fold playerPos = do
         active' = filter (not . folded) players'
     put table 
         { players = players',
-          activePlayers = active'}
+          activePlayers = active'} -- 
     
 
 ---------------------------------------    
@@ -181,28 +182,23 @@ lowestBet :: Table -> Player -> Bet
 lowestBet table player = (highBet table) - (commitedChips player)
 
 
-
-
-
 --- We need to apply an action to the game
 
-{-
+
 --------------------------------------------------------------
 --------------------------------------------------------------
 -- | Manual testing:
 player1 :: Player
-player1 = Player "Axel" hand1 400 0 False NoBlind
+player1 = Player "Axel" hand1 400 0 False False NoBlind
 
 player2 :: Player
-player2 = Player "Frodo" hand2 340 0 False NoBlind
+player2 = Player "Frodo" hand2 340 100 False False NoBlind
 
 player3 :: Player
-player3 = Player "Sam" hand3 530 0 False NoBlind
+player3 = Player "Sam" hand3 530 0 False False NoBlind
 
 playerlist :: [Player]
 playerlist = [player1, player2, player3]
 
-table1 :: Table
-table1 = Table playerlist (playerlist!!0, 0) playerlist 50 fullDeck [] Flop 75
--}
-
+table2 :: Table
+table2 = Table playerlist playerlist 100 [] fullDeck [] PreFlop 200 0 1 2
