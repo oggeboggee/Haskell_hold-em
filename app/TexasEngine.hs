@@ -31,15 +31,15 @@ gameRound = do
     liftIO $ putStrLn "Game is starting.."
     resetGameState
 
-
     liftIO $ putStrLn "Initiating blinds.."
-    initiateBlinds
+    initiateBlindsIO -- Change this to initiateBlindsIO
 
     liftIO $ putStrLn "Dealing hands.."
     dealHands
 
     table <- get
-    liftIO $ print table
+    printTable
+    --liftIO $ print table
 
     --bettingRound
 {-
@@ -107,7 +107,7 @@ resetCheckedPlayers = do
 
 
 -- | Initialisation of the blinds of the game.
-initiateBlinds :: Game ()
+initiateBlinds :: State Table ()
 initiateBlinds = do
     table <- get
 
@@ -118,7 +118,11 @@ initiateBlinds = do
     placeBet bbPlayer 100
  -- We can later on introduce logic that increases blind amount per round
 
-
+-- Take initiateBlinds and return a Game () type
+initiateBlindsIO :: Game ()
+initiateBlindsIO = do
+    state (runState initiateBlinds)
+    
 
 ---------- Dealing of cards, hands, communitycards -----------
 
@@ -230,4 +234,12 @@ gameLoop :: Game ()
 gameLoop = do
     gameRound
     --gameLoop
+
+
+
+printTable :: Game ()
+printTable = do
+    table <- get
+    liftIO $ print table
+    --liftIO $ putStrLn ("Current table: " ++ show table)
 

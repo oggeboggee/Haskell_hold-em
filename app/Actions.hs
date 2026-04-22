@@ -29,7 +29,7 @@ nextPlayerTurn = do
 --                     else p | p <- (players table)]
 --         pot'     = (pot table) + bet
 --     put table {players = players', pot = pot'}
-{-
+
 --------------------------------------------------------------
 --------------------------------------------------------------
 -- | New variation with more State monad use
@@ -41,24 +41,30 @@ decChips' player bet = do
                           then decChips p bet  
                           else p | p <- (players table)]}
 
+
 -- Helper function that increase a tables pot and change the state
 incPot' :: Chip -> State Table ()
 incPot' bet = do
     table <- get
     put table {pot = (pot table) + bet}
 
+saveBet :: Bet -> State Table ()
+saveBet bet = do
+    modify (\table -> table {bets = bet : bets table})
+
 -- Transfer a bet from a player to the table pot
-placeBet :: Player -> Bet -> State Table ()
-placeBet player bet = do
+placeBet' :: Player -> Bet -> State Table ()
+placeBet' player bet = do
     decChips' player bet
     incPot' bet
-    -}
+    saveBet bet
+    
 
 --- Thought: In placeBet we are doing get and put on the table twice, is this inefficient?
 --- 
 
 -- placeBet that works with Gaem() 
-placeBet :: Int -> Bet -> Game()
+placeBet :: Int -> Bet -> State Table ()
 placeBet playerIndex bet = do
     modify (\table ->
         let playersAtTable = (players table)
@@ -158,6 +164,7 @@ incPot pot bet = pot + bet
 -- | Helper function to calculate lowest bet a player can make
 lowestBet :: Table -> Player -> Bet
 lowestBet table player = (highBet table) - (commitedChips player)
+
 
 
 
