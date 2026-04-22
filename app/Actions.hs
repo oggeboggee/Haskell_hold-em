@@ -7,6 +7,8 @@ import Cards ( fullDeck, hand1, hand2, hand3 )
 
 import Control.Monad.State
 import Data.Bits (Bits(xor))
+import Data.Char
+import Data.List (isPrefixOf)
 
 
  {-   
@@ -64,7 +66,8 @@ nextPlayerTurn = do
 --- 
 
 -- placeBet that works with Gaem() 
-placeBet :: Int -> Bet -> State Table ()
+--placeBet :: Int -> Bet -> State Table ()
+placeBet :: Int -> Bet -> Game ()
 placeBet playerIndex bet = do
     modify (\table ->
         let playersAtTable = (players table)
@@ -93,7 +96,7 @@ replacePlayer playerIndex updatedPlayer playerList =
 --------------------------------------------------------------
 -------------- All Actions a player can make -----------------
 -- All actions end by passing the turn
-performAction :: Action -> Int -> State Table ()
+performAction :: Action -> Int -> Game ()
 performAction action playerPos = do 
     case action of
         Check   -> check
@@ -105,7 +108,8 @@ performAction action playerPos = do
 --------------------------------------------------------------
 
 -- | Change a players fold-status to True
-fold :: Int -> State Table ()
+--fold :: Int -> State Table ()
+fold :: Int -> Game()
 fold playerPos = do
     table <- get
     let player   = players table!!playerPos
@@ -120,7 +124,8 @@ fold playerPos = do
 
 ---------------------------------------    
 -- | Pass the turn to the next player -- Might not need this
-check :: State Table ()
+--check :: State Table ()
+check :: Game ()
 check = do 
     table <- get
     put table
@@ -128,7 +133,8 @@ check = do
 ---------------------------------------    
 
 -- | Take an int for how much to raise, then adds the lowest bet
-raise :: Int -> Bet -> State Table ()
+--raise :: Int -> Bet -> State Table ()
+raise :: Int -> Bet -> Game ()
 raise playerPos raiseamout = do
     table <- get
     let player = players table!!playerPos
@@ -138,7 +144,8 @@ raise playerPos raiseamout = do
 
 ---------------------------------------
 -- | A player bet the lowest amount they can to get to next phase
-call :: Int -> State Table ()
+--call :: Int -> State Table ()
+call :: Int -> Game ()
 call playerPos = do
     table <- get
     let player = players table!!playerPos
@@ -148,12 +155,62 @@ call playerPos = do
 
 ---------------------------------------
 -- | Bet all chips
-allIn :: Int -> State Table ()
+--allIn :: Int -> State Table ()
+allIn :: Int -> Game ()
 allIn playerPos = do
     table <- get
     let player = players table!!playerPos
     placeBet playerPos (chips player)
+
+
+-- We want to go: 
+-- show actions based on what player can do -> user input -> convertAction -> applyAction -> update table?
+
+-- | Show a player what actions they can make (based on highBet), prompt player to type desired action,
+--   take action and convert it from a string into what happens in-game, prompt user if action is wrong.
+getPlayerAction :: Int -> Game Action
+getPlayerAction playerIndex = do
+    table <- get
+
+    let player = (players table) !! playerIndex
+        hb = (highBet table)
+
+        availableActions = if hb == 0
+                           then "Fold, Check, Raise <x>, All In"
+                           else "Fold, Call, Raise <x>, All In"
     
+    liftIO $ do
+        putStrLn ((name player) ++ " - Your available actions: " ++ availableActions)
+
+    input <- liftIO getLine
+
+    case convertAction input hb of
+        Just action -> return action
+        Nothing -> do
+            liftIO $ putStrLn "Input isn't valid."
+            getPlayerAction playerIndex
+
+
+-- | Take the user input and convert it into a Maybe Action.
+convertAction :: String -> Bet -> Maybe Action
+convertAction userInput hb = 
+    let s = (map toLower) userInput
+    in case s of
+        "fold" -> Just Fold
+        "check"
+            | hb == 0 -> Just Check
+            | otherwise -> Nothing
+        "call"
+            | hb > 0 -> Just Call
+            | otherwise -> Nothing
+        "all in" -> Just AllIn
+        "allin" -> Just AllIn
+        _ | "raise " `isPrefixOf` s -> if all isDigit amount then Just (Raise (read amount)) else Nothing
+                                        where amount = (drop 6 s) 
+        _ -> Nothing
+
+
+-- https://zvon.org/other/haskell/Outputprelude/read_f.html    
 --------------------------------------------------------------
 --------------------------------------------------------------
 

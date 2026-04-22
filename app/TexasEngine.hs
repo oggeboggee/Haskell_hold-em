@@ -26,19 +26,38 @@ nextPhase p = case p of
 
 -- https://cstml.github.io/2021/07/22/State-Monad.html
 
+testRound :: Game ()
+testRound = do
+    let playerIndex = 0
+    let hb = 0
+
+    table <- get
+    liftIO $ print table
+
+    action <- getPlayerAction playerIndex
+
+    performAction action playerIndex
+
+    table' <- get
+
+    liftIO $ do
+        putStrLn "After action"
+        print table'
+
+
+
+
 gameRound :: Game ()
 gameRound = do
     liftIO $ putStrLn "Game is starting.."
     resetGameState
 
     liftIO $ putStrLn "Initiating blinds.."
-    state (runState initiateBlinds) -- Change this to initiateBlindsIO
+    --state (runState initiateBlinds) -- Change this to initiateBlindsIO
 
     liftIO $ putStrLn "Dealing hands.."
     dealHands
 
-    table <- get
-    printTable
     --liftIO $ print table
 
     --bettingRound
@@ -107,7 +126,8 @@ resetCheckedPlayers = do
 
 
 -- | Initialisation of the blinds of the game.
-initiateBlinds :: State Table ()
+--initiateBlinds :: State Table ()
+initiateBlinds :: Game ()
 initiateBlinds = do
     table <- get
 
@@ -119,9 +139,9 @@ initiateBlinds = do
  -- We can later on introduce logic that increases blind amount per round
 
 -- Take initiateBlinds and return a Game () type
-initiateBlindsIO :: Game ()
-initiateBlindsIO = do
-    state (runState initiateBlinds)
+--initiateBlindsIO :: Game ()
+--initiateBlindsIO = do
+--    state (runState initiateBlinds)
     
 
 ---------- Dealing of cards, hands, communitycards -----------

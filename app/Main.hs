@@ -22,7 +22,7 @@ main = do
               deck = fullDeck,
               board = [],
               phase = DealHands,
-              highBet = 0,
+              highBet = 10,
               pot = 0,
               dealerPosition = 0,
               smallBlindPosition = 1,
@@ -33,5 +33,5 @@ main = do
 --  | Evaluate a state computation with the given initial state and return the final value, 
 --    discarding the final state
 --    https://hackage-content.haskell.org/package/mtl-2.3.2/docs/Control-Monad-State-Lazy.html
-    evalStateT gameLoop initialTable
+    evalStateT testRound initialTable
 
