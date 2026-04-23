@@ -109,21 +109,17 @@ fold :: Int -> State Table ()
 fold playerPos = do
     table <- get
     let player   = players table!!playerPos
-        players' = [if name p == name player 
-                    then p {folded = True}
-                    else p | p <- players table]
-        active' = filter (not . folded) players'
+        player'  = player {folded = True}
+        players' = replacePlayer playerPos player' (players table)
     put table 
-        { players = players',
-          activePlayers = active'} -- 
+        { players = players'}
     
 
 ---------------------------------------    
 -- | Pass the turn to the next player -- Might not need this
 check :: State Table ()
 check = do 
-    table <- get
-    put table
+    return ()
     
 ---------------------------------------    
 
