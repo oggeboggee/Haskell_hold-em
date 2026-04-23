@@ -37,7 +37,10 @@ gameRound = do
     liftIO $ putStrLn "Dealing hands.."
     dealHands
 
-    table <- get
+    --table <- get
+    printTable
+
+    chooseAction
     printTable
     --liftIO $ print table
 
@@ -242,4 +245,20 @@ printTable = do
     table <- get
     liftIO $ print table
     --liftIO $ putStrLn ("Current table: " ++ show table)
+
+
+chooseAction :: Game ()
+chooseAction = do
+    liftIO $ putStrLn "Choose action: "
+    input <- liftIO getLine
+    state $ case input of
+        "fold"  -> runState (performAction Fold 0)
+        "call"  -> runState (performAction Call 0)
+        "check" -> runState (performAction Check 0)
+        "raise" -> runState (performAction (Raise 100) 0)
+        "allIn" -> runState (performAction AllIn 0)
+        _       -> error "invalid action"
+
+        
+    
 
