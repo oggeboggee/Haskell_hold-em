@@ -226,7 +226,7 @@ convertAction userInput hb =
         _ -> Nothing
 
 
-
+{-
 applyPureAction :: Table -> Action -> Int -> Table
 applyPureAction table action playerIndex =
     case action of
@@ -249,6 +249,7 @@ performAction2 :: Action -> Int -> Game ()
 performAction2 action playerIndex = do
     modify (\table -> applyPureAction table action playerIndex)
 
+-}
 -- So, do we use pure -> StateT or pure -> State -> StateT?
 
 
