@@ -30,16 +30,16 @@ nextPhase p = case p of
 gameRound :: Game ()
 gameRound = do
     liftIO $ putStrLn "Game is starting.."
-    resetGameState
+    state (runState resetGameState)
 
     liftIO $ putStrLn "Initiating blinds.."
     state (runState initiateBlinds)
 
     runShuffle2
     liftIO $ putStrLn "Dealing hands.."
-    dealHands
+    state (runState dealHands)
     -- PreFlop
-    moveToNextPhase
+    state (runState moveToNextPhase)
     table <- get
     printTable
 
@@ -47,34 +47,34 @@ gameRound = do
     printTable
     
     -- Flop
-    moveToNextPhase
-    resetGameState
-    dealCommunityCards
+    state (runState moveToNextPhase)
+    state (runState resetGameState)
+    state (runState dealCommunityCards)
     printTable
 
     bettingRound (firstPlayerToBet table)
     printTable
 
     -- Turn
-    moveToNextPhase
-    resetGameState
-    dealCommunityCards
+    state (runState moveToNextPhase)
+    state (runState resetGameState)
+    state (runState dealCommunityCards)
     printTable
 
     bettingRound (firstPlayerToBet table)
     printTable
 
     -- River
-    moveToNextPhase
-    resetGameState
-    dealCommunityCards
+    state (runState moveToNextPhase)
+    state (runState resetGameState)
+    state (runState dealCommunityCards)
     printTable
 
     bettingRound (firstPlayerToBet table)
     printTable
     
     -- Showdown
-    moveToNextPhase
+    state (runState moveToNextPhase)
     win <- state (runState showdown)
     liftIO (showWinners win)
     -- printTable
@@ -103,7 +103,7 @@ bettingRound = do
 
 
 -- | Reset the required fields in the table and the players in the table.
-resetGameState :: Game ()
+resetGameState :: State Table ()--Game ()
 resetGameState = 
     modify (\table -> 
         let resetPlayer player = player 
@@ -123,12 +123,12 @@ resetGameState =
 
 
 -- | Reset players who have checked their hands
-resetCheckedPlayers :: Game ()
-resetCheckedPlayers = do
-    table <- get
-    let uncheckPlayers = map (\players -> players {checked = False}) (players table)
+-- resetCheckedPlayers :: Game ()
+-- resetCheckedPlayers = do
+--     table <- get
+--     let uncheckPlayers = map (\players -> players {checked = False}) (players table)
 
-    modify (\table -> table { players = uncheckPlayers})
+--     modify (\table -> table { players = uncheckPlayers})
 
 
 -- | Initialisation of the blinds of the game.
@@ -142,18 +142,13 @@ initiateBlinds = do
     placeBet sbPlayer 50
     placeBet bbPlayer 100
  -- We can later on introduce logic that increases blind amount per round
-
--- Take initiateBlinds and return a Game () type
-initiateBlindsIO :: Game ()
-initiateBlindsIO = do
-    state (runState initiateBlinds)
     
 
 ---------- Dealing of cards, hands, communitycards -----------
 
 -- | Deal cards, update the deck after removing the cards
 --   and return the cards that have been delt.
-dealCards :: Int -> Game [Card]
+dealCards :: Int -> State Table [Card] --Game [Card]
 dealCards n = do
     table <- get
     let (deltCards, newDeck) = splitAt n (deck table)
@@ -164,7 +159,7 @@ dealCards n = do
 --   and for each player in the list, use 'dealCards' to take two cards from the deck. Put
 --   the cards as the players hand, then put the list of players now with updated hands back
 --   into the table.
-dealHands :: Game ()
+dealHands :: State Table () --Game ()
 dealHands = do
     table <- get
     playerList <- gets players
@@ -177,7 +172,7 @@ dealHands = do
 
 
 -- | Deal community cards to the board.
-dealCommunityCards :: Game ()
+dealCommunityCards :: State Table ()--Game ()
 dealCommunityCards = do
     table <- get
     let currentPhase = phase table
@@ -247,7 +242,7 @@ nextPlayerToAct i activePlayers = nextActivePlayer
 
                                 
 -- | Advance from the tables current phase to the next one.
-moveToNextPhase :: Game ()
+moveToNextPhase :: State Table () --Game ()
 moveToNextPhase = modify (\table -> table { phase = nextPhase (phase table) })
 
 

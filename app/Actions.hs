@@ -83,7 +83,6 @@ placeBet playerIndex bet = do
             }
         )
 
-
 -- | We need a function to take a player at a specific index in a list, 
 --   and then replace with the updated player
 replacePlayer :: Int -> Player -> [Player] -> [Player]
@@ -96,7 +95,7 @@ replacePlayer playerIndex updatedPlayer playerList =
 performAction :: Action -> Int -> State Table ()
 performAction action playerPos = do 
     case action of
-        Check   -> check
+        Check   -> check playerPos
         Fold    -> fold playerPos
         Call    -> call playerPos
         Raise x -> raise playerPos x
@@ -117,9 +116,13 @@ fold playerPos = do
 
 ---------------------------------------    
 -- | Pass the turn to the next player -- Might not need this
-check :: State Table ()
-check = do 
-    return ()
+check :: Int -> State Table ()
+check playerPos = do 
+    table <- get
+    let player   = (players table!!playerPos) {commitedChips = 0}
+        players' = replacePlayer playerPos player (players table)
+    put table {players = players'}
+
     
 ---------------------------------------    
 
