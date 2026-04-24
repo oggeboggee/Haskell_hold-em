@@ -18,7 +18,7 @@ main = do
                    
         initialTable = Table 
             { players = players,
-              activePlayers = players,           
+              --activePlayers = players,           
               deck = fullDeck,
               board = [],
               phase = DealHands,

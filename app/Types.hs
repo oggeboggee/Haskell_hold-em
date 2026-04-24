@@ -152,7 +152,7 @@ data Table = Table
             {
             players       :: [Player],
             --playerTurn    :: (Player, Int), -- We have this with dealerposition.
-            activePlayers :: [Player],
+            --activePlayers :: [Player],
             highBet       :: Bet,
             bets          :: [Bet],
             deck          :: Deck,

@@ -83,7 +83,7 @@ gameRound = do
     win <- state (runState showdown)
     --liftIO $ print win
     showWinners win
-    -- printTable
+    printTable
 {-
     moveToNextPhase
     dealCommunityCards
@@ -121,7 +121,7 @@ resetGameState =
         
         in table 
             { players = resetPlayer',
-              activePlayers = resetPlayer',
+              --activePlayers = resetPlayer',
               highBet = 0,
               bets = []
             }
@@ -185,7 +185,7 @@ dealHands = do
         deltHand <- dealCards 2
         return player { hand = deltHand}
         ) playerList
-    modify (\table -> table {players = playerList', activePlayers = playerList'})
+    modify (\table -> table {players = playerList'{-, activePlayers = playerList'-}})
 
 
 -- | Deal community cards to the board.
@@ -202,12 +202,12 @@ dealCommunityCards = do
     modify (\table -> table { board = board table ++ cards }) 
 
 
-roundOver :: Table -> Bool
-roundOver table = 
-    let playerList' = (activePlayers table)
-        hb          = (highBet table)   
-    in  length playerList' == 1 
-        || all (\p -> (commitedChips p) == hb || checked p) playerList'
+-- roundOver :: Table -> Bool
+-- roundOver table = 
+--     let playerList' = (activePlayers table)
+--         hb          = (highBet table)   
+--     in  length playerList' == 1 
+--         || all (\p -> (commitedChips p) == hb || checked p) playerList'
 
 
 
@@ -215,8 +215,8 @@ roundOver table =
 --   the player UTG (BB+1). In all postflop betting rounds action begins with the player in the SB position.
 firstPlayerToBet :: Table -> Int
 firstPlayerToBet table = case phase table of
-    PreFlop -> nextPlayerToAct (bigBlindPosition table) (activePlayers table)
-    _       -> (smallBlindPosition table)
+    PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
+    _       -> nextPlayerToAct (smallBlindPosition table) (players table)
 
 
 
@@ -245,11 +245,15 @@ moveDealer = do
 
 -- | Decided the next player to (we can ONLY use activeplayers here. Should we maybe have a specific type
 --   that guarantees it will work only for activePlayers list?)
+-- nextPlayerToAct :: Int -> [Player] -> Int
+-- nextPlayerToAct i activePlayers = nextActivePlayer
+--     where nextActivePlayer = (i + 1) `mod` (length activePlayers)
+
 nextPlayerToAct :: Int -> [Player] -> Int
-nextPlayerToAct i activePlayers = nextActivePlayer
-    where nextActivePlayer = (i + 1) `mod` (length activePlayers)
-
-
+nextPlayerToAct i players = if not (hasFolded (players!!next)) then next
+                                else nextPlayerToAct (i+1) players
+                                    where
+                                        next = (i + 1) `mod` (length players)
     
 
 
@@ -325,12 +329,13 @@ availableActions table = if canCheck table then "Check, " ++ actions
 bettingRound :: Int -> Game ()
 bettingRound playerToAct = do
     table <- get
-    if roundOver2 (players table) (highBet table) 
+    if roundOver2 (players table) (highBet table) || onePlayerLeft (players table)
         then do 
             return ()
     else do
         chooseAction playerToAct
         printTable
+        --let activePlayers = filterFolded (players table)
         bettingRound (nextPlayerToAct playerToAct (players table))
         
 --------------------------------------------------------------
@@ -340,13 +345,13 @@ bettingRound playerToAct = do
 showdown :: State Table [Int]
 showdown = do
     table <- get
-    let players'  = filter (not . hasFolded) (players table)
+    let players'  = filterFolded (players table)
         communityCards = board table
         hands    = [hand player | player <- players']
         winners'  = winners communityCards hands
-        --chips    = div (pot table) (length winners')
-        --players'' = dealOutChips players' winners' chips
-    --put table {players = players''}
+        chips    = div (pot table) (length winners')
+        players'' = dealOutChips players' winners' chips
+    put table {players = players'', pot = 0}
     return winners'
 
 showWinners :: [Int] -> Game ()
@@ -376,6 +381,8 @@ dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
         players' = replacePlayer x player players
 
 
+onePlayerLeft :: [Player] -> Bool
+onePlayerLeft players = (==1) . length $ filter not [hasFolded player | player <- players]
 --------------------------------------------------------------
 roundOver2 :: [Player] -> Int -> Bool
 roundOver2 players highBet = and [matchHBet p highBet || hasFolded p | p <- players]
@@ -386,6 +393,8 @@ matchHBet player highBet = commitedChips player == highBet && highBet /= 0
 hasFolded :: Player -> Bool
 hasFolded = folded 
 
+filterFolded :: [Player] -> [Player]
+filterFolded  = filter (not . hasFolded)
 
 --------------------------------------------------------------
 --------------------------------------------------------------

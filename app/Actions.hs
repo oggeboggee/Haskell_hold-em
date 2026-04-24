@@ -188,7 +188,7 @@ lowestBet table player = (highBet table) - (commitedChips player)
 --------------------------------------------------------------
 -- | Manual testing:
 player1 :: Player
-player1 = Player "Axel" hand1 400 0 False False NoBlind
+player1 = Player "Axel" hand1 400 0 True False NoBlind
 
 player2 :: Player
 player2 = Player "Frodo" hand2 340 100 False False NoBlind
@@ -200,4 +200,4 @@ playerlist :: [Player]
 playerlist = [player1, player2, player3]
 
 table2 :: Table
-table2 = Table playerlist playerlist 100 [] fullDeck [] PreFlop 200 0 1 2
+table2 = Table playerlist{- playerlist -}100 [] fullDeck [] PreFlop 200 0 1 2
