@@ -408,8 +408,9 @@ allIndexOfFlush cards = getIndex cards (switch (concat flushGroups))
 --------------- End Straight Flush --------------
 ------------------- Best Hand -------------------
 
-bestComb :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
-bestComb cards
+-- | Gives data given a list with cards
+handData :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
+handData cards
      | getBool (straightFlush cards) = straightFlush cards
      | getBool (quads cards        ) = quads cards
      | getBool (fullHouse cards    ) = fullHouse cards
@@ -424,19 +425,67 @@ bestComb cards
 
 ----------------- End Best Hand -----------------
 ----------------- Compare Part ------------------
-{-      Basic Texas Hold´ Em comparision
-the comparision between two hands with triumph-order is:
-                          Combination
-if same Combination ->    Compare list of Combination-ranks (example highest card in a straight)
-if same combinationRank-> Compare Rank of kickers, high to low.
-if same kickers        -> Tie        
 
--}
 
-winners :: Table -> [Player]
-winners = undefined   
 
--- | getters
+-- | input: communityCards, list of players Hands
+-- | output: index of winning hands
+winners :: [Card] -> [[Card]] -> [Int]
+winners com play = bestCombinations playersHands
+     where
+          playersHands = mergeCardList com play -- Combines every players hand with the communityCards
+
+
+bestCombinations :: [[Card]] -> [Int]
+bestCombinations playersHands = finalList
+          where
+               rankList = map getCombination (map handData playersHands) -- returns a list with the combinations of the hands
+               highestComb = maximum rankList  -- highest combination of the hands
+               zipped = zip rankList [0..] -- returns ziped with index
+               indexList =  map check zipped
+               check (x,n)                 -- checks if the combination is the highest, returns the indexes for higest, else -1.
+                  | x == highestComb = n
+                  | otherwise        = -1
+               finalList = filter (/= (-1)) indexList 
+
+
+
+-- | example 
+-- | cards: [5H,8H,JC,QD,AD]
+-- | (x:xs): [[6H,KC],[7C,9D]]
+-- | output: [[5H,6H,8H,JC,QD,KC,AD],[5H,7C,8H,9D,JC,QD,AD]]
+mergeCardList :: [Card] -> [[Card]] -> [[Card]]
+mergeCardList card []           = []
+mergeCardList cards (x:xs) = sort (mergeCards cards x)  : mergeCardList cards xs
+
+
+
+-------------------------------------------------
+-------------------------------------------------
+-------------------------------------------------
+hand24 :: Hand
+hand24 = [Card Five Hearts, Card Eight Hearts, Card Jack Hearts, Card Queen Diamonds, Card Ace Diamonds]
+
+hand25 :: Hand
+hand25 = [Card Six Hearts, Card King Hearts]
+
+hand26 :: Hand
+hand26 = [Card Seven Hearts, Card Queen Hearts]
+
+hand27 :: Hand
+hand27 = [Card Eight Diamonds, Card Queen Clubs]
+
+handList1 :: [[Card]]
+handList1 = [hand25, hand26, hand27]
+
+
+hand28 :: Hand
+hand28 = [Card Five Hearts, Card Six Spades, Card Seven Clubs, Card Eight Diamonds, Card Ace Hearts]
+
+handList2 :: [[Card]]
+handList2 = [[Card Five Hearts, Card King Spades], [Card Eight Hearts, Card King Clubs], [Card Two Spades, Card Three Spades]]
+
+-------------------- getters ---------------------
 
 getBool :: (Bool, a, b, c, d) -> Bool
 getBool (b, _, _, _, _) = b
@@ -455,14 +504,6 @@ getFinalCards (_ , _, _, _, c) = c
 
 
 --------------- End Compare Part ----------------
-
--- TODO
-
--- winnner(s)
--- special case for Ace as lowest card in a straight |Ace|Two|Three|Four|Five|
--- QuickCheck - testing, proterties
--- make the functions better and more readable
--- bitwise comparison?
 
 
 ----------------------------
