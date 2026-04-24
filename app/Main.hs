@@ -14,7 +14,7 @@ main = do
 
     let players = [Player "Bob" [] 1000 0 False False NoBlind,
                    Player "Sam" [] 1000 0 False False SmallBlind,
-                   Player "Jonathan" [] 1000 0 False False BigBlind]
+                   Player "Frodo" [] 1000 0 False False BigBlind]
                    
         initialTable = Table 
             { players = players,

@@ -42,41 +42,47 @@ gameRound = do
     state (runState moveToNextPhase)
     table <- get
     printTable
-
+    liftIO $ putStrLn "First bettinground!"
     bettingRound (firstPlayerToBet table)
     printTable
     
     -- Flop
+    liftIO $ putStrLn "Moving to next phase: Flop"
     state (runState moveToNextPhase)
-    state (runState resetGameState)
+    
+    state (runState resetRound)
     state (runState dealCommunityCards)
     printTable
-
+    liftIO $ putStrLn "Second bettinground!"
     bettingRound (firstPlayerToBet table)
     printTable
 
     -- Turn
+    liftIO $ putStrLn "Moving to next phase: Turn"
     state (runState moveToNextPhase)
-    state (runState resetGameState)
+    
+    state (runState resetRound)
     state (runState dealCommunityCards)
     printTable
-
+    liftIO $ putStrLn "Third bettinground!"
     bettingRound (firstPlayerToBet table)
     printTable
 
     -- River
+    liftIO $ putStrLn "Moving to next phase: River"
     state (runState moveToNextPhase)
-    state (runState resetGameState)
+    state (runState resetRound)
     state (runState dealCommunityCards)
     printTable
-
+    liftIO $ putStrLn "Last bettinground!"
     bettingRound (firstPlayerToBet table)
     printTable
     
     -- Showdown
     state (runState moveToNextPhase)
     win <- state (runState showdown)
-    liftIO (showWinners win)
+    --liftIO $ print win
+    showWinners win
     -- printTable
 {-
     moveToNextPhase
@@ -121,6 +127,17 @@ resetGameState =
             }
     )    
 
+resetRound :: State Table ()
+resetRound = 
+    modify (\table -> 
+        let resetPlayer player = player {commitedChips = 0}
+            resetPlayer' = map resetPlayer (players table)
+        
+        in table 
+            { players = resetPlayer',
+              highBet = 0
+            }
+    )    
 
 -- | Reset players who have checked their hands
 -- resetCheckedPlayers :: Game ()
@@ -263,8 +280,10 @@ printTable = do
     liftIO $ print table
     --liftIO $ putStrLn ("Current table: " ++ show table)
 
-
-
+printCommunityCards :: Game ()
+printCommunityCards = do
+    table <- get
+    liftIO $ print (board table)
 
 
 --------------------------------------------------------------
@@ -318,28 +337,33 @@ bettingRound playerToAct = do
 --------------------------------------------------------------
 
 -- Maybe a away to do the showdown... simple way...
-showdown :: State Table [Player]
+showdown :: State Table [Int]
 showdown = do
     table <- get
-    let players'  = players table
+    let players'  = filter (not . hasFolded) (players table)
         communityCards = board table
-        hands    = [hand player | player <- players table]
+        hands    = [hand player | player <- players']
         winners'  = winners communityCards hands
-        chips    = div (pot table) (length winners')
-        players'' = dealOutChips players' winners' chips
-    put table {players = players''}
-    return players''
+        --chips    = div (pot table) (length winners')
+        --players'' = dealOutChips players' winners' chips
+    --put table {players = players''}
+    return winners'
 
-showWinners :: [Player] -> IO ()
-showWinners ps = do
-    let names      = [name player | player <- ps]
-        nameString = printNames names
-    putStrLn $ "The winners are: " ++ nameString
+showWinners :: [Int] -> Game ()
+showWinners indexes = do
+    table <- get
+    if null indexes
+        then liftIO $ putStrLn "All folded!"
+    else do
+        let names      = [name (players table!!i) | i <- indexes]
+            nameString = printNames names
+        liftIO $ putStrLn $ "The winners are: " ++ nameString
 
 
 printNames :: [String] -> String
 printNames []     = ""
-printNames (x:xs) = " " ++ x ++ ", "
+printNames (x:[]) = x
+printNames (x:xs) = " " ++ x ++ ", " ++ printNames xs
 
 
 
@@ -369,7 +393,7 @@ runShuffle2 :: Game()
 runShuffle2 = do
     gen <- newStdGen
     let (doubles, _) = randomDoubles' 52 gen
-    let shuffledDeck = (shuffle doubles fullDeck)
+    let shuffledDeck = shuffle doubles fullDeck
     modify(\table -> table {deck = shuffledDeck})
 
 randomDoubles' :: Int -> StdGen -> ([Double], StdGen)
