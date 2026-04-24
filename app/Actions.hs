@@ -162,8 +162,8 @@ decChips player bet = player {chips         = (chips player)-bet,
                               commitedChips = (commitedChips player)+bet}
 
 -- | increase the amount of chips a player have by a certain amount
-incChip :: Player -> Pot -> Player
-incChip player pot = player {chips = (chips player)+pot}
+incChips :: Player -> Pot -> Player
+incChips player pot = player {chips = (chips player)+pot}
 
 -- | Reset the commited chips a player have made to zero
 resetCommited :: Player -> Player

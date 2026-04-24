@@ -4,6 +4,9 @@ import Types
 import Cards
 import Actions
 import Control.Monad.State
+import Data.Char (toLower)
+import System.Random
+import HandEvaluation
 
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -22,8 +25,6 @@ nextPhase p = case p of
 
 
 
-
-
 -- https://cstml.github.io/2021/07/22/State-Monad.html
 
 gameRound :: Game ()
@@ -32,32 +33,52 @@ gameRound = do
     resetGameState
 
     liftIO $ putStrLn "Initiating blinds.."
-    state (runState initiateBlinds) -- Change this to initiateBlindsIO
+    state (runState initiateBlinds)
 
+    runShuffle2
     liftIO $ putStrLn "Dealing hands.."
     dealHands
-
-    --table <- get
+    -- PreFlop
+    moveToNextPhase
+    table <- get
     printTable
 
-    chooseAction
+    bettingRound (firstPlayerToBet table)
     printTable
-    --liftIO $ print table
+    
+    -- Flop
+    moveToNextPhase
+    resetGameState
+    dealCommunityCards
+    printTable
 
-    --bettingRound
+    bettingRound (firstPlayerToBet table)
+    printTable
+
+    -- Turn
+    moveToNextPhase
+    resetGameState
+    dealCommunityCards
+    printTable
+
+    bettingRound (firstPlayerToBet table)
+    printTable
+
+    -- River
+    moveToNextPhase
+    resetGameState
+    dealCommunityCards
+    printTable
+
+    bettingRound (firstPlayerToBet table)
+    printTable
+    
+    -- Showdown
+    moveToNextPhase
+    win <- state (runState showdown)
+    liftIO (showWinners win)
+    -- printTable
 {-
-    moveToNextPhase
-    dealCommunityCards
-    bettingRound
-
-    moveToNextPhase
-    dealCommunityCards
-    bettingRound
-
-    moveToNextPhase
-    dealCommunityCards
-    bettingRound
-
     moveToNextPhase
     dealCommunityCards
     bettingRound
@@ -87,7 +108,8 @@ resetGameState =
     modify (\table -> 
         let resetPlayer player = player 
                 { folded = False,
-                  checked = False
+                  checked = False,
+                  commitedChips = 0
                 }
             resetPlayer' = map resetPlayer (players table)
         
@@ -247,18 +269,118 @@ printTable = do
     --liftIO $ putStrLn ("Current table: " ++ show table)
 
 
-chooseAction :: Game ()
-chooseAction = do
-    liftIO $ putStrLn "Choose action: "
-    input <- liftIO getLine
-    state $ case input of
-        "fold"  -> runState (performAction Fold 0)
-        "call"  -> runState (performAction Call 0)
-        "check" -> runState (performAction Check 0)
-        "raise" -> runState (performAction (Raise 100) 0)
-        "allIn" -> runState (performAction AllIn 0)
-        _       -> error "invalid action"
 
+
+
+--------------------------------------------------------------
+--------------------------------------------------------------
+--------------------------------------------------------------
+chooseAction :: Int -> Game ()
+chooseAction playerPos = do
+    table <- get
+    let playerToAct = players table!!playerPos
+    liftIO $ putStrLn $ "Available actions: " ++ availableActions table
+    liftIO $ putStrLn $ name playerToAct ++ ", choose action: "
+    input <- liftIO getLine
+    let s = (map toLower) input
+    case s of
+        "fold"  -> state $ runState (performAction Fold playerPos)
+        "call"  -> state $ runState (performAction Call playerPos)
+        "check" -> state $ runState (performAction Check playerPos)
+        "raise" -> do 
+            liftIO $ putStrLn "Type in amount: " -- Crashes if no number is typen in
+            amount <- liftIO readLn  
+            state $ runState (performAction (Raise amount) playerPos)
+        "allin" -> state $ runState (performAction AllIn playerPos)
+        _       -> do 
+            liftIO $ putStrLn "Invalid option"
+            chooseAction playerPos
+
+
+--------------------------------------------------------------    
+canCheck :: Table -> Bool
+canCheck table = highBet table == 0
+
+availableActions :: Table -> String
+availableActions table = if canCheck table then "Check, " ++ actions
+                         else "Call, " ++ actions
+    where
+        actions = "Fold, Raise, AllIn"
+
+--------------------------------------------------------------
+bettingRound :: Int -> Game ()
+bettingRound playerToAct = do
+    table <- get
+    if roundOver2 (players table) (highBet table) 
+        then do 
+            return ()
+    else do
+        chooseAction playerToAct
+        printTable
+        bettingRound (nextPlayerToAct playerToAct (players table))
         
-    
+--------------------------------------------------------------
+--------------------------------------------------------------
+
+-- Maybe a away to do the showdown... simple way...
+showdown :: State Table [Player]
+showdown = do
+    table <- get
+    let players'  = players table
+        communityCards = board table
+        hands    = [hand player | player <- players table]
+        winners'  = winners communityCards hands
+        chips    = div (pot table) (length winners')
+        players'' = dealOutChips players' winners' chips
+    put table {players = players''}
+    return players''
+
+showWinners :: [Player] -> IO ()
+showWinners ps = do
+    let names      = [name player | player <- ps]
+        nameString = printNames names
+    putStrLn $ "The winners are: " ++ nameString
+
+
+printNames :: [String] -> String
+printNames []     = ""
+printNames (x:xs) = " " ++ x ++ ", "
+
+
+
+dealOutChips :: [Player] -> [Int] -> Int -> [Player]
+dealOutChips players []      _     = players
+dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
+    where
+        indexes' = xs
+        player   = incChips (players!!x) chips
+        players' = replacePlayer x player players
+
+
+--------------------------------------------------------------
+roundOver2 :: [Player] -> Int -> Bool
+roundOver2 players highBet = and [matchHBet p highBet || hasFolded p | p <- players]
+
+matchHBet :: Player -> Int -> Bool
+matchHBet player highBet = commitedChips player == highBet && highBet /= 0
+
+hasFolded :: Player -> Bool
+hasFolded = folded 
+
+
+--------------------------------------------------------------
+--------------------------------------------------------------
+runShuffle2 :: Game()
+runShuffle2 = do
+    gen <- newStdGen
+    let (doubles, _) = randomDoubles' 52 gen
+    let shuffledDeck = (shuffle doubles fullDeck)
+    modify(\table -> table {deck = shuffledDeck})
+
+randomDoubles' :: Int -> StdGen -> ([Double], StdGen)
+randomDoubles' 0 gen = ([], gen)
+randomDoubles' n gen = ((x:xs), gen2)
+  where
+    (x, gen1)  = randomR (0.0,1.0) gen
+    (xs, gen2) = randomDoubles' (n-1) gen1
 

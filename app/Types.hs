@@ -166,7 +166,8 @@ data Table = Table
     -- deriving (Show)
 instance Show Table where
     show t = show (players t) ++ 
-    --        " Playerturn:" ++ show (name (fst (playerTurn t))) ++
+            " \nPhase:" ++ show (phase t) ++
+            " \nCommmunityCards:" ++ show (board t) ++
             " \nHighbet:" ++ show (highBet t) ++
             " \nPot:" ++ show (pot t)
 
