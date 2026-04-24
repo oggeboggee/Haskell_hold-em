@@ -12,13 +12,13 @@ main = do
 
     putStrLn "Welcome to Haskell Hold'em!"
 
-    let players = [Player "Bob" [] 1000 0 False False NoBlind,
-                   Player "Sam" [] 1000 0 False False SmallBlind,
-                   Player "Jonathan" [] 1000 0 False False BigBlind]
+    let initPlayers = [Player "Bob" [] 1000 0 False False False,
+                       Player "Sam" [] 1000 0 False False False,
+                       Player "Jonathan" [] 1000 0 False False False,
+                       Player "Lewis" [] 1000 0 False False False]
                    
         initialTable = Table 
-            { players = players,
-              activePlayers = players,           
+            { players = initPlayers,        
               deck = fullDeck,
               board = [],
               phase = DealHands,

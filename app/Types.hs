@@ -134,25 +134,26 @@ data Player = Player
             commitedChips :: Chip,
             folded        :: Bool,
             checked       :: Bool,
-            blind         :: Blind
+            acted         :: Bool
+            --blind         :: Blind
             --position      :: TablePosition
             }
     deriving (Eq)
 
 instance Show Player where
-    show p = "Name:" ++ show (name p) ++
-           " Hand:" ++ show (hand p) ++ 
-           " Chips:" ++ show (chips p) ++
-           " Commited:" ++ show (commitedChips p) ++
-           " Folded:" ++ show (folded p) ++
-           " Blind:" ++ show (blind p) ++ "\n"
+    show p = "Name: " ++ show (name p) ++
+           " Hand: " ++ show (hand p) ++ 
+           " Chips: " ++ show (chips p) ++
+           " Pot contribution: " ++ show (commitedChips p) ++
+           " Folded: " ++ show (folded p) ++
+           " Checked: " ++ show (checked p)
+           --" Blind:" ++ show (blind p) ++ "\n"
 ---------------------------------------------------------------------
 -- | The table represent the gamestate
 data Table = Table
             {
             players       :: [Player],
             --playerTurn    :: (Player, Int), -- We have this with dealerposition.
-            activePlayers :: [Player],
             highBet       :: Bet,
             bets          :: [Bet],
             deck          :: Deck,
@@ -164,11 +165,12 @@ data Table = Table
             bigBlindPosition :: Int
             }
     -- deriving (Show)
+
 instance Show Table where
-    show t = show (players t) ++ 
-    --        " Playerturn:" ++ show (name (fst (playerTurn t))) ++
-            " \nHighbet:" ++ show (highBet t) ++
-            " \nPot:" ++ show (pot t)
+    show t = "Players:\n" ++ unlines (map show (players t)) ++ 
+            " \nHighbet: " ++ show (highBet t) ++
+            " \nPot: " ++ show (pot t) ++
+            " \nBoard: " ++ show (board t)
 
 
 ---------------------------------------------------------------------
@@ -180,4 +182,12 @@ data Action =
     | Call
     | Raise Int
     | AllIn
+--    deriving (Show)
+
+instance Show Action where
+    show Check = "Check"
+    show Fold = "Fold"
+    show Call = "Call"
+    show (Raise x) = "Raise " ++ show x
+    show AllIn = "All-in"
 

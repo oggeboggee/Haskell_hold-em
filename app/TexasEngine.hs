@@ -29,10 +29,11 @@ gameLoop :: Int -> Bet -> Game ()
 gameLoop playerIndex highestBet = do
     table <- get
 
-    if roundOver table   --- We need to make sure the logic for roundOVer works like we want it to.
+    if bettingroundOver table   --- We need to make sure the logic for roundOVer works like we want it to.
     then do 
         liftIO $ putStrLn "Bettinground has finished, moving to next phase.." --how do we move out and to next hand dealing in gameRound
         moveToNextPhase
+
     else do 
         let currentPlayer = (players table) !! playerIndex
             playerList    = (players table)
@@ -42,54 +43,52 @@ gameLoop playerIndex highestBet = do
         else do
             playerAction <- getPlayerAction playerIndex
 
-            performAction playerAction playerIndex
 
-           -- modify (\table -> table { newHighestBet = })
+            let printAction = case playerAction of
+                    Fold -> (name currentPlayer) ++ " folds."
+                    Check -> (name currentPlayer) ++ " checks."
+                    Call -> (name currentPlayer) ++ " calls with (" ++ show (lowestBet table currentPlayer) ++ " chips.)"
+                    AllIn -> (name currentPlayer) ++ " goes all-in with (" ++ show (chips currentPlayer) ++ " chips.)"
+                    Raise x -> (name currentPlayer) ++ " raises with (" ++ show x ++ " chips.)"
+
+
+
+            performAction2 playerAction playerIndex
+
+            liftIO $ putStrLn printAction
 
             gameLoop (nextPlayerToAct playerIndex playerList) highestBet
 
 
-
-
-testRound :: Game ()
-testRound = do
-    let playerIndex = 0
-    let hb = 0
-
-    table <- get
-    liftIO $ print table
-
-    action <- getPlayerAction playerIndex
-
-    performAction action playerIndex
-
-    table' <- get
-
-    liftIO $ do
-        putStrLn "After action"
-        print table'
-
-
-
-
 gameRound :: Game ()
 gameRound = do
+    
     liftIO $ putStrLn "Game is starting.."
     resetGameState
 
-    liftIO $ putStrLn "Initiating blinds.."
+    table <- get
+    let playersList = (players table)
+        sbIndex = (smallBlindPosition table)
+        bbindex = (bigBlindPosition table)
+        dindex = (dealerPosition table)
 
-    liftIO $ putStrLn "XXXX: placed the small blind, YYYY: placed the big blind"
-    --state (runState initiateBlinds) -- Change this to initiateBlindsIO
-    -- We need to fix this for all functions. Still need to remove Game () from functions that don't need it.
-    -- for now we can just see if it works with all functions being with stateT and IO monad.
+        sbPlayer = playersList !! sbIndex
+        bbPlayer = playersList !! bbindex
 
-    liftIO $ putStrLn "Dealing hands.."
+    initiateBlinds
+    liftIO $ putStrLn ((name sbPlayer) ++ ": placed the small blind | " ++ (name bbPlayer) ++ ": placed the big blind")
+    table' <- get
+    liftIO $ putStrLn (show table')
+
     dealHands
+    liftIO $ putStrLn "Dealing hands.."
     bettingRound
 
-    liftIO $ putStrLn "Flop delt.."
+    
     dealCommunityCards
+    table''' <- get
+    liftIO $ putStrLn "Flop delt.."
+    showBoard
     bettingRound
 
     
@@ -107,13 +106,16 @@ gameRound = do
     -- after this we need to do showdown and check winenr hand combination etc.
 
 
-
+showBoard :: Game ()
+showBoard = do 
+    board <- gets board
+    liftIO $ print board
 
 
 -- | Initiate the betting phase of the game.
 bettingRound :: Game ()
 bettingRound = do
-    resetCheckedPlayers    -- Need to make something to reset players, no fold,check.
+    resetBettingRound   -- Need to make something to reset players, no fold,check.
     table <- get
     let firstPlayer = (firstPlayerToBet table)
         highestBet           = (highBet table)
@@ -121,6 +123,8 @@ bettingRound = do
     liftIO $ putStrLn ("Get ready to place your bets. First player to act: " ++ show firstPlayer)
 
     gameLoop firstPlayer highestBet
+
+
 
 
 
@@ -169,7 +173,7 @@ dealHands = do
         deltHand <- dealCards 2
         return player { hand = deltHand}
         ) playerList
-    modify (\table -> table {players = playerList', activePlayers = playerList'})
+    modify (\table -> table { players = playerList' })
 
 
 -- | Deal community cards to the board.
@@ -202,7 +206,6 @@ resetGameState =
         
         in table 
             { players = resetPlayer',
-              activePlayers = resetPlayer',
               highBet = 0,
               bets = []
             }
@@ -211,8 +214,8 @@ resetGameState =
 -- | Decided the next player to (we can ONLY use activeplayers here. Should we maybe have a specific type
 --   that guarantees it will work only for activePlayers list?)
 nextPlayerToAct :: Int -> [Player] -> Int
-nextPlayerToAct i activePlayers = nextActivePlayer
-    where nextActivePlayer = (i + 1) `mod` (length activePlayers)
+nextPlayerToAct i players = nextActivePlayer
+    where nextActivePlayer = (i + 1) `mod` (length players)
 
                                 
 -- | Advance from the tables current phase to the next one.
@@ -239,26 +242,35 @@ moveDealer = do
 --   the player UTG (BB+1). In all postflop betting rounds action begins with the player in the SB position.
 firstPlayerToBet :: Table -> Int
 firstPlayerToBet table = case phase table of
-    PreFlop -> nextPlayerToAct (bigBlindPosition table) (activePlayers table)
+    PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
     _       -> (smallBlindPosition table)
 
 
-roundOver :: Table -> Bool
-roundOver table = 
-    let playerList' = (activePlayers table)
-        hb          = (highBet table)   
-    in  length playerList' == 1 
-        || all (\p -> (commitedChips p) == hb || checked p) playerList'
+bettingroundOver :: Table -> Bool
+bettingroundOver table = 
+    let playerList = (players table)
+        hb          = (highBet table)
+
+        allPlayersActed p =
+            folded p ||
+            chips p == 0 ||
+            (commitedChips p == hb && acted p)
+    in all allPlayersActed playerList   
 
 
 -- | Reset players who have checked their hands
-resetCheckedPlayers :: Game ()
-resetCheckedPlayers = do
-    table <- get
-    let uncheckPlayers = map (\players -> players {checked = False}) (players table)
-
-    modify (\table -> table { players = uncheckPlayers})
-
+resetBettingRound :: Game ()
+resetBettingRound = 
+    modify (\table -> 
+        table 
+            { players = 
+                map (\player -> player 
+                    { checked = False,
+                      acted = False
+                    }
+                ) (players table),
+              highBet = 0
+            })
 
 
 
