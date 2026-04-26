@@ -100,7 +100,16 @@ performAction action playerPos = do
         Call    -> call playerPos
         Raise x -> raise playerPos x
         AllIn   -> allIn playerPos
+    playerHaveActed playerPos
 
+playerHaveActed :: Int -> State Table ()
+playerHaveActed playerPos = do
+    table <- get
+    let players'  = players table
+        player   = (players'!!playerPos) {hasActed = True}
+        players'' = replacePlayer playerPos player players'
+    put table
+        { players = players''}
 --------------------------------------------------------------
 
 -- | Change a players fold-status to True
@@ -117,11 +126,11 @@ fold playerPos = do
 ---------------------------------------    
 -- | Pass the turn to the next player -- Might not need this
 check :: Int -> State Table ()
-check playerPos = do 
-    table <- get
-    let player   = (players table!!playerPos) {commitedChips = 0}
-        players' = replacePlayer playerPos player (players table)
-    put table {players = players'}
+check playerPos = do return ()
+    -- table <- get
+    -- let player   = (players table!!playerPos) {hasActed = True}
+    --     players' = replacePlayer playerPos player (players table)
+    -- put table {players = players'}
 
     
 ---------------------------------------    
@@ -188,13 +197,13 @@ lowestBet table player = (highBet table) - (commitedChips player)
 --------------------------------------------------------------
 -- | Manual testing:
 player1 :: Player
-player1 = Player "Axel" hand1 400 0 True False NoBlind
+player1 = Player "Axel" hand1 400 0 True False NoBlind False
 
 player2 :: Player
-player2 = Player "Frodo" hand2 340 100 False False NoBlind
+player2 = Player "Frodo" hand2 340 100 False False NoBlind False
 
 player3 :: Player
-player3 = Player "Sam" hand3 530 0 False False NoBlind
+player3 = Player "Sam" hand3 530 0 False False NoBlind False
 
 playerlist :: [Player]
 playerlist = [player1, player2, player3]

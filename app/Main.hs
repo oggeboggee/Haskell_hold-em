@@ -12,9 +12,9 @@ main = do
 
     putStrLn "Welcome to Haskell Hold'em!"
 
-    let players = [Player "Bob" [] 1000 0 False False NoBlind,
-                   Player "Sam" [] 1000 0 False False SmallBlind,
-                   Player "Frodo" [] 1000 0 False False BigBlind]
+    let players = [Player "Bob" [] 1000 0 False False NoBlind False,
+                   Player "Sam" [] 1000 0 False False SmallBlind False,
+                   Player "Frodo" [] 1000 0 False False BigBlind False]
                    
         initialTable = Table 
             { players = players,

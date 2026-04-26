@@ -94,16 +94,6 @@ gameRound = do
 -}
 
 
-
-{-
-bettingRound :: Game ()
-bettingRound = do
-    resetCheckedPlayers    -- Need to make something to reset players, no fold,check.
-    table <- get
-    let initiate = (firstPlayerToBet table)
--}
-
-
 ------------------------------------------------------------------------------------------
 ------------ Code for each step of the game ---------------------------------------------
 
@@ -115,7 +105,8 @@ resetGameState =
         let resetPlayer player = player 
                 { folded = False,
                   checked = False,
-                  commitedChips = 0
+                  commitedChips = 0,
+                  hasActed = False
                 }
             resetPlayer' = map resetPlayer (players table)
         
@@ -130,7 +121,7 @@ resetGameState =
 resetRound :: State Table ()
 resetRound = 
     modify (\table -> 
-        let resetPlayer player = player {commitedChips = 0}
+        let resetPlayer player = player {commitedChips = 0, hasActed = False}
             resetPlayer' = map resetPlayer (players table)
         
         in table 
@@ -138,14 +129,6 @@ resetRound =
               highBet = 0
             }
     )    
-
--- | Reset players who have checked their hands
--- resetCheckedPlayers :: Game ()
--- resetCheckedPlayers = do
---     table <- get
---     let uncheckPlayers = map (\players -> players {checked = False}) (players table)
-
---     modify (\table -> table { players = uncheckPlayers})
 
 
 -- | Initialisation of the blinds of the game.
@@ -220,12 +203,6 @@ firstPlayerToBet table = case phase table of
 
 
 
---startOfGame :: Table -> Bool
---startOfGame table | (table phase) == DealHands = True
---                  | (table phase) == _         = False
-
-
-
 -- | Move where the dealer,SB, and BB are on the table. Mod helps us wrap around.
 moveDealer :: State Table ()
 moveDealer = do
@@ -251,9 +228,9 @@ moveDealer = do
 
 nextPlayerToAct :: Int -> [Player] -> Int
 nextPlayerToAct i players = if not (hasFolded (players!!next)) then next
-                                else nextPlayerToAct (i+1) players
-                                    where
-                                        next = (i + 1) `mod` (length players)
+                            else nextPlayerToAct (i+1) players
+                                where
+                                    next = (i + 1) `mod` (length players)
     
 
 
@@ -371,7 +348,6 @@ printNames (x:[]) = x
 printNames (x:xs) = " " ++ x ++ ", " ++ printNames xs
 
 
-
 dealOutChips :: [Player] -> [Int] -> Int -> [Player]
 dealOutChips players []      _     = players
 dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
@@ -385,7 +361,7 @@ onePlayerLeft :: [Player] -> Bool
 onePlayerLeft players = (==1) . length $ filter not [hasFolded player | player <- players]
 --------------------------------------------------------------
 roundOver2 :: [Player] -> Int -> Bool
-roundOver2 players highBet = and [matchHBet p highBet || hasFolded p | p <- players]
+roundOver2 players highBet = (and [matchHBet p highBet || hasFolded p| p <- players]) && allHaveActed players
 
 matchHBet :: Player -> Int -> Bool
 matchHBet player highBet = commitedChips player == highBet && highBet /= 0
@@ -396,6 +372,8 @@ hasFolded = folded
 filterFolded :: [Player] -> [Player]
 filterFolded  = filter (not . hasFolded)
 
+allHaveActed :: [Player] -> Bool
+allHaveActed players = and [hasActed player | player <- players]
 --------------------------------------------------------------
 --------------------------------------------------------------
 runShuffle2 :: Game()

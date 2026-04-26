@@ -134,8 +134,8 @@ data Player = Player
             commitedChips :: Chip,
             folded        :: Bool,
             checked       :: Bool,
-            blind         :: Blind
-            --position      :: TablePosition
+            blind         :: Blind,
+            hasActed      :: Bool
             }
     deriving (Eq)
 
