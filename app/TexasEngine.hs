@@ -42,8 +42,8 @@ gameRound = do
     state (runState moveToNextPhase)
     table <- get
     printTable
-    liftIO $ putStrLn "First bettinground!"
-    bettingRound (firstPlayerToBet table)
+    liftIO $ putStrLn $ "First bettinground!" ++ show (phase table)
+    bettingRound (nextPlayerToAct (bigBlindPosition table) (players table))
     printTable
     
     -- Flop
@@ -54,7 +54,7 @@ gameRound = do
     state (runState dealCommunityCards)
     printTable
     liftIO $ putStrLn "Second bettinground!"
-    bettingRound (firstPlayerToBet table)
+    bettingRound (nextPlayerToAct (dealerPosition table) (players table))
     printTable
 
     -- Turn
@@ -65,7 +65,7 @@ gameRound = do
     state (runState dealCommunityCards)
     printTable
     liftIO $ putStrLn "Third bettinground!"
-    bettingRound (firstPlayerToBet table)
+    bettingRound (nextPlayerToAct (dealerPosition table) (players table))
     printTable
 
     -- River
@@ -75,7 +75,7 @@ gameRound = do
     state (runState dealCommunityCards)
     printTable
     liftIO $ putStrLn "Last bettinground!"
-    bettingRound (firstPlayerToBet table)
+    bettingRound (nextPlayerToAct (dealerPosition table) (players table))
     printTable
     
     -- Showdown
@@ -197,10 +197,9 @@ dealCommunityCards = do
 -- | Who bets first varies depedning on if we are in PreFlop state or any other state. PreFlop it is
 --   the player UTG (BB+1). In all postflop betting rounds action begins with the player in the SB position.
 firstPlayerToBet :: Table -> Int
-firstPlayerToBet table = case phase table of
-    PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
-    _       -> nextPlayerToAct (smallBlindPosition table) (players table)
-
+firstPlayerToBet table = case (phase table) of
+        PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
+        _       -> nextPlayerToAct (dealerPosition table) (players table)
 
 
 -- | Move where the dealer,SB, and BB are on the table. Mod helps us wrap around.
@@ -307,7 +306,7 @@ bettingRound :: Int -> Game ()
 bettingRound playerToAct = do
     table <- get
     if roundOver2 (players table) (highBet table) || onePlayerLeft (players table)
-        then do 
+        then do
             return ()
     else do
         chooseAction playerToAct
@@ -334,12 +333,9 @@ showdown = do
 showWinners :: [Int] -> Game ()
 showWinners indexes = do
     table <- get
-    if null indexes
-        then liftIO $ putStrLn "All folded!"
-    else do
-        let names      = [name (players table!!i) | i <- indexes]
-            nameString = printNames names
-        liftIO $ putStrLn $ "The winners are: " ++ nameString
+    let names      = [name (players table!!i) | i <- indexes]
+        nameString = printNames names
+    liftIO $ putStrLn $ "The winners are: " ++ nameString
 
 
 printNames :: [String] -> String

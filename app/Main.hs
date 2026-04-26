@@ -12,9 +12,9 @@ main = do
 
     putStrLn "Welcome to Haskell Hold'em!"
 
-    let players = [Player "Bob" [] 1000 0 False False NoBlind False,
-                   Player "Sam" [] 1000 0 False False SmallBlind False,
-                   Player "Frodo" [] 1000 0 False False BigBlind False]
+    let players = [Player "Bob" [] 1000 0 False False SmallBlind False,
+                   Player "Sam" [] 1000 0 False False BigBlind False,
+                   Player "Frodo" [] 1000 0 False False NoBlind False]
                    
         initialTable = Table 
             { players = players,
@@ -24,9 +24,9 @@ main = do
               phase = DealHands,
               highBet = 0,
               pot = 0,
-              dealerPosition = 0,
-              smallBlindPosition = 1,
-              bigBlindPosition = 2,
+              dealerPosition = 2,
+              smallBlindPosition = 0,
+              bigBlindPosition = 1,
               bets = []
             }
 

@@ -197,7 +197,7 @@ lowestBet table player = (highBet table) - (commitedChips player)
 --------------------------------------------------------------
 -- | Manual testing:
 player1 :: Player
-player1 = Player "Axel" hand1 400 0 True False NoBlind False
+player1 = Player "Axel" hand1 400 0 False False NoBlind False
 
 player2 :: Player
 player2 = Player "Frodo" hand2 340 100 False False NoBlind False
