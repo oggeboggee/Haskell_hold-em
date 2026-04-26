@@ -116,7 +116,7 @@ resetGameState =
               highBet = 0,
               bets = []
             }
-    )    
+    )
 
 resetRound :: State Table ()
 resetRound = 
@@ -185,13 +185,6 @@ dealCommunityCards = do
     modify (\table -> table { board = board table ++ cards }) 
 
 
--- roundOver :: Table -> Bool
--- roundOver table = 
---     let playerList' = (activePlayers table)
---         hb          = (highBet table)   
---     in  length playerList' == 1 
---         || all (\p -> (commitedChips p) == hb || checked p) playerList'
-
 
 
 -- | Who bets first varies depedning on if we are in PreFlop state or any other state. PreFlop it is
@@ -221,10 +214,6 @@ moveDealer = do
 
 -- | Decided the next player to (we can ONLY use activeplayers here. Should we maybe have a specific type
 --   that guarantees it will work only for activePlayers list?)
--- nextPlayerToAct :: Int -> [Player] -> Int
--- nextPlayerToAct i activePlayers = nextActivePlayer
---     where nextActivePlayer = (i + 1) `mod` (length activePlayers)
-
 nextPlayerToAct :: Int -> [Player] -> Int
 nextPlayerToAct i players = if not (hasFolded (players!!next)) then next
                             else nextPlayerToAct (i+1) players
@@ -273,14 +262,18 @@ chooseAction :: Int -> Game ()
 chooseAction playerPos = do
     table <- get
     let playerToAct = players table!!playerPos
-    liftIO $ putStrLn $ "Available actions: " ++ availableActions table
+    liftIO $ putStrLn $ "Available actions: " ++ availableActions table playerPos
     liftIO $ putStrLn $ name playerToAct ++ ", choose action: "
     input <- liftIO getLine
     let s = (map toLower) input
     case s of
         "fold"  -> state $ runState (performAction Fold playerPos)
         "call"  -> state $ runState (performAction Call playerPos)
-        "check" -> state $ runState (performAction Check playerPos)
+        "check" -> 
+            if (highBet table == 0) || matchHBet playerToAct (highBet table)
+                then state $ runState (performAction Check playerPos)
+            else do liftIO $ putStrLn "Invalid option"
+                    chooseAction playerPos
         "raise" -> do 
             liftIO $ putStrLn "Type in amount: " -- Crashes if no number is typen in
             amount <- liftIO readLn  
@@ -292,11 +285,14 @@ chooseAction playerPos = do
 
 
 --------------------------------------------------------------    
-canCheck :: Table -> Bool
-canCheck table = highBet table == 0
+canCheck :: Table -> Int -> Bool
+canCheck table playerPos = highBet table == 0 
+                        || (playerPos == bigBlindPosition table 
+                            && commitedChips (players table!!playerPos) == highBet table
+                            && phase table == PreFlop)
 
-availableActions :: Table -> String
-availableActions table = if canCheck table then "Check, " ++ actions
+availableActions :: Table -> Int -> String
+availableActions table playerPos = if canCheck table playerPos then "Check, " ++ actions
                          else "Call, " ++ actions
     where
         actions = "Fold, Raise, AllIn"
@@ -360,7 +356,7 @@ roundOver2 :: [Player] -> Int -> Bool
 roundOver2 players highBet = (and [matchHBet p highBet || hasFolded p| p <- players]) && allHaveActed players
 
 matchHBet :: Player -> Int -> Bool
-matchHBet player highBet = commitedChips player == highBet && highBet /= 0
+matchHBet player highBet = commitedChips player == highBet -- && highBet /= 0
 
 hasFolded :: Player -> Bool
 hasFolded = folded 

@@ -111,7 +111,7 @@ data GamePhase =
             | Turn
             | River
             | Showdown
-    deriving (Show)
+    deriving (Show, Eq)
 
 ---------------------------------------------------------------------
 -- | Table positions a player can be in.
