@@ -36,8 +36,8 @@ nextPlayerToAct i players = if not (hasFolded (players!!next)) then next
 availableActions :: Table -> Int -> String
 availableActions table playerPos = if canCheck table playerPos then "Check, " ++ actions
                          else "Call, " ++ actions
-    where
-        actions = "Fold, Raise, AllIn"
+                        where
+                            actions = "Fold, Raise, AllIn"
 
 -- | Filter out all players that have folded
 filterFolded :: [Player] -> [Player]
@@ -61,7 +61,7 @@ dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
----------------------------- Checkers ------------------------------------------
+---------- Checkers to check different part of the state -----------------------
 
 -- | Check if a player can check, return a bool
 canCheck :: Table -> Int -> Bool
@@ -76,7 +76,7 @@ onePlayerLeft players = (==1) . length $ filter not [hasFolded player | player <
 
 -- | Decide if a betting round is over
 roundOver2 :: [Player] -> Int -> Bool
-roundOver2 players highBet = (and [(matchHBet p highBet && hasActed p)|| hasFolded p | p <- players]) 
+roundOver2 players highBet = (and [(matchHBet p highBet && hasActed p) || hasFolded p | p <- players]) 
 
 -- | Check if a player have macthed the highest bet
 matchHBet :: Player -> Int -> Bool

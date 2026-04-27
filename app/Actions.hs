@@ -187,7 +187,7 @@ incPot pot bet = pot + bet
 
 -- | Helper function to calculate lowest bet a player can make
 lowestBet :: Table -> Player -> Bet
-lowestBet table player = (highBet table) - (commitedChips player)
+lowestBet table player = highBet table - commitedChips player
 
 
 --- We need to apply an action to the game

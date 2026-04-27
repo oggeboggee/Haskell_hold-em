@@ -136,6 +136,7 @@ data Player = Player
             checked       :: Bool,
             blind         :: Blind,
             hasActed      :: Bool
+            --state         :: PlayerState
             }
     deriving (Eq)
 
@@ -182,3 +183,10 @@ data Action =
     | Raise Int
     | AllIn
 
+data PlayerState =
+    NotActed
+    | HasFolded
+    | HasChecked
+    | HasBet
+    | HasAllin
+    deriving (Eq)

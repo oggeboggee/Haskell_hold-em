@@ -160,6 +160,8 @@ showWinners indexes = do
 
 --------------------------------------------------------------
 --------------------------------------------------------------
+
+-- | Return a shuffled deck with 52 cards
 runShuffle2 :: Game()
 runShuffle2 = do
     gen <- newStdGen
@@ -167,6 +169,7 @@ runShuffle2 = do
     let shuffledDeck = shuffle doubles fullDeck
     modify(\table -> table {deck = shuffledDeck})
 
+-- | Helperfunction to runShuffle, generate a list of random doubles
 randomDoubles' :: Int -> StdGen -> ([Double], StdGen)
 randomDoubles' 0 gen = ([], gen)
 randomDoubles' n gen = ((x:xs), gen2)
@@ -185,10 +188,10 @@ resetGameState :: State Table ()--Game ()
 resetGameState = 
     modify (\table -> 
         let resetPlayer player = player 
-                { folded = False,
-                  checked = False,
+                { folded        = False,
+                  checked       = False,
                   commitedChips = 0,
-                  hasActed = False
+                  hasActed      = False
                 }
             resetPlayer' = map resetPlayer (players table)
         
@@ -205,7 +208,7 @@ resetRound :: State Table ()
 resetRound = 
     modify (\table -> 
         let resetPlayer player = player {commitedChips = 0, hasActed = False}
-            resetPlayer' = map resetPlayer (players table)
+            resetPlayer'       = map resetPlayer (players table)
         
         in table 
             { players = resetPlayer',
@@ -221,8 +224,8 @@ initiateBlinds :: State Table ()
 initiateBlinds = do
     table <- get
 
-    let sbPlayer = (smallBlindPosition table)
-        bbPlayer = (bigBlindPosition table)
+    let sbPlayer = smallBlindPosition table
+        bbPlayer = bigBlindPosition table
 
     placeBet sbPlayer 50
     placeBet bbPlayer 100
@@ -259,10 +262,10 @@ dealCommunityCards = do
     table <- get
     let currentPhase = phase table
     cards <- case currentPhase of
-        Flop -> dealCards 3
-        Turn -> dealCards 1
+        Flop  -> dealCards 3
+        Turn  -> dealCards 1
         River -> dealCards 1
-        _ -> return []
+        _     -> return []
 
     modify (\table -> table { board = board table ++ cards }) 
 
@@ -270,10 +273,10 @@ dealCommunityCards = do
 moveDealer :: State Table ()
 moveDealer = do
     table <- get
-    let numPlayers = length (players table)
-        newDealerPosition     = ((dealerPosition table) + 1) `mod` numPlayers
-        newSmallBlindPosition = ((newDealerPosition) + 1) `mod` numPlayers
-        newBigBlindPosition   = ((newSmallBlindPosition) + 1) `mod` numPlayers
+    let numPlayers            = length (players table)
+        newDealerPosition     = (dealerPosition table + 1) `mod` numPlayers
+        newSmallBlindPosition = (newDealerPosition + 1) `mod` numPlayers
+        newBigBlindPosition   = (newSmallBlindPosition + 1) `mod` numPlayers
 
     modify (\table -> table 
         { dealerPosition     = newDealerPosition,
@@ -286,12 +289,12 @@ moveDealer = do
 showdown :: State Table [Int]
 showdown = do
     table <- get
-    let players'  = filterFolded (players table)
+    let players'       = filterFolded (players table)
         communityCards = board table
-        hands    = [hand player | player <- players']
-        winners'  = winners communityCards hands
-        chips    = div (pot table) (length winners')
-        players'' = dealOutChips players' winners' chips
+        hands          = [hand player | player <- players']
+        winners'       = winners communityCards hands
+        chips          = div (pot table) (length winners')
+        players''      = dealOutChips players' winners' chips
     put table {players = players'', pot = 0}
     return winners'
 
