@@ -12,10 +12,10 @@ main = do
 
     putStrLn "Welcome to Haskell Hold'em!"
 
-    let initPlayers = [Player "Bob" [] 1000 0 False False False,
-                       Player "Sam" [] 1000 0 False False False,
-                       Player "Jonathan" [] 1000 0 False False False,
-                       Player "Lewis" [] 1000 0 False False False]
+    let initPlayers = [Player "Bob" [] 1000 0 False False,
+                       Player "Sam" [] 1000 0 False False,
+                       Player "Jonathan" [] 1000 0 False False,
+                       Player "Lewis" [] 1000 0 False False]
                    
         initialTable = Table 
             { players = initPlayers,        

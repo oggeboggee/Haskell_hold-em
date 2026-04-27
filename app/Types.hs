@@ -1,6 +1,45 @@
 module Types where
 import Control.Monad.State
 
+
+
+-- | Attempt at making event data types.
+-- Should we have events for players that are actions and then also have Events for things such as
+-- dealing cards/hands, resetting rounds, etc? Does Blinds belong in this category. Thinking in terms
+-- of future if we will need to send this in JSON? https://academy.fpblock.com/haskell/library/aeson/
+
+data Event = 
+    PlayerEvent Int Action
+    | Blind Int Bet
+
+data GameEvent =
+    PlayerFolded String
+    | PlayerChecked String
+    | PlayerCalled String Bet
+    | PlayerRaised String Bet
+    | PlayerAllIn String Bet
+    | PlayerPutBlinds String Bet
+    deriving (Show)
+
+
+
+-- Data type for all the different types of actions a player can make
+data Action = 
+    Check
+    | Fold
+    | Call
+    | Raise Int
+    | AllIn
+--    deriving (Show)
+
+instance Show Action where
+    show Check = "Check"
+    show Fold = "Fold"
+    show Call = "Call"
+    show (Raise x) = "Raise " ++ show x
+    show AllIn = "All-in"
+
+
 --------------------------------------------
 -- | https://cstml.github.io/2021/07/22/State-Monad.html
 -- | We can use StateT to get access to IO inside the state monad.
@@ -133,7 +172,6 @@ data Player = Player
             chips         :: Chip,
             commitedChips :: Chip,
             folded        :: Bool,
-            checked       :: Bool,
             acted         :: Bool
             --blind         :: Blind
             --position      :: TablePosition
@@ -145,8 +183,7 @@ instance Show Player where
            " Hand: " ++ show (hand p) ++ 
            " Chips: " ++ show (chips p) ++
            " Pot contribution: " ++ show (commitedChips p) ++
-           " Folded: " ++ show (folded p) ++
-           " Checked: " ++ show (checked p)
+           " Folded: " ++ show (folded p)
            --" Blind:" ++ show (blind p) ++ "\n"
 ---------------------------------------------------------------------
 -- | The table represent the gamestate
@@ -175,19 +212,5 @@ instance Show Table where
 
 ---------------------------------------------------------------------
 
--- Data type for all the different types of actions a player can make
-data Action = 
-    Check
-    | Fold
-    | Call
-    | Raise Int
-    | AllIn
---    deriving (Show)
 
-instance Show Action where
-    show Check = "Check"
-    show Fold = "Fold"
-    show Call = "Call"
-    show (Raise x) = "Raise " ++ show x
-    show AllIn = "All-in"
 

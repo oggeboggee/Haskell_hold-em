@@ -11,26 +11,26 @@ import Data.Char
 import Data.List (isPrefixOf)
 
 
+-- With these changes the gameloop for eventsshould become
+-- 1. Pick a player
+-- 2. Get input from player with IO
+-- 3. Convert the input into an Event
+-- 4. Apply the event to the table (the logci)
+-- 5. As a result get the new table and the event(s) (table', [GameEvent])
+-- 6. Print the resulting action with IO (eventMSg)
+-- 7. Repeat loop
 
--- | We need a function to take a player at a specific index in a list, 
---   and then replace with the updated player
-replacePlayer :: Int -> Player -> [Player] -> [Player]
-replacePlayer playerIndex updatedPlayer playerList = 
-    take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
+-- How do we separate events driven by the engine and driven by the player?
 
-
-
--- We want to go: 
--- show actions based on what player can do -> user input -> convertAction -> applyAction -> update table?
-
+-- change getPlayerAction and convertAction to sue Event instead of Action?
 -- | Show a player what actions they can make (based on highBet), prompt player to type desired action,
 --   take action and convert it from a string into what happens in-game, prompt user if action is wrong.
-getPlayerAction :: Int -> Game Action
-getPlayerAction playerIndex = do
+getPlayerEvent :: Int -> Game Event
+getPlayerEvent playerIndex = do
     table <- get
 
     let player = (players table) !! playerIndex
-        hb = (highBet table)
+        hb     = (highBet table)
 
         availableActions = if hb == 0
                            then "Fold, Check, Raise <x>, All In"
@@ -41,10 +41,10 @@ getPlayerAction playerIndex = do
     input <- liftIO getLine
 
     case convertAction input of
-        Just action -> return action
+        Just action -> return (PlayerEvent playerIndex action)
         Nothing -> do
             liftIO $ putStrLn "Input isn't valid."
-            getPlayerAction playerIndex
+            getPlayerEvent playerIndex
 
 
 -- | Take the user input and convert it into a Maybe Action.
@@ -63,22 +63,91 @@ convertAction userInput =
 
 
 
-applyPureAction :: Table -> Action -> Int -> Table
-applyPureAction table action playerIndex =
-    case action of
-        Fold -> pureFold table playerIndex
+-- | Source guide:
+-- | https://www.ahri.net/2019/07/practical-event-driven-and-sourced-programs-in-haskell/
+-- | Here we update the state, have betting rules (when can a player call, raise etc.). 
+-- | We handle errors if wanted action isn't allowed. We produce GameEvents.
+-- | This is instead of having applyPureAction.
+applyEvent :: Event -> Table -> Either String (Table, [GameEvent])
+-- PLAYERACTIONS
+applyEvent (PlayerEvent playerIndex action) table =
+    let player = (players table) !! playerIndex
+        hb     = (highBet table)
+        cChips = (commitedChips player)
+        plName = (name player)
+    in case action of
+        Fold -> let table' = pureFold table playerIndex
+                in Right (table', [PlayerFolded plName])
+        
+        Check -> if cChips == hb
+                 then 
+                    let table' = pureCheck table playerIndex
+                    in Right (table', [PlayerChecked plName])
+                 else Left "You can't check when behind the highbet."
 
-        Check -> if commitedChips ((players table) !! playerIndex) == (highBet table)
-                 then pureCheck table playerIndex
-                 else table --shouldnt be table
-            
-        Call -> if (highBet table) > 0
-                then pureCall table playerIndex
-                else table --shouldnt be table.
+        Call -> if hb == 0
+                then Left "There isn't a bet to call."
+                else
+                    let amount = hb - cChips
+                        table' = placePureBet table playerIndex amount
+                    in Right (table', [PlayerCalled plName amount])
 
-        Raise x -> pureRaise table playerIndex x
+        Raise x -> if x <= 0
+                   then Left "Raise amount must be larger than 0."
+                   else
+                    let callAmount = hb - cChips
+                        callAndRaiseAmount = callAmount + x
+                        table' = placePureBet table playerIndex callAndRaiseAmount
+                    in Right (table', [PlayerRaised plName x])
 
-        AllIn -> pureAllIn table playerIndex
+        AllIn -> let amount = (chips player)
+                     table' = placePureBet table playerIndex amount
+                 in Right (table', [PlayerAllIn plName amount])
+
+-- BLINDS
+applyEvent (Blind playerIndex bet) table =
+    let table' = placePureBet table playerIndex bet
+        player = (players table) !! playerIndex
+        plName = (name player)
+    in
+        Right (table', [])
+
+-- | This is the function that prints the events.
+eventMsg :: GameEvent -> Game ()
+eventMsg event = liftIO $ case event of
+    PlayerFolded p -> putStrLn (p ++ " folds.")
+
+    PlayerChecked p -> putStrLn (p ++ " checks.")
+
+    PlayerCalled p amount -> putStrLn (p ++ " calls with " ++ (show amount) ++ " chips.")
+
+    PlayerRaised p amount -> putStrLn (p ++ " raises with " ++ (show amount) ++ " chips.")
+
+    PlayerAllIn p amount -> putStrLn (p ++ " goes all-in with " ++ (show amount) ++ " chips.")
+
+
+-- | https://stackoverflow.com/questions/27609062/what-is-the-difference-between-mapm-and-mapm-in-haskell
+-- | mapM_ : We can use this because we don't care about the result of eventMsg (We have Game () as return type.)
+-- | We still print what we need. So mapM_ when we only care about the side effects?
+
+-- | Here we update the state and trigger the output of eventMSg. 
+-- | If we get Right returned from applyEvent, then we get a new table and a list of events that happened.
+performEvent :: Event -> Game ()
+performEvent event = do
+    table <- get
+    case applyEvent event table of
+        Left inv -> liftIO $ putStrLn inv
+
+        Right (table', gEvents) -> do
+            put table'
+            mapM_ eventMsg gEvents
+
+
+-- | We need a function to take a player at a specific index in a list, 
+--   and then replace with the updated player
+replacePlayer :: Int -> Player -> [Player] -> [Player]
+replacePlayer playerIndex updatedPlayer playerList = 
+    take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
 
 
 updatePlayerAtIndex :: Int -> (Player -> Player) -> Table -> Table
@@ -95,18 +164,16 @@ updatePlayerAtIndex playerIndex f table =
 placePureBet :: Table -> Int -> Bet -> Table
 placePureBet table playerIndex bet =
     let tableUpdated = updatePlayerAtIndex playerIndex 
-                        (\player -> player { chips = (chips player) - bet,
-                                   commitedChips = (commitedChips player) + bet
-                                }) table
+                        (\player -> decChips player bet) table
+        
         player = (players tableUpdated) !! playerIndex
+    
     in tableUpdated
-            { pot = (pot tableUpdated) + bet,
+            { pot = incPot (pot tableUpdated) bet,
               bets = bet : (bets tableUpdated),
               highBet = max (highBet tableUpdated) (commitedChips player)
             }
 
-placeBet :: Int -> Bet -> Game ()
-placeBet playerIndex bet = modify (\table -> placePureBet table playerIndex bet)
 
 pureFold :: Table -> Int -> Table
 pureFold table playerIndex =
@@ -115,39 +182,9 @@ pureFold table playerIndex =
 
 pureCheck :: Table -> Int -> Table
 pureCheck table playerIndex = 
-    updatePlayerAtIndex playerIndex (\p -> p { checked = True }) table
+    updatePlayerAtIndex playerIndex (\p -> p { acted = True }) table
 
 
-pureCall :: Table -> Int -> Table
-pureCall table playerIndex =
-    let player = (players table) !! playerIndex
-        amount = max 0 (lowestBet table player)
-
-    in placePureBet table playerIndex amount
-
-
-pureRaise :: Table -> Int -> Bet -> Table
-pureRaise table playerIndex raiseAmount =
-    let player = (players table) !! playerIndex
-        toCall = max 0 (lowestBet table player)
-        amount = toCall + raiseAmount
-    in placePureBet table playerIndex amount
-
-
-pureAllIn :: Table -> Int -> Table
-pureAllIn table playerIndex =
-    let player = (players table) !! playerIndex
-    in placePureBet table playerIndex (chips player)
-
-
-performAction2 :: Action -> Int -> Game ()
-performAction2 action playerIndex = do
-    modify (\table -> applyPureAction table action playerIndex)
-
-    modify (\table -> updatePlayerAtIndex playerIndex (\p -> p { acted = True }) table)
-
-
--- So, do we use pure -> StateT or pure -> State -> StateT?
 
 
 
@@ -179,187 +216,3 @@ incPot pot bet = pot + bet
 lowestBet :: Table -> Player -> Bet
 lowestBet table player = (highBet table) - (commitedChips player)
 
-
---- We need to apply an action to the game
-
-
---------------------------------------------------------------
---------------------------------------------------------------
--- | Manual testing:
-
-
---------------------------------------------------------------
--- Moved commented versions to here for now.
-
---------------------------------------------------------------
--------------- All Actions a player can make -----------------
--- All actions end by passing the turn
-{-performAction :: Action -> Int -> Game ()
-performAction action playerPos = do 
-    case action of
-        Check   -> check
-        Fold    -> fold playerPos
-        Call    -> call playerPos
-        Raise x -> raise playerPos x
-        AllIn   -> allIn playerPos
-
--}
-
-
-
---------------------------------------------------------------
-
-
-    
-{-
----------------------------------------    
--- | Pass the turn to the next player -- Might not need this
-check :: State Table ()
-check = do 
-    table <- get
-    put table
-    
----------------------------------------    
-
--- | Take an int for how much to raise, then adds the lowest bet
-raise :: Int -> Bet -> State Table ()
-raise playerPos raiseamout = do
-    table <- get
-    let player = players table!!playerPos
-        bet = raiseamout + lowestBet table player
-    placeBet playerPos bet
-    
-
----------------------------------------
--- | A player bet the lowest amount they can to get to next phase
-call :: Int -> State Table ()
-call playerPos = do
-    table <- get
-    let player = players table!!playerPos
-        lowBet = lowestBet table player
-    placeBet playerPos lowBet
-    
-
----------------------------------------
--- | Bet all chips
-allIn :: Int -> State Table ()
-allIn playerPos = do
-    table <- get
-    let player = players table!!playerPos
-    placeBet playerPos (chips player)
--}
-
-
-
-
-
- {-   
---------------------------------------------------------------
---------------------------------------------------------------
--- | Change whos turn it is
-nextPlayerTurn :: State Table ()
-nextPlayerTurn = do
-    table <- get
-    let nextplayer = nextPlayer (snd (playerTurn table)) (activePlayers table)
-    put table {playerTurn = nextplayer}
--}
---------------------------------------------------------------
---------------------------------------------------------------
--- | State monad function to place a bet
--- placeBet :: Player -> Bet -> State Table ()
--- placeBet player bet = do
---     table <- get
---     let players' = [if (name p) == (name player )
---                     then decChips p bet 
---                     else p | p <- (players table)]
---         pot'     = (pot table) + bet
---     put table {players = players', pot = pot'}
-
---------------------------------------------------------------
---------------------------------------------------------------
--- | New variation with more State monad use
--- Helper function that decrease a players chips and change the state
--- decChips' :: Player -> Bet -> State Table ()
--- decChips' player bet = do
---     table <- get
---     put table {players = [if (name p) == (name player)
---                           then decChips p bet  
---                           else p | p <- (players table)]}
-
--- -- Helper function that increase a tables pot and change the state
--- incPot' :: Chip -> State Table ()
--- incPot' bet = do
---     table <- get
---     put table {pot = (pot table) + bet}
-
--- saveBet :: Bet -> State Table ()
--- saveBet bet = do
---     modify (\table -> table {bets = bet : bets table})
-
--- -- Transfer a bet from a player to the table pot
--- placeBet' :: Player -> Bet -> State Table ()
--- placeBet' player bet = do
---     decChips' player bet
---     incPot' bet
---     saveBet bet
-    
-
---- Thought: In placeBet we are doing get and put on the table twice, is this inefficient?
---- 
-
-
--- | Change a players fold-status to True
-{-
---fold :: Int -> State Table ()
-fold :: Int -> Game()
-fold playerPos = do
-    table <- get
-    let player   = players table!!playerPos
-        players' = [if name p == name player 
-                    then p {folded = True}
-                    else p | p <- players table]
-        active' = filter (not . folded) players'
-    put table 
-        { players = players',
-          activePlayers = active'} --
--}           
-{-
-pureFold :: Table -> Int -> Table
-pureFold table playerIndex =
-    let allPlayers = (players table)
-        currentPlayer = allPlayers !! playerIndex
-        currentPlayer' = currentPlayer { folded = True }
-        allPlayers' = replacePlayer playerIndex currentPlayer' allPlayers
-    in table { players = allPlayers'}
-
-fold :: Int -> Game ()
-fold playerIndex = modify (\table -> pureFold table playerIndex)
-
-
-
-
-
--- placeBet that works with Gaem() 
---placeBet :: Int -> Bet -> State Table ()
-placeBet :: Int -> Bet -> Game ()
-placeBet playerIndex bet = do
-    modify (\table ->
-        let playersAtTable = (players table)
-            currentPlayer = playersAtTable !! playerIndex
-            updatedPlayer = currentPlayer
-                { chips = (chips currentPlayer) - bet,
-                  commitedChips = (commitedChips currentPlayer) + bet
-                }
-            playersAtTableUpdated = replacePlayer playerIndex updatedPlayer playersAtTable
-
-        in table
-            { players = playersAtTableUpdated,
-              pot = (pot table) + bet,
-              bets = bet : (bets table),
-              highBet = max (highBet table) (commitedChips updatedPlayer)
-            }
-        )
-
-
-
--}

@@ -30,10 +30,7 @@ gameLoop playerIndex highestBet = do
     table <- get
 
     if bettingroundOver table   --- We need to make sure the logic for roundOVer works like we want it to.
-    then do 
-        liftIO $ putStrLn "Bettinground has finished, moving to next phase.." --how do we move out and to next hand dealing in gameRound
-        moveToNextPhase
-
+    then return ()
     else do 
         let currentPlayer = (players table) !! playerIndex
             playerList    = (players table)
@@ -41,21 +38,10 @@ gameLoop playerIndex highestBet = do
         if (folded currentPlayer) || (chips currentPlayer) == 0
         then gameLoop (nextPlayerToAct playerIndex playerList) highestBet
         else do
-            playerAction <- getPlayerAction playerIndex
+            
+            playerAction <- getPlayerEvent playerIndex
 
-
-            let printAction = case playerAction of
-                    Fold -> (name currentPlayer) ++ " folds."
-                    Check -> (name currentPlayer) ++ " checks."
-                    Call -> (name currentPlayer) ++ " calls with (" ++ show (lowestBet table currentPlayer) ++ " chips.)"
-                    AllIn -> (name currentPlayer) ++ " goes all-in with (" ++ show (chips currentPlayer) ++ " chips.)"
-                    Raise x -> (name currentPlayer) ++ " raises with (" ++ show x ++ " chips.)"
-
-
-
-            performAction2 playerAction playerIndex
-
-            liftIO $ putStrLn printAction
+            performEvent playerAction
 
             gameLoop (nextPlayerToAct playerIndex playerList) highestBet
 
@@ -64,7 +50,7 @@ gameRound :: Game ()
 gameRound = do
     
     liftIO $ putStrLn "Game is starting.."
-    resetGameState
+    resetTable
 
     table <- get
     let playersList = (players table)
@@ -80,25 +66,28 @@ gameRound = do
     table' <- get
     liftIO $ putStrLn (show table')
 
+    -- PREFLOP
     dealHands
     liftIO $ putStrLn "Dealing hands.."
+    moveToNextPhase
     bettingRound
 
-    
+    -- FLOP
+    moveToNextPhase
     dealCommunityCards
-    table''' <- get
     liftIO $ putStrLn "Flop delt.."
     showBoard
     bettingRound
 
-    
+    -- TURN
     dealCommunityCards 
-    liftIO $ putStrLn "River delt.."
+    liftIO $ putStrLn "Turn delt.."
     bettingRound
 
-    
+    -- RIVER
+    moveToNextPhase
     dealCommunityCards
-    liftIO $ putStrLn "Turn delt.."
+    liftIO $ putStrLn "River delt.."
     bettingRound
 
    
@@ -134,19 +123,12 @@ bettingRound = do
 --initiateBlinds :: State Table ()
 initiateBlinds :: Game ()
 initiateBlinds = do
-    table <- get
+    sbPlayer <- gets smallBlindPosition
+    bbPlayer <- gets bigBlindPosition
 
-    let sbPlayer = (smallBlindPosition table)
-        bbPlayer = (bigBlindPosition table)
+    performEvent (Blind sbPlayer 50)
+    performEvent (Blind bbPlayer 100)
 
-    placeBet sbPlayer 50
-    placeBet bbPlayer 100
-
-
--- Take initiateBlinds and return a Game () type
---initiateBlindsIO :: Game ()
---initiateBlindsIO = do
---    state (runState initiateBlinds)
     
 --------------------------------------------------------------
 ---------- Dealing of cards, hands, communitycards -----------
@@ -166,7 +148,7 @@ dealCards n = do
 --   into the table.
 dealHands :: Game ()
 dealHands = do
-    table <- get
+
     playerList <- gets players
 
     playerList' <- mapM (\player -> do
@@ -179,15 +161,14 @@ dealHands = do
 -- | Deal community cards to the board.
 dealCommunityCards :: Game ()
 dealCommunityCards = do
-    table <- get
-    let currentPhase = phase table
+    currentPhase <- gets phase
     cards <- case currentPhase of
         Flop -> dealCards 3
         Turn -> dealCards 1
         River -> dealCards 1
         _ -> return []
 
-    modify (\table -> table { board = board table ++ cards }) 
+    modify (\t -> t { board = board t ++ cards }) 
 
 
 
@@ -195,35 +176,42 @@ dealCommunityCards = do
 ------------------ Utility functions -------------------------
 
 -- | Reset the required fields in the table and the players in the table.
-resetGameState :: Game ()
-resetGameState = 
+resetTable :: Game ()
+resetTable = 
     modify (\table -> 
-        let resetPlayer player = player 
-                { folded = False,
-                  checked = False
-                }
-            resetPlayer' = map resetPlayer (players table)
+        let resetPlayer p = 
+                p { folded = False,
+                    acted = False,
+                    commitedChips = 0 
+                  }
         
         in table 
-            { players = resetPlayer',
+            { players = map resetPlayer (players table),
               highBet = 0,
-              bets = []
+              pot = 0,
+              bets = [],
+              board = []
             }
     )
 
--- | Decided the next player to (we can ONLY use activeplayers here. Should we maybe have a specific type
---   that guarantees it will work only for activePlayers list?)
+-- | Finds the next player in turn order who is eligible to act. I.e not folded and still has chips.
+-- | It wraps around the table.
 nextPlayerToAct :: Int -> [Player] -> Int
-nextPlayerToAct i players = nextActivePlayer
-    where nextActivePlayer = (i + 1) `mod` (length players)
-
+nextPlayerToAct i players = 
+    let n = (length players)
+        nextPlayer = (i + 1) `mod` n
+        player = players !! nextPlayer
+    in if ((folded player) || (chips player) == 0)
+       then nextPlayerToAct nextPlayer players
+       else nextPlayer 
                                 
 -- | Advance from the tables current phase to the next one.
 moveToNextPhase :: Game ()
 moveToNextPhase = modify (\table -> table { phase = nextPhase (phase table) })
 
 
--- | Move where the dealer,SB, and BB are on the table. Mod helps us wrap around.
+-- | Rotates the delaer button around the table and updates SB and BB positions based on where the dealer
+-- | button ends up.
 moveDealer :: State Table ()
 moveDealer = do
     table <- get
@@ -245,11 +233,12 @@ firstPlayerToBet table = case phase table of
     PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
     _       -> (smallBlindPosition table)
 
-
+-- | Determines wether the current betting round is over or not. A round is over once eveery player has
+-- | either folded, is all-in, or matched the current highBet and taken an action.
 bettingroundOver :: Table -> Bool
 bettingroundOver table = 
     let playerList = (players table)
-        hb          = (highBet table)
+        hb         = (highBet table)
 
         allPlayersActed p =
             folded p ||
@@ -258,20 +247,23 @@ bettingroundOver table =
     in all allPlayersActed playerList   
 
 
--- | Reset players who have checked their hands
+-- | Reset after each betting round by clearing flags for players. Also resets relevant fields in the table
+-- | but preserves the higBet during the PreFlop phase of the game (makes BB be highBet during PreFlop).
 resetBettingRound :: Game ()
-resetBettingRound = 
+resetBettingRound = do
+    table <- get
+    
+    let hb = case (phase table) of
+                PreFlop -> (highBet table) 
+                _       -> 0
+    
     modify (\table -> 
         table 
             { players = 
-                map (\player -> player 
-                    { checked = False,
-                      acted = False
-                    }
-                ) (players table),
-              highBet = 0
+                map (\player -> player { acted = False }) (players table),
+                highBet = hb,
+                bets = []
             })
-
 
 
 -- remove below maybe --
@@ -282,6 +274,3 @@ printTable = do
     --liftIO $ putStrLn ("Current table: " ++ show table)
 
 
---startOfGame :: Table -> Bool
---startOfGame table | (table phase) == DealHands = True
---                  | (table phase) == _         = False
