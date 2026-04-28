@@ -12,21 +12,22 @@ main = do
 
     putStrLn "\nWelcome to Haskell Hold'em!"
 
+
     let initPlayers = [Player "Bob" [] 1000 0 False False,
                        Player "Sam" [] 1000 0 False False,
                        Player "Jonathan" [] 1000 0 False False,
                        Player "Lewis" [] 1000 0 False False]
                    
         initialTable = Table 
-            { players = initPlayers,        
+            { players = initPlayers,
               deck = fullDeck,
               board = [],
               phase = DealHands,
               highBet = 0,
               pot = 0,
-              dealerPosition = 0,
-              smallBlindPosition = 1,
-              bigBlindPosition = 2,
+              dealerPosition = 2,
+              smallBlindPosition = 0,
+              bigBlindPosition = 1,
               bets = []
             }
 
@@ -35,3 +36,9 @@ main = do
 --    https://hackage-content.haskell.org/package/mtl-2.3.2/docs/Control-Monad-State-Lazy.html
     evalStateT gameRound initialTable
 
+-- other init table
+{-
+let players = [Player "Bob" [] 1000 0 False False SmallBlind False,
+                   Player "Sam" [] 1000 0 False False BigBlind False,
+                   Player "Frodo" [] 1000 0 False False NoBlind False]
+-}

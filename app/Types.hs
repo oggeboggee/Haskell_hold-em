@@ -160,16 +160,6 @@ data GamePhase =
             | Turn
             | River
             | Showdown
-    deriving (Show)
-
----------------------------------------------------------------------
--- | Table positions a player can be in.
-data TablePosition =
-    Dealer
-    | SB
-    | BB
-    | UTG
-    | CutOff
     deriving (Show, Eq)
 
 
@@ -183,8 +173,10 @@ data Player = Player
             commitedChips :: Chip,
             folded        :: Bool,
             acted         :: Bool
-            --blind         :: Blind
-            --position      :: TablePosition
+            checked       :: Bool,
+            blind         :: Blind,
+            hasActed      :: Bool,
+            playeState    :: PlayerState
             }
     deriving (Eq)
 
@@ -200,7 +192,6 @@ instance Show Player where
 data Table = Table
             {
             players       :: [Player],
-            --playerTurn    :: (Player, Int), -- We have this with dealerposition.
             highBet       :: Bet,
             bets          :: [Bet],
             deck          :: Deck,
@@ -211,16 +202,30 @@ data Table = Table
             smallBlindPosition :: Int,
             bigBlindPosition :: Int
             }
-    -- deriving (Show)
 
 instance Show Table where
-    show t = "Players:\n" ++ unlines (map show (players t)) ++ 
-            " \nHighbet: " ++ show (highBet t) ++
-            " \nPot: " ++ show (pot t) ++
-            " \nBoard: " ++ show (board t)
+
+    -- show t = "Players:\n" ++ unlines (map show (players t)) ++ 
+    --         " \nHighbet: " ++ show (highBet t) ++
+    --         " \nPot: " ++ show (pot t) ++
+    --         " \nBoard: " ++ show (board t)
+
+    show t = show (players t) ++ 
+            " \nPhase:" ++ show (phase t) ++
+            " \nCommmunityCards: " ++ show (board t) ++
+            " \nHighbet:         " ++ show (highBet t) ++
+            " \nCurrent Pot:     " ++ show (pot t)
+
 
 
 ---------------------------------------------------------------------
 
 
 
+data PlayerState =
+    NotActed
+    | HasFolded
+    | HasChecked
+    | HasBet
+    | HasAllin
+    deriving (Eq)

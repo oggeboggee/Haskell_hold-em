@@ -7,6 +7,7 @@ import Types
 import Control.Monad.State
 import Data.Char
 import Data.List (isPrefixOf)
+import Utilities
 
 
 -- With these changes the gameloop for eventsshould become
@@ -147,12 +148,12 @@ performEvent event = do
             put table'
             mapM_ eventMsg gEvents
 
-
 -- | We need a function to take a player at a specific index in a list, 
 --   and then replace with the updated player
 replacePlayer :: PlayerIndex -> Player -> [Player] -> [Player]
 replacePlayer playerIndex updatedPlayer playerList = 
     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
+
 
 
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
@@ -172,13 +173,6 @@ placePureBet table playerIndex bet =
                         (\player -> decChips player bet) table
         
         player = (players tableUpdated) !! playerIndex
-    
-    in tableUpdated
-            { pot = incPot (pot tableUpdated) bet,
-              bets = bet : (bets tableUpdated),
-              highBet = max (highBet tableUpdated) (commitedChips player)
-            }
-
 
 pureFold :: Table -> PlayerIndex -> Table
 pureFold table playerIndex =
@@ -189,38 +183,76 @@ pureCheck :: Table -> PlayerIndex -> Table
 pureCheck table playerIndex = 
     updatePlayerAtIndex playerIndex (\p -> p { acted = True }) table
 
+---- AXEL
+--------------------------------------------------------------
+-------------- All Actions a player can make -----------------
+-- All actions end by passing the turn
+performAction :: Action -> Int -> State Table ()
+performAction action playerPos = do 
+    case action of
+        Check   -> check playerPos
+        Fold    -> fold playerPos
+        Call    -> call playerPos
+        Raise x -> raise playerPos x
+        AllIn   -> allIn playerPos
+    playerHaveActed playerPos
 
+playerHaveActed :: Int -> State Table ()
+playerHaveActed playerPos = do
+    table <- get
+    let players'  = players table
+        player   = (players'!!playerPos) {hasActed = True}
+        players'' = replacePlayer playerPos player players'
+    put table
+        { players = players''}
+--------------------------------------------------------------
 
+-- | Change a players fold-status to True
+fold :: Int -> State Table ()
+fold playerPos = do
+    table <- get
+    let player   = players table!!playerPos
+        player'  = player {folded = True}
+        players' = replacePlayer playerPos player' (players table)
+    put table 
+        { players = players'}
+
+    
+    in tableUpdated
+            { pot = incPot (pot tableUpdated) bet,
+              bets = bet : (bets tableUpdated),
+              highBet = max (highBet tableUpdated) (commitedChips player)
+            }
+
+---------------------------------------    
+-- | Pass the turn to the next player -- Might not need this
+check :: Int -> State Table ()
+check playerPos = do return ()
 
 
 -- https://zvon.org/other/haskell/Outputprelude/read_f.html    
---------------------------------------------------------------
---------------------------------------------------------------
-
---------------------------------------------------------------
---------------------------------------------------------------
-    
--- | Pure function, decrease the amount of chips a player have by a certain amount
-decChips :: Player -> Bet -> Player
-decChips player bet = player {chips         = (chips player)-bet,
-                              commitedChips = (commitedChips player)+bet}
-
--- | increase the amount of chips a player have by a certain amount
-incChip :: Player -> Pot -> Player
-incChip player pot = player {chips = (chips player)+pot}
-
--- | Reset the commited chips a player have made to zero
-resetCommited :: Player -> Player
-resetCommited player = player {commitedChips = 0}
-
--- | Increase the Pot by a certain amount
-incPot :: Pot -> Bet -> Pot
-incPot pot bet = pot + bet
-
--- | Helper function to calculate lowest bet a player can make
-lowestBet :: Table -> Player -> Bet
-lowestBet table player = (highBet table) - (commitedChips player)
 
 
 printHand :: Player -> Game ()
 printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))
+
+{-
+--------------------------------------------------------------
+--------------------------------------------------------------
+-- | Manual testing:
+player1 :: Player
+player1 = Player "Axel" hand1 400 0 False False NoBlind False
+
+player2 :: Player
+player2 = Player "Frodo" hand2 340 100 False False NoBlind False
+
+player3 :: Player
+player3 = Player "Sam" hand3 530 0 False False NoBlind False
+
+playerlist :: [Player]
+playerlist = [player1, player2, player3]
+
+table2 :: Table
+table2 = Table playerlist{- playerlist -}100 [] fullDeck [] PreFlop 200 0 1 2
+
+-}
