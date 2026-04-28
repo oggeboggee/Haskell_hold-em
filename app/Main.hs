@@ -1,6 +1,6 @@
 module Main where
 
-import System.IO 
+import System.IO ()
 import Cards
 import TexasEngine
 import Types
@@ -10,7 +10,7 @@ import Control.Monad.State
 main :: IO ()
 main = do
 
-    putStrLn "Welcome to Haskell Hold'em!"
+    putStrLn "\nWelcome to Haskell Hold'em!"
 
     let initPlayers = [Player "Bob" [] 1000 0 False False,
                        Player "Sam" [] 1000 0 False False,

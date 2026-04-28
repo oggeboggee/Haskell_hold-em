@@ -1,27 +1,39 @@
 module Types where
 import Control.Monad.State
 
-
+-- | https://wiki.haskell.org/Real_World_Applications/Event_Driven_Applications
 
 -- | Attempt at making event data types.
--- Should we have events for players that are actions and then also have Events for things such as
--- dealing cards/hands, resetting rounds, etc? Does Blinds belong in this category. Thinking in terms
--- of future if we will need to send this in JSON? https://academy.fpblock.com/haskell/library/aeson/
+-- | Should we have events for players that are actions and then also have Events for things such as
+-- | dealing cards/hands, resetting rounds, etc? Does Blinds belong in this category. Thinking in terms
+-- | of future if we will need to send this in JSON? https://academy.fpblock.com/haskell/library/aeson/
 
+-- | An Event sent into the gameengine. An intention to change the game state.
 data Event = 
-    PlayerEvent Int Action
-    | Blind Int Bet
+    PlayerEvent PlayerIndex Action    -- Player attempts to perform an action.
+    | SystemEvent SystemAction        -- Game engine trigers something.
 
+-- | Actions initiated by the game.
+data SystemAction =
+    PlaceBlind PlayerIndex BlindType Bet   -- Player places blind.
+    -- | AdvancePhase
+    -- | EndRound
+
+-- | Specific events produced by the game after an Event is processed. Descirbe what happened and
+-- | is used for output or to log what happened.
 data GameEvent =
-    PlayerFolded String
-    | PlayerChecked String
-    | PlayerCalled String Bet
-    | PlayerRaised String Bet
-    | PlayerAllIn String Bet
-    | PlayerPutBlinds String Bet
+    PlayerFolded PlayerName
+    | PlayerChecked PlayerName
+    | PlayerCalled PlayerName Bet
+    | PlayerRaised PlayerName Bet
+    | PlayerAllIn PlayerName Bet
+    | PlayerPlacedBlinds PlayerName BlindType Bet
     deriving (Show)
 
-
+-- | A players name (used for output)
+type PlayerName = String
+-- | An internal reference to a player. 
+type PlayerIndex = Int
 
 -- Data type for all the different types of actions a player can make
 data Action = 
@@ -30,7 +42,6 @@ data Action =
     | Call
     | Raise Int
     | AllIn
---    deriving (Show)
 
 instance Show Action where
     show Check = "Check"
@@ -135,9 +146,8 @@ type Pot = Int
 
 ---------------------------------------------------------------------
 -- | Represent if a player have big, samll or no blind
-data Blind = 
-    NoBlind
-    | SmallBlind
+data BlindType = 
+    SmallBlind
     | BigBlind
     deriving (Show, Eq)
 

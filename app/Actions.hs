@@ -3,10 +3,8 @@ module Actions where
 {- Logic for the the different actions a player can make -}
 
 import Types
-import Cards ( fullDeck, hand1, hand2, hand3 )
 
 import Control.Monad.State
-import Data.Bits (Bits(xor))
 import Data.Char
 import Data.List (isPrefixOf)
 
@@ -25,7 +23,7 @@ import Data.List (isPrefixOf)
 -- change getPlayerAction and convertAction to sue Event instead of Action?
 -- | Show a player what actions they can make (based on highBet), prompt player to type desired action,
 --   take action and convert it from a string into what happens in-game, prompt user if action is wrong.
-getPlayerEvent :: Int -> Game Event
+getPlayerEvent :: PlayerIndex -> Game Event
 getPlayerEvent playerIndex = do
     table <- get
 
@@ -37,6 +35,7 @@ getPlayerEvent playerIndex = do
                            else "Fold, Call, Raise <x>, All In"
     
     liftIO $ putStrLn ((name player) ++ " - Your available actions: " ++ availableActions)
+    printHand player
 
     input <- liftIO getLine
 
@@ -69,6 +68,7 @@ convertAction userInput =
 -- | We handle errors if wanted action isn't allowed. We produce GameEvents.
 -- | This is instead of having applyPureAction.
 applyEvent :: Event -> Table -> Either String (Table, [GameEvent])
+
 -- PLAYERACTIONS
 applyEvent (PlayerEvent playerIndex action) table =
     let player = (players table) !! playerIndex
@@ -104,13 +104,15 @@ applyEvent (PlayerEvent playerIndex action) table =
                      table' = placePureBet table playerIndex amount
                  in Right (table', [PlayerAllIn plName amount])
 
--- BLINDS
-applyEvent (Blind playerIndex bet) table =
-    let table' = placePureBet table playerIndex bet
-        player = (players table) !! playerIndex
-        plName = (name player)
-    in
-        Right (table', [])
+-- System Events
+applyEvent (SystemEvent systemAction) table =
+    case systemAction of
+        PlaceBlind playerIndex blindType bet ->
+            let table' = placePureBet table playerIndex bet
+                player = (players table) !! playerIndex
+                plName = (name player)
+            in
+                Right (table', [PlayerPlacedBlinds plName blindType bet])
 
 -- | This is the function that prints the events.
 eventMsg :: GameEvent -> Game ()
@@ -124,6 +126,8 @@ eventMsg event = liftIO $ case event of
     PlayerRaised p amount -> putStrLn (p ++ " raises with " ++ (show amount) ++ " chips.")
 
     PlayerAllIn p amount -> putStrLn (p ++ " goes all-in with " ++ (show amount) ++ " chips.")
+
+    PlayerPlacedBlinds p blindType amount -> putStrLn (p ++ " placed the " ++ (show blindType) ++ " of " ++ (show amount) ++ " chips.")
 
 
 -- | https://stackoverflow.com/questions/27609062/what-is-the-difference-between-mapm-and-mapm-in-haskell
@@ -145,12 +149,12 @@ performEvent event = do
 
 -- | We need a function to take a player at a specific index in a list, 
 --   and then replace with the updated player
-replacePlayer :: Int -> Player -> [Player] -> [Player]
+replacePlayer :: PlayerIndex -> Player -> [Player] -> [Player]
 replacePlayer playerIndex updatedPlayer playerList = 
     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
 
 
-updatePlayerAtIndex :: Int -> (Player -> Player) -> Table -> Table
+updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
 updatePlayerAtIndex playerIndex f table =
     let playerList = (players table)
         player = playerList !! playerIndex
@@ -161,7 +165,7 @@ updatePlayerAtIndex playerIndex f table =
 
 -- placeBet that works with Gaem() 
 --placeBet :: Int -> Bet -> State Table ()
-placePureBet :: Table -> Int -> Bet -> Table
+placePureBet :: Table -> PlayerIndex -> Bet -> Table
 placePureBet table playerIndex bet =
     let tableUpdated = updatePlayerAtIndex playerIndex 
                         (\player -> decChips player bet) table
@@ -175,12 +179,12 @@ placePureBet table playerIndex bet =
             }
 
 
-pureFold :: Table -> Int -> Table
+pureFold :: Table -> PlayerIndex -> Table
 pureFold table playerIndex =
     updatePlayerAtIndex playerIndex (\p -> p { folded = True }) table
 
 
-pureCheck :: Table -> Int -> Table
+pureCheck :: Table -> PlayerIndex -> Table
 pureCheck table playerIndex = 
     updatePlayerAtIndex playerIndex (\p -> p { acted = True }) table
 
@@ -216,3 +220,6 @@ incPot pot bet = pot + bet
 lowestBet :: Table -> Player -> Bet
 lowestBet table player = (highBet table) - (commitedChips player)
 
+
+printHand :: Player -> Game ()
+printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))

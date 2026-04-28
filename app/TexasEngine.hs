@@ -49,45 +49,49 @@ gameLoop playerIndex highestBet = do
 gameRound :: Game ()
 gameRound = do
     
-    liftIO $ putStrLn "Game is starting.."
+    liftIO $ putStrLn "\n--------------------------------"
+    liftIO $ putStrLn "              NEW HAND             "
+    liftIO $ putStrLn "--------------------------------"
+    
     resetTable
+    resetBettingRound
+    initiateBlinds
+    dealHands
+
+    -- PREFLOP --
+    table <- get
+    printPhase "PREFLOP" table
+    printBettingRound (firstPlayerToBet table)
+    bettingRound
+
+    -- FLOP --
+    moveToNextPhase
+    dealCommunityCards
+    resetBettingRound
 
     table <- get
-    let playersList = (players table)
-        sbIndex = (smallBlindPosition table)
-        bbindex = (bigBlindPosition table)
-        dindex = (dealerPosition table)
-
-        sbPlayer = playersList !! sbIndex
-        bbPlayer = playersList !! bbindex
-
-    initiateBlinds
-    liftIO $ putStrLn ((name sbPlayer) ++ ": placed the small blind | " ++ (name bbPlayer) ++ ": placed the big blind")
-    table' <- get
-    liftIO $ putStrLn (show table')
-
-    -- PREFLOP
-    dealHands
-    liftIO $ putStrLn "Dealing hands.."
-    moveToNextPhase
+    printPhase "FLOP" table
+    printBettingRound (firstPlayerToBet table)
     bettingRound
 
-    -- FLOP
+    -- TURN --
     moveToNextPhase
     dealCommunityCards
-    liftIO $ putStrLn "Flop delt.."
-    showBoard
+    resetBettingRound
+
+    table <- get 
+    printPhase "TURN" table
+    printBettingRound (firstPlayerToBet table)
     bettingRound
 
-    -- TURN
-    dealCommunityCards 
-    liftIO $ putStrLn "Turn delt.."
-    bettingRound
-
-    -- RIVER
+    -- RIVER --
     moveToNextPhase
     dealCommunityCards
-    liftIO $ putStrLn "River delt.."
+    resetBettingRound
+
+    table <- get
+    printPhase "RIVER" table
+    printBettingRound (firstPlayerToBet table)
     bettingRound
 
    
@@ -95,21 +99,12 @@ gameRound = do
     -- after this we need to do showdown and check winenr hand combination etc.
 
 
-showBoard :: Game ()
-showBoard = do 
-    board <- gets board
-    liftIO $ print board
-
-
 -- | Initiate the betting phase of the game.
 bettingRound :: Game ()
 bettingRound = do
-    resetBettingRound   -- Need to make something to reset players, no fold,check.
     table <- get
     let firstPlayer = (firstPlayerToBet table)
         highestBet           = (highBet table)
-
-    liftIO $ putStrLn ("Get ready to place your bets. First player to act: " ++ show firstPlayer)
 
     gameLoop firstPlayer highestBet
 
@@ -126,8 +121,8 @@ initiateBlinds = do
     sbPlayer <- gets smallBlindPosition
     bbPlayer <- gets bigBlindPosition
 
-    performEvent (Blind sbPlayer 50)
-    performEvent (Blind bbPlayer 100)
+    performEvent (SystemEvent (PlaceBlind sbPlayer SmallBlind 50))
+    performEvent (SystemEvent (PlaceBlind bbPlayer BigBlind 100))
 
     
 --------------------------------------------------------------
@@ -178,15 +173,15 @@ dealCommunityCards = do
 -- | Reset the required fields in the table and the players in the table.
 resetTable :: Game ()
 resetTable = 
-    modify (\table -> 
+    modify (\t -> 
         let resetPlayer p = 
                 p { folded = False,
                     acted = False,
                     commitedChips = 0 
                   }
         
-        in table 
-            { players = map resetPlayer (players table),
+        in t
+            { players = map resetPlayer (players t),
               highBet = 0,
               pot = 0,
               bets = [],
@@ -196,18 +191,18 @@ resetTable =
 
 -- | Finds the next player in turn order who is eligible to act. I.e not folded and still has chips.
 -- | It wraps around the table.
-nextPlayerToAct :: Int -> [Player] -> Int
-nextPlayerToAct i players = 
-    let n = (length players)
+nextPlayerToAct :: PlayerIndex -> [Player] -> PlayerIndex
+nextPlayerToAct i playersList = 
+    let n = (length playersList)
         nextPlayer = (i + 1) `mod` n
-        player = players !! nextPlayer
+        player = playersList !! nextPlayer
     in if ((folded player) || (chips player) == 0)
-       then nextPlayerToAct nextPlayer players
+       then nextPlayerToAct nextPlayer playersList
        else nextPlayer 
                                 
 -- | Advance from the tables current phase to the next one.
 moveToNextPhase :: Game ()
-moveToNextPhase = modify (\table -> table { phase = nextPhase (phase table) })
+moveToNextPhase = modify (\t -> t { phase = nextPhase (phase t) })
 
 
 -- | Rotates the delaer button around the table and updates SB and BB positions based on where the dealer
@@ -220,7 +215,7 @@ moveDealer = do
         newSmallBlindPosition = ((newDealerPosition) + 1) `mod` numPlayers
         newBigBlindPosition   = ((newSmallBlindPosition) + 1) `mod` numPlayers
 
-    modify (\table -> table 
+    modify (\t -> t
         { dealerPosition     = newDealerPosition,
           smallBlindPosition = newSmallBlindPosition,
           bigBlindPosition   = newBigBlindPosition
@@ -228,7 +223,7 @@ moveDealer = do
 
 -- | Who bets first varies depedning on if we are in PreFlop state or any other state. PreFlop it is
 --   the player UTG (BB+1). In all postflop betting rounds action begins with the player in the SB position.
-firstPlayerToBet :: Table -> Int
+firstPlayerToBet :: Table -> PlayerIndex
 firstPlayerToBet table = case phase table of
     PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
     _       -> (smallBlindPosition table)
@@ -240,12 +235,11 @@ bettingroundOver table =
     let playerList = (players table)
         hb         = (highBet table)
 
-        allPlayersActed p =
-            folded p ||
-            chips p == 0 ||
-            (commitedChips p == hb && acted p)
-    in all allPlayersActed playerList   
-
+    in all (\p ->
+        folded p ||
+        chips p == 0 ||
+        commitedChips p == hb
+        ) playerList 
 
 -- | Reset after each betting round by clearing flags for players. Also resets relevant fields in the table
 -- | but preserves the higBet during the PreFlop phase of the game (makes BB be highBet during PreFlop).
@@ -257,20 +251,22 @@ resetBettingRound = do
                 PreFlop -> (highBet table) 
                 _       -> 0
     
-    modify (\table -> 
-        table 
-            { players = 
-                map (\player -> player { acted = False }) (players table),
-                highBet = hb,
-                bets = []
-            })
+    modify (\t -> t { players = map (\p -> p { acted = False, commitedChips = 0 }) (players t), highBet = hb})
 
 
--- remove below maybe --
-printTable :: Game ()
-printTable = do
-    table <- get
-    liftIO $ print table
-    --liftIO $ putStrLn ("Current table: " ++ show table)
+-- | Printing helpers
+printPhase :: String -> Table -> Game ()
+printPhase phaseName table = 
+    liftIO $ do 
+        putStrLn ("\n")
+        putStrLn ("-------------------------")
+        putStrLn (phaseName ++ " (Pot: " ++ show (pot table) ++ ")")
+        putStrLn ("-------------------------")
+        putStrLn ("Board: " ++ show (board table))
+        putStrLn ("\n")
+
+printBettingRound :: PlayerIndex -> Game ()
+printBettingRound player = liftIO $ putStrLn ("First player to act: " ++ (show player))
+
 
 
