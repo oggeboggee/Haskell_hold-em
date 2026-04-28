@@ -162,7 +162,7 @@ data GamePhase =
             | Showdown
     deriving (Show, Eq)
 
-
+{-
 ---------------------------------------------------------------------
 -- | Data type for a player
 data Player = Player
@@ -177,6 +177,19 @@ data Player = Player
             blind         :: Blind,
             hasActed      :: Bool,
             playeState    :: PlayerState
+            }
+    deriving (Eq)
+-}
+data Player = Player
+            {
+            name          :: String,
+            hand          :: Hand,
+            chips         :: Chip,
+            commitedChips :: Chip,
+            folded        :: Bool,
+            acted         :: Bool
+            --blind         :: Blind
+            --position      :: TablePosition
             }
     deriving (Eq)
 

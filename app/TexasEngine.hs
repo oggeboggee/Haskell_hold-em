@@ -61,6 +61,7 @@ gameRound = do
     bettingRound
 
 -- Axel
+{-
 gameRound2:: Game ()
 gameRound = do
 
@@ -119,10 +120,7 @@ gameRound = do
     --liftIO $ print win
     showWinners win
     printTable
-
-
--------------------------------------------------------------------------------------------
-
+-}
 
 -------------- All Game () - Functions -----------------------
 ------------------------------------------------------------
@@ -163,6 +161,7 @@ bettingRound = do
 
 
 --Axel
+{-
 -- Gameloop for Game ().
 gameLoop :: Game ()
 gameLoop = do
@@ -181,7 +180,7 @@ bettingRound playerToAct = do
         printTable
         bettingRound (nextPlayerToAct playerToAct (players table))
 
-
+-- Axel
 -- | Recive input from user and call for the correct actions depending on the input. 
 chooseAction :: Int -> Game ()
 chooseAction playerPos = do
@@ -208,7 +207,7 @@ chooseAction playerPos = do
             liftIO $ putStrLn "Invalid option"
             chooseAction playerPos
 
-
+-}
 --------------------------------------------------------------
 --------------------------------------------------------------
 
@@ -265,7 +264,7 @@ resetBettingRound = do
     
     modify (\t -> t { players = map (\p -> p { acted = False, commitedChips = 0 }) (players t), highBet = hb})
 
-
+{-
 -- Axel
 -- | Reset the required fields in the table and the players in the table.
 resetGameState :: State Table ()--Game ()
@@ -298,7 +297,7 @@ resetRound =
               highBet = 0
             }
     )    
-
+-}
 
 --------- Dealing of cards, hands, communitycards -----------
 
@@ -313,6 +312,7 @@ initiateBlinds = do
     performEvent (SystemEvent (PlaceBlind bbPlayer BigBlind 100))
 
 --AXEL
+{-
 --------------------------------------------------------------
 ---------- Dealing of cards, hands, communitycards -----------
 initiateBlinds :: Game ()
@@ -324,10 +324,10 @@ initiateBlinds = do
     placeBet bbPlayer 100
  -- We can later on introduce logic that increases blind amount per round
 
-
+-}
 -- | Deal cards, update the deck after removing the cards
 --   and return the cards that have been delt.
-dealCards :: Int -> State Table [Card] --Game [Card]
+dealCards :: Int -> Game [Card]  --State Table [Card] 
 dealCards n = do
     table <- get
     let (deltCards, newDeck) = splitAt n (deck table)
@@ -338,7 +338,7 @@ dealCards n = do
 --   and for each player in the list, use 'dealCards' to take two cards from the deck. Put
 --   the cards as the players hand, then put the list of players now with updated hands back
 --   into the table.
-dealHands :: State Table () --Game ()
+dealHands :: Game () --State Table () 
 dealHands = do
 
     playerList <- gets players
@@ -353,7 +353,7 @@ dealHands = do
 
 
 -- | Deal community cards to the board.
-dealCommunityCards :: State Table ()--Game ()
+dealCommunityCards :: Game () -- State Table ()
 dealCommunityCards = do
     currentPhase <- gets phase
     cards <- case currentPhase of
@@ -391,6 +391,8 @@ moveDealer = do
           bigBlindPosition   = newBigBlindPosition
         })
 
+-- Axel
+{-
 -- Maybe a away to do the showdown... simple way...
 showdown :: State Table [Int]
 showdown = do
@@ -407,7 +409,7 @@ showdown = do
  -- | Advance from the tables current phase to the next one.
 moveToNextPhase :: State Table () --Game ()
 moveToNextPhase = modify (\table -> table { phase = nextPhase (phase table) })   
-
+-}
 
 --------------------------------------------------------------
 ------------ Functions to print out sepcific things ----------
@@ -426,7 +428,8 @@ printPhase phaseName table =
 printBettingRound :: PlayerIndex -> Game ()
 printBettingRound player = liftIO $ putStrLn ("First player to act: " ++ (show player))
 
-
+--Axel
+{-
 printTable :: Game ()
 printTable = do
     table <- get
@@ -446,7 +449,7 @@ showWinners indexes = do
         nameString = printNames names
     liftIO $ putStrLn $ "The winners are: " ++ nameString
 
-
+-}
 
 
 --------------------------------------------------------------

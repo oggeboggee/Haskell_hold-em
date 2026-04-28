@@ -36,7 +36,7 @@ main = do
 --    https://hackage-content.haskell.org/package/mtl-2.3.2/docs/Control-Monad-State-Lazy.html
     evalStateT gameRound initialTable
 
--- other init table
+-- Init table for Axel
 {-
 let players = [Player "Bob" [] 1000 0 False False SmallBlind False,
                    Player "Sam" [] 1000 0 False False BigBlind False,

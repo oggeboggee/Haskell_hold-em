@@ -3,7 +3,7 @@ module Utilities where
 
 import Types
 import Cards
-import Actions
+--import Actions
 import Control.Monad.State
 import Data.Char (toLower)
 import System.Random
@@ -23,14 +23,15 @@ nextPhase p = case p of
     River       -> Showdown
     Showdown    -> DealHands
 
-
+-- Axel
+{-
 -- | Choose who is the next player to act, return the index of that player
 nextPlayerToAct :: Int -> [Player] -> Int
 nextPlayerToAct i players = if not (hasFolded (players!!next)) then next
                             else nextPlayerToAct (i+1) players
                                 where
                                     next = (i + 1) `mod` (length players)
-
+-}
  -- | Finds the next player in turn order who is eligible to act. I.e not folded and still has chips.
 -- | It wraps around the table.
 nextPlayerToAct :: PlayerIndex -> [Player] -> PlayerIndex
@@ -50,7 +51,8 @@ firstPlayerToBet table = case phase table of
     PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
     _       -> (smallBlindPosition table)
 
-
+-- Axel
+{-
 -- | Given the state of a table and a specific player(index) return a string with avalible actions
 availableActions :: Table -> Int -> String
 availableActions table playerPos = if canCheck table playerPos then "Check, " ++ actions
@@ -96,7 +98,7 @@ onePlayerLeft players = (==1) . length $ filter not [hasFolded player | player <
 -- | Decide if a betting round is over
 roundOver2 :: [Player] -> Int -> Bool
 roundOver2 players highBet = (and [(matchHBet p highBet && hasActed p) || hasFolded p | p <- players]) 
-
+-}
 -- | Determines wether the current betting round is over or not. A round is over once eveery player has
 -- | either folded, is all-in, or matched the current highBet and taken an action.
 bettingroundOver :: Table -> Bool
@@ -109,7 +111,7 @@ bettingroundOver table =
         chips p == 0 ||
         commitedChips p == hb
         ) playerList 
-
+{-
 -- | Check if a player have macthed the highest bet
 matchHBet :: Player -> Int -> Bool
 matchHBet player highBet = commitedChips player == highBet
@@ -121,7 +123,7 @@ hasFolded = folded
 -- | Check if all players have acted
 allHaveActed :: [Player] -> Bool
 allHaveActed players = and [hasActed player | player <- players]    
-
+-}
 
 -- From Actions
     

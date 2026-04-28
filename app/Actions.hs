@@ -173,6 +173,11 @@ placePureBet table playerIndex bet =
                         (\player -> decChips player bet) table
         
         player = (players tableUpdated) !! playerIndex
+    in tableUpdated
+            { pot = incPot (pot tableUpdated) bet,
+              bets = bet : (bets tableUpdated),
+              highBet = max (highBet tableUpdated) (commitedChips player)
+            }
 
 pureFold :: Table -> PlayerIndex -> Table
 pureFold table playerIndex =
@@ -183,6 +188,7 @@ pureCheck :: Table -> PlayerIndex -> Table
 pureCheck table playerIndex = 
     updatePlayerAtIndex playerIndex (\p -> p { acted = True }) table
 
+{-
 ---- AXEL
 --------------------------------------------------------------
 -------------- All Actions a player can make -----------------
@@ -232,7 +238,7 @@ check playerPos = do return ()
 
 -- https://zvon.org/other/haskell/Outputprelude/read_f.html    
 
-
+-}
 printHand :: Player -> Game ()
 printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))
 
