@@ -67,6 +67,7 @@ convertAction userInput =
 -- | Here we update the state, have betting rules (when can a player call, raise etc.). 
 -- | We handle errors if wanted action isn't allowed. We produce GameEvents.
 -- | This is instead of having applyPureAction.
+-- applyEvent :: Event -> State Table (Either String [GameEvent])
 applyEvent :: Event -> Table -> Either String (Table, [GameEvent])
 
 -- PLAYERACTIONS
