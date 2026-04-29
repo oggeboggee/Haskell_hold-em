@@ -8,6 +8,7 @@ import Control.Monad.State
 import Data.Char
 import Data.List (isPrefixOf)
 import Utilities
+import HandEvaluation
 
 
 -- With these changes the gameloop for eventsshould become
@@ -60,8 +61,6 @@ convertAction userInput =
         _ | "raise " `isPrefixOf` s -> if all isDigit amount then Just (Raise (read amount)) else Nothing
                                         where amount = (drop 6 s) 
         _ -> Nothing
-
-
 
 -- | Source guide:
 -- | https://www.ahri.net/2019/07/practical-event-driven-and-sourced-programs-in-haskell/
@@ -124,13 +123,12 @@ applyEvent (EngineEvent engineAction) = do
             modify (\t -> placePureBet table playerIndex bet)
             pure (Right [PlayerPlacedBlinds plName blindType bet])
 
-        Showdown_ -> do
-            let resultOfShowdown = state (runState runShowDown)
+        RunShowdown -> do
+            resultOfShowdown <- runShowdown
             pure (Right resultOfShowdown)
             
-
-runShowDown :: State Table [GameEvent]
-runShowDown = do
+runShowdown :: State Table [GameEvent]
+runShowdown = do
     table <- get
 
     let playerList = (players table)
@@ -141,14 +139,14 @@ runShowDown = do
         activePlayers = filter (not . folded) playerList
 
         -- ex. [[5H,8C], [7H,9H]]
-        extractedHands = map hand activeplayers
+        extractedHands = map hand activePlayers
 
         -- ex- [1]  , indexes relative to the activeplayers
         winnerIndexes = winners finalBoard extractedHands
 
         -- winners returns index of winner(s) in activePlayers list, need to map to who it is
         -- in activePlayers: ex. activePlayers !! 1 = Lewis
-        computedWinners = map (\i -> activeplayers !! i) winnerIndexes
+        computedWinners = map (\i -> activePlayers !! i) winnerIndexes
                 
         potSize = (pot table)
 
@@ -158,10 +156,13 @@ runShowDown = do
             then 0
             else potSize `div` length computedWinners
 
-        updatedPlayers = map (dealOutChips2 computedWinners evenShare) playerList
+        winnerNames = map name computedWinners
+
+        updatedPlayers = map (dealOutChips2 winnerNames evenShare) playerList
 
     modify (\t -> t { players = updatedPlayers, pot = 0 })
-    pure (Right [ShowdownHappened (map name computedWinners)])
+    pure [ShowdownHappened (map name computedWinners)]
+
 {-
 showdown :: State Table [Int]
 showdown = do
@@ -175,12 +176,7 @@ showdown = do
     put table {players = players'', pot = 0} -- folded players get removed from the table here i think?
     return winners'
 -}
--- | Updates a player after showdown, adds their share of pot if they are winner. if player
---   is not in the list of winners then they don't get a share.
-dealOutChips2 :: [Player] -> Int -> Player -> Player
-dealOutChips2 winners share p
-    | p `elem` winners = p { chips = chips p + share }
-    | otherwise        = p
+
   {-              
 dealOutChips :: [Player] -> [Int] -> Int -> [Player]
 dealOutChips players []      _     = players
@@ -204,6 +200,8 @@ eventMsg event = liftIO $ case event of
     PlayerAllIn p amount -> putStrLn (p ++ " goes all-in with " ++ (show amount) ++ " chips.")
 
     PlayerPlacedBlinds p blindType amount -> putStrLn (p ++ " placed the " ++ (show blindType) ++ " of " ++ (show amount) ++ " chips.")
+
+    ShowdownHappened ps -> mapM_ (\p -> putStrLn (p ++ " wins!")) ps
 
 
 -- | https://stackoverflow.com/questions/27609062/what-is-the-difference-between-mapm-and-mapm-in-haskell

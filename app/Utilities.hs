@@ -79,6 +79,12 @@ dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
         player   = incChips (players!!x) chips
         players' = replacePlayer x player players
 -}
+-- | Updates a player after showdown, adds their share of pot if they are winner. if player
+--   is not in the list of winners then they don't get a share.
+dealOutChips2 :: [PlayerName] -> Int -> Player -> Player
+dealOutChips2 winners share p
+    | name p `elem` winners = p { chips = chips p + share }
+    | otherwise        = p
 {-
 
 --------------------------------------------------------------------------------
