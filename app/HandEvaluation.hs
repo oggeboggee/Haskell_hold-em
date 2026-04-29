@@ -6,6 +6,69 @@ import Data.List
 import Data.Maybe
 import Data.Function (on)
 
+
+
+----------------------------------------------------------------
+--------------------   New Functions  --------------------------
+----------------------------------------------------------------
+
+-- | (Combination, [Card], [Card], [Card])
+-- | 
+-- | 
+
+handData :: [Card] -> (Combination, [Card])
+handData cards = undefined
+
+
+
+pair :: [Card] -> Maybe (Combination, [Card])
+pair cards
+     | length cards < 2     = Nothing
+     | pairCards /= Nothing = Just ( Pair,                                 -- <-- Combination
+                                     (fromJust pairCards) ++ kickerCards   -- <-- BestHand with kickers in descending order
+                                    )
+     | otherwise = Nothing
+     where        
+          groupCards = groupBy ((==) `on` rank) cards
+          pairCards = find (\g -> length g == 2) groupCards
+          kickerCards = take 3 $ reverse $ removeCards (fromJust pairCards) cards
+
+-- Testing:
+-- if it not have a pair, it should return Nothing
+-- if we have a pair, it should return a pair
+          -- the two first cards of the list of cards is the pair
+          -- the rest of the cards is three highest cards of the cards who not is part of the pair
+
+
+twoPair :: [Card] -> Maybe (Combination, [Card])
+twoPair cards
+     | length cards < 4 = Nothing
+     | length pairCards >= 2   = Just ( TwoPairs,                                 -- <-- Combination
+                                      (concat highestTwoPair) ++ kickerCards    -- <-- BestHand with kickers in descending order
+                                      )
+     | otherwise = Nothing
+          where
+               groupCards = groupBy ((==) `on` rank) cards            -- example [[2H,2H], [6C,6C], [8D]]
+               pairCards = filter (\g -> length g == 2) groupCards    --         [[2H,2H], [6C,6C]]
+               highestTwoPair = take 2 $ reverse pairCards
+               kickerCards = take 1 $ reverse $ removeCards (concat highestTwoPair) cards
+
+
+-- Testing:
+-- if we dont have Two-pair, it should return Nothing
+-- if we have two or more pairs, it should return twoPair
+          -- the order should always be : [highest pair ++ second highest pair ++ best kicker]
+
+
+
+
+----------------------------------------------------------------
+----------------------------------------------------------------
+----------------------------------------------------------------
+
+
+
+
 ----------------------------
 ------------helpers---------
 
@@ -77,7 +140,7 @@ highCard cards = (True,                               -- <-- Bool if the hand ha
 -------------------- Pair --------------------
 -- | works with sorted hand
 -- | can give wrong answer if it is called with card that have better combination than pair
-
+{-
 
 pair :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
 pair []             = (False, Nothing, Nothing, Nothing, Nothing)
@@ -91,7 +154,7 @@ pair cards
      | otherwise   = (False, Nothing, Nothing, Nothing, Nothing)
      where
           kick = kickers (removeCards (pairCards cards) cards) 3 
-
+-}
 
 -- | Helpers
 hasPairBool :: [Card] -> Bool
@@ -118,7 +181,7 @@ pairCards cards = [cards!!indexOfPair, cards!!(indexOfPair+1)]
 ------------------- End Pair --------------------
 -------------------- twoPair --------------------
 
-
+{-
 twoPair :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
 twoPair cards
      | length cards <= 3    = (False, Nothing, Nothing, Nothing, Nothing)
@@ -132,7 +195,7 @@ twoPair cards
           where
                kick = kickers (removeCards twoPairCardss cards) 1
                twoPairCardss = twoPairsCards cards
-
+-}
 -- | Helpers
 hasTwoPairBool :: [Card] -> Bool
 hasTwoPairBool cards
@@ -407,7 +470,7 @@ allIndexOfFlush cards = getIndex cards (switch (concat flushGroups))
 
 --------------- End Straight Flush --------------
 ------------------- Best Hand -------------------
-
+{-
 -- | Gives data given a list with cards
 handData :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
 handData cards
@@ -421,12 +484,12 @@ handData cards
      | getBool (twoPair cards      ) = twoPair cards
      | getBool (pair cards         ) = pair cards
      | otherwise                    = highCard cards  
-
+-}
 
 ----------------- End Best Hand -----------------
 ----------------- Compare Part ------------------
 
-
+{-
 
 -- | input: communityCards, list of players Hands
 -- | output: index of winning hands
@@ -434,8 +497,8 @@ winners :: [Card] -> [[Card]] -> [Int]
 winners com play = bestCombinations playersHands
      where
           playersHands = mergeCardList com play -- Combines every players hand with the communityCards
-
-
+-}
+{-
 bestCombinations :: [[Card]] -> [Int]
 bestCombinations playersHands = finalList
           where
@@ -448,7 +511,7 @@ bestCombinations playersHands = finalList
                   | otherwise        = -1
                finalList = filter (/= (-1)) indexList 
 
-
+-}
 
 -- | example 
 -- | cards: [5H,8H,JC,QD,AD]
