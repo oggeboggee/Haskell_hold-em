@@ -8,6 +8,7 @@ import Data.Char (toLower)
 import System.Random
 import HandEvaluation
 import Utilities
+import Control.Monad (void)
 
 -- Jonathan
 gameRound :: Game ()
@@ -38,7 +39,7 @@ gameRound = do
     runPhase
 
     -- SHOWDOWN --
-    performEvent (EngineEvent RunShowdown)
+    void $ performEvent (EngineEvent RunShowdown)
 
 -- | Above is quite repetetive so I'll make a helper function to make it shorter and cleaner
 runPhase :: Game ()
@@ -134,19 +135,30 @@ gameLoop :: PlayerIndex -> Game ()
 gameLoop playerIndex = do
     table <- get
 
-    let playerList    = (players table)
-        currentPlayer = playerList !! playerIndex
+    if bettingRoundOver table
+        then return ()
+    else do
+
+        let playerList    = (players table)
+            currentPlayer = playerList !! playerIndex
         
-        inactive p = folded p || chips p == 0
+            inactive p = folded p || chips p == 0
         
-    if inactive currentPlayer
-        then gameLoop (nextPlayerToAct playerIndex playerList)
+        if inactive currentPlayer
+            then gameLoop (nextPlayerToAct playerIndex playerList)
         else do
-            playerAction <- getPlayerEvent playerIndex
+            event <- getPlayerEvent playerIndex
 
-            performEvent playerAction
+            result <- performEvent event
 
-            gameLoop (nextPlayerToAct playerIndex playerList)
+            case result of
+                Left _ -> gameLoop playerIndex -- Same player retries
+
+                Right _ -> gameLoop (nextPlayerToAct playerIndex playerList)
+
+
+
+                    
 
 -- | Initiate the betting phase of the game.
 bettingRound :: Game ()
@@ -307,8 +319,8 @@ initiateBlinds = do
     sbPlayer <- gets smallBlindPosition
     bbPlayer <- gets bigBlindPosition
 
-    performEvent (EngineEvent (PlaceBlind sbPlayer SmallBlind 50))
-    performEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
+    void $ performEvent (EngineEvent (PlaceBlind sbPlayer SmallBlind 50))
+    void $ performEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
 
 --AXEL
 {-
@@ -421,8 +433,38 @@ printPhase phase table =
         putStrLn ("-------------------------")
         putStrLn ((show phase) ++ " (Pot: " ++ show (pot table) ++ ")")
         putStrLn ("-------------------------")
-        putStrLn ("Board: " ++ show (board table))
         putStrLn ("\n")
+        putStrLn (printTable table)
+        putStrLn ("\n")
+
+printTable :: Table -> String
+printTable table = 
+    let playersList = (players table)
+        d           = (dealerPosition table)
+        sb          = (smallBlindPosition table)
+        bb          = (bigBlindPosition table)
+
+        pos i 
+            | i == d = "(D)"
+            | i == sb = "(SB)"
+            | i == bb = "(BB)"
+            | otherwise = ""
+
+        showPlayer i p =
+            "chips: " ++ show (chips p)
+            ++ " | name: " ++ (name p)
+            ++ " | pos: " ++ pos i
+
+
+        indexedPlayers = zipWith showPlayer [0..] playersList
+    
+        -- put each player on a new line
+        render [] = ""    
+        render [x] = x
+        render (x:xs) = x ++ "\n" ++ render xs
+
+    in render indexedPlayers
+
 
 printBettingRound :: PlayerIndex -> Game ()
 printBettingRound player = liftIO $ putStrLn ("First player to act: " ++ (show player))

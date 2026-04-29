@@ -209,21 +209,31 @@ eventMsg event = liftIO $ case event of
 
 -- | Here we update the state and trigger the output of eventMSg. 
 -- | If we get Right returned from applyEvent, then we get a new table and a list of events that happened.
-performEvent :: Event -> Game ()
+performEvent :: Event -> Game (Either String [GameEvent])
 performEvent event = do
-    result <- state (runState (applyEvent event))
-    case result of
-        Left inv -> liftIO $ putStrLn inv
+    table <- get
+    
+    let (result, newTable) = runState (applyEvent event) table
+    
+    put newTable
 
-        Right gEvents -> do
-            mapM_ eventMsg gEvents
+    case result of
+        Left inv -> do
+            liftIO $ putStrLn inv
+            pure (Left inv)
+
+        Right events -> do
+            mapM_ eventMsg events
+            pure (Right events)
+
+
+
 
 -- | We need a function to take a player at a specific index in a list, 
 --   and then replace with the updated player
 replacePlayer :: PlayerIndex -> Player -> [Player] -> [Player]
 replacePlayer playerIndex updatedPlayer playerList = 
     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
-
 
 
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
