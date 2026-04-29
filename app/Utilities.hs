@@ -111,19 +111,17 @@ roundOver2 players highBet = (and [(matchHBet p highBet && hasActed p) || hasFol
 -- | either folded, is all-in, or matched the current highBet and taken an action.
 bettingRoundOver :: Table -> Bool
 bettingRoundOver table = 
-    let playerList = (players table)
+    let active = filter (not . folded) (players table)
         hb         = (highBet table)
-
-        onePlayerLeft = filter (not . folded) playerList
 
         allMatched =
             all (\p ->
                 folded p ||
                 chips p == 0 ||
                 commitedChips p == hb
-            ) playerList 
+            ) active 
     
-    in length onePlayerLeft <= 1 || allMatched
+    in length active <= 1 || allMatched
 {-
 -- | Check if a player have macthed the highest bet
 matchHBet :: Player -> Int -> Bool

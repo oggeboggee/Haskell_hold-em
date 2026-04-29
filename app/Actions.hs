@@ -77,6 +77,7 @@ applyEvent (PlayerEvent playerIndex action) = do
         hb     = (highBet table)
         cChips = (commitedChips player)
         plName = (name player)
+        toCall = hb - cChips
 
     case action of
         Fold -> do
@@ -84,33 +85,31 @@ applyEvent (PlayerEvent playerIndex action) = do
             pure (Right [PlayerFolded plName])
         
         Check -> do
-            if cChips == hb
+            if toCall == 0
             then do 
-                modify (\t -> pureCheck table playerIndex)
+                modify (\t -> pureCheck t playerIndex)
                 pure (Right [PlayerChecked plName])
             else
                 pure (Left "You can't check when behind the highbet.")
 
         Call -> do
-            if hb == 0
+            if toCall <= 0
             then pure (Left "There isn't a bet to call.")
             else do
-                let amount = hb - cChips
-                modify (\t -> placePureBet table playerIndex amount)
-                pure (Right [PlayerCalled plName amount])
+                modify (\t -> placePureBet t playerIndex toCall)
+                pure (Right [PlayerCalled plName toCall])
 
         Raise x -> do
             if x <= 0
             then pure (Left "Raise amount must be larger than 0.")
             else do
-                let callAmount = hb - cChips
-                    totalAmount = callAmount + x
-                modify (\t -> placePureBet table playerIndex totalAmount) 
+                let totalAmount = toCall + x
+                modify (\t -> placePureBet t playerIndex totalAmount) 
                 pure (Right [PlayerRaised plName x])
 
         AllIn -> do
             let amount = (chips player)
-            modify (\t -> placePureBet table playerIndex amount)
+            modify (\t -> placePureBet t playerIndex amount)
             pure (Right [PlayerAllIn plName amount])
 
 -- System Events
@@ -120,7 +119,7 @@ applyEvent (EngineEvent engineAction) = do
         PlaceBlind playerIndex blindType bet -> do
             let player = (players table) !! playerIndex
                 plName = (name player)
-            modify (\t -> placePureBet table playerIndex bet)
+            modify (\t -> placePureBet t playerIndex bet)
             pure (Right [PlayerPlacedBlinds plName blindType bet])
 
         RunShowdown -> do

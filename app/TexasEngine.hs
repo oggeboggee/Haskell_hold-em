@@ -24,33 +24,40 @@ gameRound = do
 
     -- PREFLOP -- (We don't use the helper here because its a special case.)
     table <- get
-    printPhase "PREFLOP" table
+    printPhase (phase table) table
     printBettingRound (firstPlayerToBet table)
     bettingRound
 
     -- FLOP --
-    runPhase "FLOP"
+    runPhase 
 
     -- TURN --
-    runPhase "TURN"
+    runPhase 
 
     -- RIVER --
-    runPhase "River"
+    runPhase
 
     -- SHOWDOWN --
-
+    performEvent (EngineEvent RunShowdown)
 
 -- | Above is quite repetetive so I'll make a helper function to make it shorter and cleaner
-runPhase :: String -> Game ()
-runPhase name = do
+runPhase :: Game ()
+runPhase = do
     moveToNextPhase
     dealCommunityCards
     resetBettingRound
 
     table <- get
-    printPhase name table
-    printBettingRound (firstPlayerToBet table)
-    bettingRound
+    printPhase (phase table) table
+
+    case phase table of
+        Showdown -> pure ()
+        _        -> do
+                printBettingRound (firstPlayerToBet table)
+                bettingRound
+
+
+
 
 
 -- Axel
@@ -407,12 +414,12 @@ moveToNextPhase = modify (\table -> table { phase = nextPhase (phase table) })
 ------------ Functions to print out sepcific things ----------
 
 -- | Printing helpers
-printPhase :: String -> Table -> Game ()
-printPhase phaseName table = 
+printPhase :: GamePhase -> Table -> Game ()
+printPhase phase table = 
     liftIO $ do 
         putStrLn ("\n")
         putStrLn ("-------------------------")
-        putStrLn (phaseName ++ " (Pot: " ++ show (pot table) ++ ")")
+        putStrLn ((show phase) ++ " (Pot: " ++ show (pot table) ++ ")")
         putStrLn ("-------------------------")
         putStrLn ("Board: " ++ show (board table))
         putStrLn ("\n")
