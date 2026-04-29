@@ -99,6 +99,7 @@ applyEvent (PlayerEvent playerIndex action) = do
             else do
                 let amount = hb - cChips
                 modify (\t -> placePureBet table playerIndex amount)
+                playerHaveActed playerIndex -- Change a players acted to True
                 pure (Right [PlayerCalled plName amount])
 
         Raise x -> do
@@ -107,12 +108,14 @@ applyEvent (PlayerEvent playerIndex action) = do
             else do
                 let callAmount = hb - cChips
                     totalAmount = callAmount + x
-                modify (\t -> placePureBet table playerIndex totalAmount) 
+                modify (\t -> placePureBet table playerIndex totalAmount)
+                playerHaveActed playerIndex
                 pure (Right [PlayerRaised plName x])
 
         AllIn -> do
             let amount = (chips player)
             modify (\t -> placePureBet table playerIndex amount)
+            playerHaveActed playerIndex -- Change a players acted to True
             pure (Right [PlayerAllIn plName amount])
 
 -- System Events
@@ -277,15 +280,16 @@ performAction action playerPos = do
         Raise x -> raise playerPos x
         AllIn   -> allIn playerPos
     playerHaveActed playerPos
-
+-}
 playerHaveActed :: Int -> State Table ()
 playerHaveActed playerPos = do
     table <- get
     let players'  = players table
-        player   = (players'!!playerPos) {hasActed = True}
+        player   = (players'!!playerPos) {acted = True}
         players'' = replacePlayer playerPos player players'
     put table
         { players = players''}
+{-
 --------------------------------------------------------------
 
 -- | Change a players fold-status to True

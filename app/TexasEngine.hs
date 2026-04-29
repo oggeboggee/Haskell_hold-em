@@ -145,7 +145,7 @@ gameLoop playerIndex = do
     if bettingRoundOver table 
         then return ()
     else do
-        let playerList    = (players table)
+        let playerList    = players table
             currentPlayer = playerList !! playerIndex
             
             inactive p = folded p || chips p == 0
