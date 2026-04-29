@@ -124,14 +124,11 @@ bettingRoundOver table =
         allMatched =
             all (\p ->
                 folded p ||
-                chips p == 0 ||
-                commitedChips p == hb
+                chips p <= 0 ||
+                (commitedChips p == hb && acted p)
             ) playerList
-
-        allActed =
-            and [acted p | p <- playerList]
     
-    in length onePlayerLeft <= 1 || (allMatched && allActed)
+    in length onePlayerLeft <= 1 || allMatched
 {-
 -- | Check if a player have macthed the highest bet
 matchHBet :: Player -> Int -> Bool

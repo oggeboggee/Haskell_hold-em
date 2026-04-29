@@ -266,6 +266,13 @@ pureCheck :: Table -> PlayerIndex -> Table
 pureCheck table playerIndex = 
     updatePlayerAtIndex playerIndex (\p -> p { acted = True }) table
 
+
+-- Change a players acted status to True
+playerHaveActed :: Int -> State Table ()
+playerHaveActed playerPos = do
+    modify (updatePlayerAtIndex playerPos (\p -> p {acted = True}))
+
+
 {-
 ---- AXEL
 --------------------------------------------------------------
@@ -281,14 +288,6 @@ performAction action playerPos = do
         AllIn   -> allIn playerPos
     playerHaveActed playerPos
 -}
-playerHaveActed :: Int -> State Table ()
-playerHaveActed playerPos = do
-    table <- get
-    let players'  = players table
-        player   = (players'!!playerPos) {acted = True}
-        players'' = replacePlayer playerPos player players'
-    put table
-        { players = players''}
 {-
 --------------------------------------------------------------
 
