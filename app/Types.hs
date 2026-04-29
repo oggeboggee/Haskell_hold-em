@@ -199,7 +199,8 @@ instance Show Player where
            " Hand: " ++ show (hand p) ++ 
            " Chips: " ++ show (chips p) ++
            " Pot contribution: " ++ show (commitedChips p) ++
-           " Folded: " ++ show (folded p)
+           " Folded: " ++ show (folded p) ++
+           " Acted: " ++ show (acted p)
            --" Blind:" ++ show (blind p) ++ "\n"
 ---------------------------------------------------------------------
 -- | The table represent the gamestate
@@ -224,11 +225,12 @@ instance Show Table where
     --         " \nPot: " ++ show (pot t) ++
     --         " \nBoard: " ++ show (board t)
 
-    show t = show (players t) ++ 
+    show t = "Players:\n" ++ unlines (map show (players t)) ++ 
+            "\nTable State(print): " ++ 
             " \nPhase:" ++ show (phase t) ++
             " \nCommmunityCards: " ++ show (board t) ++
-            " \nHighbet:         " ++ show (highBet t) ++
-            " \nCurrent Pot:     " ++ show (pot t)
+            " \nHighbet:         " ++ show (highBet t)
+            --" \nCurrent Pot:     " ++ show (pot t)
 
 
 

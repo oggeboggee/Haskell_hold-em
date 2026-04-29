@@ -21,9 +21,11 @@ gameRound = do
     resetBettingRound
     initiateBlinds
     runShuffle
-    dealHands
+    state (runState dealHands)
 
     -- PREFLOP -- (We don't use the helper here because its a special case.)
+    printTable
+    moveToNextPhase
     table <- get
     printPhase "PREFLOP" table
     printBettingRound (firstPlayerToBet table)
@@ -45,7 +47,7 @@ gameRound = do
 runPhase :: String -> Game ()
 runPhase name = do
     moveToNextPhase
-    dealCommunityCards
+    state (runState dealCommunityCards)
     resetBettingRound
 
     table <- get
@@ -154,7 +156,7 @@ gameLoop playerIndex = do
                 playerAction <- getPlayerEvent playerIndex
 
                 performEvent playerAction
-
+                printTable
                 gameLoop (nextPlayerToAct playerIndex playerList)
 
 -- | Initiate the betting phase of the game.
@@ -335,7 +337,7 @@ initiateBlinds = do
 -}
 -- | Deal cards, update the deck after removing the cards
 --   and return the cards that have been delt.
-dealCards :: Int -> Game [Card]  --State Table [Card] 
+dealCards :: Int -> State Table [Card] --Game [Card] 
 dealCards n = do
     table <- get
     let (deltCards, newDeck) = splitAt n (deck table)
@@ -346,7 +348,7 @@ dealCards n = do
 --   and for each player in the list, use 'dealCards' to take two cards from the deck. Put
 --   the cards as the players hand, then put the list of players now with updated hands back
 --   into the table.
-dealHands :: Game () --State Table () 
+dealHands :: State Table () --Game ()
 dealHands = do
 
     playerList <- gets players
@@ -361,7 +363,7 @@ dealHands = do
 
 
 -- | Deal community cards to the board.
-dealCommunityCards :: Game () -- State Table ()
+dealCommunityCards :: State Table ()--Game () -- State Table ()
 dealCommunityCards = do
     currentPhase <- gets phase
     cards <- case currentPhase of
@@ -437,13 +439,13 @@ printBettingRound :: PlayerIndex -> Game ()
 printBettingRound player = liftIO $ putStrLn ("First player to act: " ++ (show player))
 
 --Axel
-{-
+
 printTable :: Game ()
 printTable = do
     table <- get
     liftIO $ print table
     --liftIO $ putStrLn ("Current table: " ++ show table)
-
+{-
 printCommunityCards :: Game ()
 printCommunityCards = do
     table <- get
