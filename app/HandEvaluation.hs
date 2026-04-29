@@ -41,13 +41,21 @@ tester fun = [ (hand0, fun hand0),
                (hand26, fun hand26),
                (hand27, fun hand27),
                (hand28, fun hand28),
-               (hand29, fun hand29)
+               (hand29, fun hand29),
+               (hand30, fun hand30)
                ]
 
+
 ----------------------------------------------------------------
+winners :: [Card] -> [[Card]] -> [Int]
+winners com play = undefined
+
 
 handData :: [Card] -> (Combination, [Card])
-handData cards = undefined
+handData cards = fromJust $ fromJust $ find (/= Nothing) $ map ($ cards) allCombinations
+          where
+               allCombinations = [straightFlush, quads, fullHouse, flush, straight, threeOfAKind, twoPair, pair, highCard]
+
 
 ----------------------------------------------------------------
 highCard :: [Card] -> Maybe (Combination, [Card])
@@ -221,6 +229,25 @@ quads cards
 
 
 ----------------------------------------------------------------
+
+straightFlush :: [Card] -> Maybe (Combination, [Card])
+straightFlush cards
+     | length cards < 5          = Nothing
+     | flush cards    == Nothing = Nothing
+     | straight cards == Nothing = Nothing
+     | straightFlush' /= Nothing = Just (StraightFlush,
+                                         take 5 $ reverse $ fromJust straightFlush'
+                                         )
+     | otherwise                 = Nothing
+     where
+          sortedBySuit   = sortOn suit cards                         -- sorts cards by suit
+          groupCards     = groupBy ((==) `on` suit) sortedBySuit     -- group cards by suit
+          flushes = filter (\x -> length x >=5) groupCards    -- removes the groups with length <5
+          straightFlush' = find (\x -> straight x /= Nothing) flushes
+
+
+
+
 ----------------------------------------------------------------
 
 
@@ -569,7 +596,7 @@ cardOfQuads cards = [ cards!!(firstIndex),
 -------------------- End Quads ------------------
 ----------------- Straight Flush ----------------
 
-
+{-
 straightFlush :: [Card] -> (Bool, Maybe Combination, Maybe [Rank], Maybe [Rank], Maybe [Card])
 straightFlush cards
           | hasFlushBool cards == False                  = (False, Nothing, Nothing, Nothing, Nothing)
@@ -598,7 +625,7 @@ allIndexOfFlush cards = getIndex cards (switch (concat flushGroups))
           sortedTupleList   = sort (tupleList cards)
           groupedBySuit     = groupBy ((==) `on` fst) (sortOn fst sortedTupleList)
           flushGroups       = filter ((>=5) . length) groupedBySuit
-          
+          -}
 
 --------------- End Straight Flush --------------
 ------------------- Best Hand -------------------
@@ -782,3 +809,7 @@ hand28 = [Card Five Hearts, Card Six Spades, Card Seven Clubs, Card Eight Diamon
 
 hand29 :: Hand -- Straight Ace Low
 hand29 = [Card Ace Diamonds, Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts]
+
+
+hand30 :: Hand -- Straight Ace Low
+hand30 = [Card Ace Diamonds, Card Two Diamonds, Card Three Diamonds, Card Four Diamonds, Card Five Diamonds]
