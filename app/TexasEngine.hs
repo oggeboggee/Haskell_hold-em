@@ -140,19 +140,22 @@ gameLoop :: PlayerIndex -> Game ()
 gameLoop playerIndex = do
     table <- get
 
-    let playerList    = (players table)
-        currentPlayer = playerList !! playerIndex
-        
-        inactive p = folded p || chips p == 0
-        
-    if inactive currentPlayer
-        then gameLoop (nextPlayerToAct playerIndex playerList)
+    if bettingRoundOver table 
+        then return ()
+    else do
+        let playerList    = (players table)
+            currentPlayer = playerList !! playerIndex
+            
+            inactive p = folded p || chips p == 0
+            
+        if inactive currentPlayer
+            then gameLoop (nextPlayerToAct playerIndex playerList)
         else do
-            playerAction <- getPlayerEvent playerIndex
+                playerAction <- getPlayerEvent playerIndex
 
-            performEvent playerAction
+                performEvent playerAction
 
-            gameLoop (nextPlayerToAct playerIndex playerList)
+                gameLoop (nextPlayerToAct playerIndex playerList)
 
 -- | Initiate the betting phase of the game.
 bettingRound :: Game ()
