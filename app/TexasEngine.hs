@@ -20,6 +20,7 @@ gameRound = do
     resetTable
     resetBettingRound
     initiateBlinds
+    runShuffle
     dealHands
 
     -- PREFLOP -- (We don't use the helper here because its a special case.)
@@ -216,8 +217,8 @@ chooseAction playerPos = do
 --------------------------------------------------------------
 
 -- | Return a shuffled deck with 52 cards
-runShuffle2 :: Game()
-runShuffle2 = do
+runShuffle :: Game()
+runShuffle = do
     gen <- newStdGen
     let (doubles, _) = randomDoubles' 52 gen
     let shuffledDeck = shuffle doubles fullDeck
