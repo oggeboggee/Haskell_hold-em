@@ -50,7 +50,7 @@ runPhase name = do
     table <- get
     printPhase name table
     printBettingRound (firstPlayerToBet table)
-    bettinground
+    bettingRound
 
 showdown :: State Table [Int]
 showdown = do
@@ -312,8 +312,8 @@ initiateBlinds = do
     sbPlayer <- gets smallBlindPosition
     bbPlayer <- gets bigBlindPosition
 
-    performEvent (SystemEvent (PlaceBlind sbPlayer SmallBlind 50))
-    performEvent (SystemEvent (PlaceBlind bbPlayer BigBlind 100))
+    performEvent (EngineEvent (PlaceBlind sbPlayer SmallBlind 50))
+    performEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
 
 --AXEL
 {-

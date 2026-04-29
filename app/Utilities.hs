@@ -51,6 +51,17 @@ firstPlayerToBet table = case phase table of
     PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
     _       -> (smallBlindPosition table)
 
+
+-- | We need a function to take a player at a specific index in a list, 
+--   and then replace with the updated player
+replacePlayer :: PlayerIndex -> Player -> [Player] -> [Player]
+replacePlayer playerIndex updatedPlayer playerList = 
+    take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
+
+
+filterFolded :: [Player] -> [Player]
+filterFolded  = filter (not . hasFolded)
+
 -- Axel
 {-
 -- | Given the state of a table and a specific player(index) return a string with avalible actions
@@ -69,7 +80,7 @@ printNames :: [String] -> String
 printNames []     = ""
 printNames (x:[]) = x
 printNames (x:xs) = " " ++ x ++ ", " ++ printNames xs
--}{-
+-}
 -- | Helper function to deal out the winning to the players
 dealOutChips :: [Player] -> [Int] -> Int -> [Player]
 dealOutChips players []      _     = players
@@ -78,7 +89,7 @@ dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
         indexes' = xs
         player   = incChips (players!!x) chips
         players' = replacePlayer x player players
--}
+
 {-
 
 --------------------------------------------------------------------------------
@@ -122,11 +133,11 @@ bettingRoundOver table =
 -- | Check if a player have macthed the highest bet
 matchHBet :: Player -> Int -> Bool
 matchHBet player highBet = commitedChips player == highBet
-
+-}
 -- | Check if player have folded
 hasFolded :: Player -> Bool
 hasFolded = folded 
-
+{-
 -- | Check if all players have acted
 allHaveActed :: [Player] -> Bool
 allHaveActed players = and [hasActed player | player <- players]    

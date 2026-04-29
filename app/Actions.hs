@@ -8,6 +8,7 @@ import Control.Monad.State
 import Data.Char
 import Data.List (isPrefixOf)
 import Utilities
+import HandEvaluation
 
 
 -- With these changes the gameloop for eventsshould become
@@ -125,7 +126,8 @@ applyEvent (EngineEvent engineAction) = do
             pure (Right [PlayerPlacedBlinds plName blindType bet])
 
         Showdown_ -> do
-            let resultOfShowdown = state (runState runShowDown)
+            resultOfShowdown <- state (runState runShowDown)
+            --let resultOfShowdown = state (runState runShowDown)
             pure (Right resultOfShowdown)
             
 
@@ -141,14 +143,14 @@ runShowDown = do
         activePlayers = filter (not . folded) playerList
 
         -- ex. [[5H,8C], [7H,9H]]
-        extractedHands = map hand activeplayers
+        extractedHands = map hand activePlayers
 
         -- ex- [1]  , indexes relative to the activeplayers
         winnerIndexes = winners finalBoard extractedHands
 
         -- winners returns index of winner(s) in activePlayers list, need to map to who it is
         -- in activePlayers: ex. activePlayers !! 1 = Lewis
-        computedWinners = map (\i -> activeplayers !! i) winnerIndexes
+        computedWinners = map (\i -> activePlayers !! i) winnerIndexes
                 
         potSize = (pot table)
 
@@ -161,7 +163,7 @@ runShowDown = do
         updatedPlayers = map (dealOutChips2 computedWinners evenShare) playerList
 
     modify (\t -> t { players = updatedPlayers, pot = 0 })
-    pure (Right [ShowdownHappened (map name computedWinners)])
+    pure [ShowdownHappened (map name computedWinners)]
 {-
 showdown :: State Table [Int]
 showdown = do
@@ -223,9 +225,9 @@ performEvent event = do
 
 -- | We need a function to take a player at a specific index in a list, 
 --   and then replace with the updated player
-replacePlayer :: PlayerIndex -> Player -> [Player] -> [Player]
-replacePlayer playerIndex updatedPlayer playerList = 
-    take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
+-- replacePlayer :: PlayerIndex -> Player -> [Player] -> [Player]
+-- replacePlayer playerIndex updatedPlayer playerList = 
+--     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
 
 
 
