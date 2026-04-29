@@ -68,6 +68,7 @@ executable Haskell-hold-em
             TexasEngine
             Actions
             HandEvaluation
+            Utilities
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

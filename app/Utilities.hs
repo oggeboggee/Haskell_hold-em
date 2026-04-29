@@ -69,7 +69,7 @@ printNames :: [String] -> String
 printNames []     = ""
 printNames (x:[]) = x
 printNames (x:xs) = " " ++ x ++ ", " ++ printNames xs
-
+-}{-
 -- | Helper function to deal out the winning to the players
 dealOutChips :: [Player] -> [Int] -> Int -> [Player]
 dealOutChips players []      _     = players
@@ -78,6 +78,8 @@ dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
         indexes' = xs
         player   = incChips (players!!x) chips
         players' = replacePlayer x player players
+-}
+{-
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -101,16 +103,21 @@ roundOver2 players highBet = (and [(matchHBet p highBet && hasActed p) || hasFol
 -}
 -- | Determines wether the current betting round is over or not. A round is over once eveery player has
 -- | either folded, is all-in, or matched the current highBet and taken an action.
-bettingroundOver :: Table -> Bool
-bettingroundOver table = 
+bettingRoundOver :: Table -> Bool
+bettingRoundOver table = 
     let playerList = (players table)
         hb         = (highBet table)
 
-    in all (\p ->
-        folded p ||
-        chips p == 0 ||
-        commitedChips p == hb
-        ) playerList 
+        onePlayerLeft = filter (not . folded) playerList
+
+        allMatched =
+            all (\p ->
+                folded p ||
+                chips p == 0 ||
+                commitedChips p == hb
+            ) playerList 
+    
+    in length onePlayerLeft <= 1 || allMatched
 {-
 -- | Check if a player have macthed the highest bet
 matchHBet :: Player -> Int -> Bool

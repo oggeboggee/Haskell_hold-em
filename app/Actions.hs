@@ -68,54 +68,128 @@ convertAction userInput =
 -- | Here we update the state, have betting rules (when can a player call, raise etc.). 
 -- | We handle errors if wanted action isn't allowed. We produce GameEvents.
 -- | This is instead of having applyPureAction.
--- applyEvent :: Event -> State Table (Either String [GameEvent])
-applyEvent :: Event -> Table -> Either String (Table, [GameEvent])
+applyEvent :: Event -> State Table (Either String [GameEvent])
+--applyEvent :: Event -> Table -> Either String (Table, [GameEvent])
 
 -- PLAYERACTIONS
-applyEvent (PlayerEvent playerIndex action) table =
+applyEvent (PlayerEvent playerIndex action) = do
+    table <- get
     let player = (players table) !! playerIndex
         hb     = (highBet table)
         cChips = (commitedChips player)
         plName = (name player)
-    in case action of
-        Fold -> let table' = pureFold table playerIndex
-                in Right (table', [PlayerFolded plName])
+
+    case action of
+        Fold -> do
+            modify (\t -> pureFold t playerIndex) 
+            pure (Right [PlayerFolded plName])
         
-        Check -> if cChips == hb
-                 then 
-                    let table' = pureCheck table playerIndex
-                    in Right (table', [PlayerChecked plName])
-                 else Left "You can't check when behind the highbet."
+        Check -> do
+            if cChips == hb
+            then do 
+                modify (\t -> pureCheck table playerIndex)
+                pure (Right [PlayerChecked plName])
+            else
+                pure (Left "You can't check when behind the highbet.")
 
-        Call -> if hb == 0
-                then Left "There isn't a bet to call."
-                else
-                    let amount = hb - cChips
-                        table' = placePureBet table playerIndex amount
-                    in Right (table', [PlayerCalled plName amount])
+        Call -> do
+            if hb == 0
+            then pure (Left "There isn't a bet to call.")
+            else do
+                let amount = hb - cChips
+                modify (\t -> placePureBet table playerIndex amount)
+                pure (Right [PlayerCalled plName amount])
 
-        Raise x -> if x <= 0
-                   then Left "Raise amount must be larger than 0."
-                   else
-                    let callAmount = hb - cChips
-                        callAndRaiseAmount = callAmount + x
-                        table' = placePureBet table playerIndex callAndRaiseAmount
-                    in Right (table', [PlayerRaised plName x])
+        Raise x -> do
+            if x <= 0
+            then pure (Left "Raise amount must be larger than 0.")
+            else do
+                let callAmount = hb - cChips
+                    totalAmount = callAmount + x
+                modify (\t -> placePureBet table playerIndex totalAmount) 
+                pure (Right [PlayerRaised plName x])
 
-        AllIn -> let amount = (chips player)
-                     table' = placePureBet table playerIndex amount
-                 in Right (table', [PlayerAllIn plName amount])
+        AllIn -> do
+            let amount = (chips player)
+            modify (\t -> placePureBet table playerIndex amount)
+            pure (Right [PlayerAllIn plName amount])
 
 -- System Events
-applyEvent (SystemEvent systemAction) table =
-    case systemAction of
-        PlaceBlind playerIndex blindType bet ->
-            let table' = placePureBet table playerIndex bet
-                player = (players table) !! playerIndex
+applyEvent (EngineEvent engineAction) = do
+    table <- get
+    case engineAction of
+        PlaceBlind playerIndex blindType bet -> do
+            let player = (players table) !! playerIndex
                 plName = (name player)
-            in
-                Right (table', [PlayerPlacedBlinds plName blindType bet])
+            modify (\t -> placePureBet table playerIndex bet)
+            pure (Right [PlayerPlacedBlinds plName blindType bet])
 
+        Showdown_ -> do
+            let resultOfShowdown = state (runState runShowDown)
+            pure (Right resultOfShowdown)
+            
+
+runShowDown :: State Table [GameEvent]
+runShowDown = do
+    table <- get
+
+    let playerList = (players table)
+        finalBoard = (board table)
+
+        -- only the players that are still in the hand
+        -- ex. [Sam, Lewis]
+        activePlayers = filter (not . folded) playerList
+
+        -- ex. [[5H,8C], [7H,9H]]
+        extractedHands = map hand activeplayers
+
+        -- ex- [1]  , indexes relative to the activeplayers
+        winnerIndexes = winners finalBoard extractedHands
+
+        -- winners returns index of winner(s) in activePlayers list, need to map to who it is
+        -- in activePlayers: ex. activePlayers !! 1 = Lewis
+        computedWinners = map (\i -> activeplayers !! i) winnerIndexes
+                
+        potSize = (pot table)
+
+        -- split the pot evenly
+        evenShare =
+            if null computedWinners
+            then 0
+            else potSize `div` length computedWinners
+
+        updatedPlayers = map (dealOutChips2 computedWinners evenShare) playerList
+
+    modify (\t -> t { players = updatedPlayers, pot = 0 })
+    pure (Right [ShowdownHappened (map name computedWinners)])
+{-
+showdown :: State Table [Int]
+showdown = do
+    table <- get
+    let players'       = filterFolded (players table)
+        communityCards = board table
+        hands          = [hand player | player <- players']
+        winners'       = winners communityCards hands
+        chips          = div (pot table) (length winners')
+        players''      = dealOutChips players' winners' chips
+    put table {players = players'', pot = 0} -- folded players get removed from the table here i think?
+    return winners'
+-}
+-- | Updates a player after showdown, adds their share of pot if they are winner. if player
+--   is not in the list of winners then they don't get a share.
+dealOutChips2 :: [Player] -> Int -> Player -> Player
+dealOutChips2 winners share p
+    | p `elem` winners = p { chips = chips p + share }
+    | otherwise        = p
+  {-              
+dealOutChips :: [Player] -> [Int] -> Int -> [Player]
+dealOutChips players []      _     = players
+dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
+    where
+        indexes' = xs
+        player   = incChips (players!!x) chips
+        players' = replacePlayer x player players
+-}
 -- | This is the function that prints the events.
 eventMsg :: GameEvent -> Game ()
 eventMsg event = liftIO $ case event of
@@ -140,12 +214,11 @@ eventMsg event = liftIO $ case event of
 -- | If we get Right returned from applyEvent, then we get a new table and a list of events that happened.
 performEvent :: Event -> Game ()
 performEvent event = do
-    table <- get
-    case applyEvent event table of
+    result <- state (runState (applyEvent event))
+    case result of
         Left inv -> liftIO $ putStrLn inv
 
-        Right (table', gEvents) -> do
-            put table'
+        Right gEvents -> do
             mapM_ eventMsg gEvents
 
 -- | We need a function to take a player at a specific index in a list, 

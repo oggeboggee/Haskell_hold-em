@@ -9,8 +9,6 @@ import System.Random
 import HandEvaluation
 import Utilities
 
-
-
 -- Jonathan
 gameRound :: Game ()
 gameRound = do
@@ -24,41 +22,48 @@ gameRound = do
     initiateBlinds
     dealHands
 
-    -- PREFLOP --
+    -- PREFLOP -- (We don't use the helper here because its a special case.)
     table <- get
     printPhase "PREFLOP" table
     printBettingRound (firstPlayerToBet table)
     bettingRound
 
     -- FLOP --
-    moveToNextPhase
-    dealCommunityCards
-    resetBettingRound
-
-    table <- get
-    printPhase "FLOP" table
-    printBettingRound (firstPlayerToBet table)
-    bettingRound
+    runPhase "FLOP"
 
     -- TURN --
-    moveToNextPhase
-    dealCommunityCards
-    resetBettingRound
-
-    table <- get 
-    printPhase "TURN" table
-    printBettingRound (firstPlayerToBet table)
-    bettingRound
+    runPhase "TURN"
 
     -- RIVER --
+    runPhase "River"
+
+    -- SHOWDOWN --
+
+
+-- | Above is quite repetetive so I'll make a helper function to make it shorter and cleaner
+runPhase :: String -> Game ()
+runPhase name = do
     moveToNextPhase
     dealCommunityCards
     resetBettingRound
 
     table <- get
-    printPhase "RIVER" table
+    printPhase name table
     printBettingRound (firstPlayerToBet table)
-    bettingRound
+    bettinground
+
+showdown :: State Table [Int]
+showdown = do
+    table <- get
+    let players'       = filterFolded (players table)
+        communityCards = board table
+        hands          = [hand player | player <- players']
+        winners'       = winners communityCards hands
+        chips          = div (pot table) (length winners')
+        players''      = dealOutChips players' winners' chips
+    put table {players = players'', pot = 0}
+    return winners'
+
 
 -- Axel
 {-
@@ -130,34 +135,33 @@ gameRound = do
 -------------- Bettinground, gameround, gameloop -----------------
 -- Jonathan
 -- Looping through the bettinground and making playeractions
-gameLoop :: Int -> Bet -> Game ()
-gameLoop playerIndex highestBet = do
+gameLoop :: PlayerIndex -> Game ()
+gameLoop playerIndex = do
     table <- get
 
-    if bettingroundOver table   --- We need to make sure the logic for roundOVer works like we want it to.
-    then return ()
-    else do 
-        let currentPlayer = (players table) !! playerIndex
-            playerList    = (players table)
+    let playerList    = (players table)
+        currentPlayer = playerList !! playerIndex
         
-        if (folded currentPlayer) || (chips currentPlayer) == 0
-        then gameLoop (nextPlayerToAct playerIndex playerList) highestBet
+        inactive p = folded p || chips p == 0
+        
+    if inactive currentPlayer
+        then gameLoop (nextPlayerToAct playerIndex playerList)
         else do
-            
             playerAction <- getPlayerEvent playerIndex
 
             performEvent playerAction
 
-            gameLoop (nextPlayerToAct playerIndex playerList) highestBet
+            gameLoop (nextPlayerToAct playerIndex playerList)
 
 -- | Initiate the betting phase of the game.
 bettingRound :: Game ()
 bettingRound = do
     table <- get
-    let firstPlayer = (firstPlayerToBet table)
-        highestBet           = (highBet table)
 
-    gameLoop firstPlayer highestBet
+    if bettingRoundOver table
+        then return ()
+        else do
+            gameLoop (firstPlayerToBet table)
 
 
 --Axel

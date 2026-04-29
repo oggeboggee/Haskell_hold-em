@@ -11,13 +11,13 @@ import Control.Monad.State
 -- | An Event sent into the gameengine. An intention to change the game state.
 data Event = 
     PlayerEvent PlayerIndex Action    -- Player attempts to perform an action.
-    | SystemEvent SystemAction        -- Game engine trigers something.
+    | EngineEvent EngineAction        -- Game engine trigers something.
 
 -- | Actions initiated by the game.
-data SystemAction =
+data EngineAction =
     PlaceBlind PlayerIndex BlindType Bet   -- Player places blind.
     -- | AdvancePhase
-    -- | EndRound
+    | Showdown_
 
 -- | Specific events produced by the game after an Event is processed. Descirbe what happened and
 -- | is used for output or to log what happened.
@@ -28,6 +28,7 @@ data GameEvent =
     | PlayerRaised PlayerName Bet
     | PlayerAllIn PlayerName Bet
     | PlayerPlacedBlinds PlayerName BlindType Bet
+    | ShowdownHappened [PlayerName]
     deriving (Show)
 
 -- | A players name (used for output)
