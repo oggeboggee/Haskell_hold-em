@@ -1,13 +1,17 @@
 module TexasEngine where
 
+-- Other files
 import Types
 import Cards
 import Actions
-import Control.Monad.State
-import Data.Char (toLower)
-import System.Random
 import HandEvaluation
 import Utilities
+
+-- Packages
+import Control.Monad.State
+import Control.Monad (void)
+import Data.Char (toLower)
+import System.Random
 
 -- Jonathan
 gameRound :: Game ()
@@ -27,45 +31,40 @@ gameRound = do
     printTable
     moveToNextPhase
     table <- get
-    printPhase "PREFLOP" table
+    printPhase (phase table) table
     printBettingRound (firstPlayerToBet table)
     bettingRound
 
     -- FLOP --
-    runPhase "FLOP"
+    runPhase 
 
     -- TURN --
-    runPhase "TURN"
+    runPhase 
 
     -- RIVER --
-    runPhase "River"
+    runPhase
 
     -- SHOWDOWN --
-
+    void $ performEvent (EngineEvent RunShowdown)
 
 -- | Above is quite repetetive so I'll make a helper function to make it shorter and cleaner
-runPhase :: String -> Game ()
-runPhase name = do
+runPhase :: Game ()
+runPhase = do
     moveToNextPhase
     state (runState dealCommunityCards)
     resetBettingRound
 
     table <- get
+
     printPhase name table
     printBettingRound (firstPlayerToBet table)
     bettingRound
 
-showdown :: State Table [Int]
-showdown = do
-    table <- get
-    let players'       = filterFolded (players table)
-        communityCards = board table
-        hands          = [hand player | player <- players']
-        winners'       = winners communityCards hands
-        chips          = div (pot table) (length winners')
-        players''      = dealOutChips players' winners' chips
-    put table {players = players'', pot = 0}
-    return winners'
+    case phase table of
+        Showdown -> pure ()
+        _        -> do
+                printBettingRound (firstPlayerToBet table)
+                bettingRound
 
 
 -- Axel
@@ -142,22 +141,27 @@ gameLoop :: PlayerIndex -> Game ()
 gameLoop playerIndex = do
     table <- get
 
-    if bettingRoundOver table 
+    if bettingRoundOver table
         then return ()
     else do
-        let playerList    = players table
+
+        let playerList    = (players table)
             currentPlayer = playerList !! playerIndex
-            
+        
             inactive p = folded p || chips p == 0
-            
+        
         if inactive currentPlayer
             then gameLoop (nextPlayerToAct playerIndex playerList)
         else do
-                playerAction <- getPlayerEvent playerIndex
+            event <- getPlayerEvent playerIndex
 
-                performEvent playerAction
-                printTable
-                gameLoop (nextPlayerToAct playerIndex playerList)
+            result <- performEvent event
+
+            case result of
+                Left _ -> gameLoop playerIndex -- Same player retries
+
+                Right _ -> gameLoop (nextPlayerToAct playerIndex playerList)
+
 
 -- | Initiate the betting phase of the game.
 bettingRound :: Game ()
@@ -318,8 +322,13 @@ initiateBlinds = do
     sbPlayer <- gets smallBlindPosition
     bbPlayer <- gets bigBlindPosition
 
-    performEvent (EngineEvent (PlaceBlind sbPlayer SmallBlind 50))
-    performEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
+
+    -- performEvent (EngineEvent (PlaceBlind sbPlayer SmallBlind 50))
+    -- performEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
+
+    void $ performEvent (EngineEvent (PlaceBlind sbPlayer SmallBlind 50))
+    void $ performEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
+
 
 --AXEL
 {-
@@ -425,15 +434,45 @@ moveToNextPhase = modify (\table -> table { phase = nextPhase (phase table) })
 ------------ Functions to print out sepcific things ----------
 
 -- | Printing helpers
-printPhase :: String -> Table -> Game ()
-printPhase phaseName table = 
+printPhase :: GamePhase -> Table -> Game ()
+printPhase phase table = 
     liftIO $ do 
         putStrLn ("\n")
         putStrLn ("-------------------------")
-        putStrLn (phaseName ++ " (Pot: " ++ show (pot table) ++ ")")
+        putStrLn ((show phase) ++ " (Pot: " ++ show (pot table) ++ ")")
         putStrLn ("-------------------------")
-        putStrLn ("Board: " ++ show (board table))
         putStrLn ("\n")
+        putStrLn (printTable table)
+        putStrLn ("\n")
+
+printTable :: Table -> String
+printTable table = 
+    let playersList = (players table)
+        d           = (dealerPosition table)
+        sb          = (smallBlindPosition table)
+        bb          = (bigBlindPosition table)
+
+        pos i 
+            | i == d = "(D)"
+            | i == sb = "(SB)"
+            | i == bb = "(BB)"
+            | otherwise = ""
+
+        showPlayer i p =
+            "chips: " ++ show (chips p)
+            ++ " | name: " ++ (name p)
+            ++ " | pos: " ++ pos i
+
+
+        indexedPlayers = zipWith showPlayer [0..] playersList
+    
+        -- put each player on a new line
+        render [] = ""    
+        render [x] = x
+        render (x:xs) = x ++ "\n" ++ render xs
+
+    in render indexedPlayers
+
 
 printBettingRound :: PlayerIndex -> Game ()
 printBettingRound player = liftIO $ putStrLn ("First player to act: " ++ (show player))

@@ -15,9 +15,9 @@ data Event =
 
 -- | Actions initiated by the game.
 data EngineAction =
-    PlaceBlind PlayerIndex BlindType Bet   -- Player places blind.
+    PlaceBlind PlayerIndex BlindType Bet   -- Engine places blind for player
     -- | AdvancePhase
-    | Showdown_
+    | RunShowdown                          -- Engine initiates showdown.
 
 -- | Specific events produced by the game after an Event is processed. Descirbe what happened and
 -- | is used for output or to log what happened.

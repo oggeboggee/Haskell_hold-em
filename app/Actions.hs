@@ -62,8 +62,6 @@ convertAction userInput =
                                         where amount = (drop 6 s) 
         _ -> Nothing
 
-
-
 -- | Source guide:
 -- | https://www.ahri.net/2019/07/practical-event-driven-and-sourced-programs-in-haskell/
 -- | Here we update the state, have betting rules (when can a player call, raise etc.). 
@@ -79,6 +77,7 @@ applyEvent (PlayerEvent playerIndex action) = do
         hb     = (highBet table)
         cChips = (commitedChips player)
         plName = (name player)
+        toCall = hb - cChips
 
     case action of
         Fold -> do
@@ -86,36 +85,45 @@ applyEvent (PlayerEvent playerIndex action) = do
             pure (Right [PlayerFolded plName])
         
         Check -> do
-            if cChips == hb
+            if toCall == 0
             then do 
-                modify (\t -> pureCheck table playerIndex)
+                modify (\t -> pureCheck t playerIndex)
                 pure (Right [PlayerChecked plName])
             else
                 pure (Left "You can't check when behind the highbet.")
 
         Call -> do
-            if hb == 0
+            if toCall <= 0
             then pure (Left "There isn't a bet to call.")
             else do
+
                 let amount = hb - cChips
                 modify (\t -> placePureBet table playerIndex amount)
                 playerHaveActed playerIndex -- Change a players acted to True
                 pure (Right [PlayerCalled plName amount])
 
+                -- modify (\t -> placePureBet t playerIndex toCall)
+                -- pure (Right [PlayerCalled plName toCall])
+
+
         Raise x -> do
             if x <= 0
             then pure (Left "Raise amount must be larger than 0.")
             else do
+
                 let callAmount = hb - cChips
                     totalAmount = callAmount + x
                 modify (\t -> placePureBet table playerIndex totalAmount)
                 playerHaveActed playerIndex
+
                 pure (Right [PlayerRaised plName x])
 
         AllIn -> do
             let amount = (chips player)
+
             modify (\t -> placePureBet table playerIndex amount)
             playerHaveActed playerIndex -- Change a players acted to True
+
             pure (Right [PlayerAllIn plName amount])
 
 -- System Events
@@ -125,17 +133,21 @@ applyEvent (EngineEvent engineAction) = do
         PlaceBlind playerIndex blindType bet -> do
             let player = (players table) !! playerIndex
                 plName = (name player)
-            modify (\t -> placePureBet table playerIndex bet)
+            modify (\t -> placePureBet t playerIndex bet)
             pure (Right [PlayerPlacedBlinds plName blindType bet])
 
-        Showdown_ -> do
-            resultOfShowdown <- state (runState runShowDown)
-            --let resultOfShowdown = state (runState runShowDown)
+
+        -- Showdown_ -> do
+        --     resultOfShowdown <- state (runState runShowDown)
+
+
+        RunShowdown -> do
+            resultOfShowdown <- runShowdown
+
             pure (Right resultOfShowdown)
             
-
-runShowDown :: State Table [GameEvent]
-runShowDown = do
+runShowdown :: State Table [GameEvent]
+runShowdown = do
     table <- get
 
     let playerList = (players table)
@@ -163,10 +175,13 @@ runShowDown = do
             then 0
             else potSize `div` length computedWinners
 
-        updatedPlayers = map (dealOutChips2 computedWinners evenShare) playerList
+        winnerNames = map name computedWinners
+
+        updatedPlayers = map (dealOutChips2 winnerNames evenShare) playerList
 
     modify (\t -> t { players = updatedPlayers, pot = 0 })
     pure [ShowdownHappened (map name computedWinners)]
+
 {-
 showdown :: State Table [Int]
 showdown = do
@@ -180,12 +195,7 @@ showdown = do
     put table {players = players'', pot = 0} -- folded players get removed from the table here i think?
     return winners'
 -}
--- | Updates a player after showdown, adds their share of pot if they are winner. if player
---   is not in the list of winners then they don't get a share.
-dealOutChips2 :: [Player] -> Int -> Player -> Player
-dealOutChips2 winners share p
-    | p `elem` winners = p { chips = chips p + share }
-    | otherwise        = p
+
   {-              
 dealOutChips :: [Player] -> [Int] -> Int -> [Player]
 dealOutChips players []      _     = players
@@ -210,6 +220,8 @@ eventMsg event = liftIO $ case event of
 
     PlayerPlacedBlinds p blindType amount -> putStrLn (p ++ " placed the " ++ (show blindType) ++ " of " ++ (show amount) ++ " chips.")
 
+    ShowdownHappened ps -> mapM_ (\p -> putStrLn (p ++ " wins!")) ps
+
 
 -- | https://stackoverflow.com/questions/27609062/what-is-the-difference-between-mapm-and-mapm-in-haskell
 -- | mapM_ : We can use this because we don't care about the result of eventMsg (We have Game () as return type.)
@@ -217,21 +229,31 @@ eventMsg event = liftIO $ case event of
 
 -- | Here we update the state and trigger the output of eventMSg. 
 -- | If we get Right returned from applyEvent, then we get a new table and a list of events that happened.
-performEvent :: Event -> Game ()
+performEvent :: Event -> Game (Either String [GameEvent])
 performEvent event = do
-    result <- state (runState (applyEvent event))
-    case result of
-        Left inv -> liftIO $ putStrLn inv
+    table <- get
+    
+    let (result, newTable) = runState (applyEvent event) table
+    
+    put newTable
 
-        Right gEvents -> do
-            mapM_ eventMsg gEvents
+    case result of
+        Left inv -> do
+            liftIO $ putStrLn inv
+            pure (Left inv)
+
+        Right events -> do
+            mapM_ eventMsg events
+            pure (Right events)
+
+
+
 
 -- | We need a function to take a player at a specific index in a list, 
 --   and then replace with the updated player
 -- replacePlayer :: PlayerIndex -> Player -> [Player] -> [Player]
 -- replacePlayer playerIndex updatedPlayer playerList = 
 --     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
-
 
 
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table

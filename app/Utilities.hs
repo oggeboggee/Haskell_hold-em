@@ -90,6 +90,13 @@ dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
         player   = incChips (players!!x) chips
         players' = replacePlayer x player players
 
+-- | Updates a player after showdown, adds their share of pot if they are winner. if player
+--   is not in the list of winners then they don't get a share.
+dealOutChips2 :: [PlayerName] -> Int -> Player -> Player
+dealOutChips2 winners share p
+    | name p `elem` winners = p { chips = chips p + share }
+    | otherwise        = p
+
 {-
 
 --------------------------------------------------------------------------------
@@ -116,19 +123,19 @@ roundOver2 players highBet = (and [(matchHBet p highBet && hasActed p) || hasFol
 -- | either folded, is all-in, or matched the current highBet and taken an action.
 bettingRoundOver :: Table -> Bool
 bettingRoundOver table = 
-    let playerList = (players table)
+    let active = filter (not . folded) (players table)
         hb         = (highBet table)
-
-        onePlayerLeft = filter (not . folded) playerList
 
         allMatched =
             all (\p ->
                 folded p ||
+
                 chips p <= 0 ||
                 (commitedChips p == hb && acted p)
-            ) playerList
+            ) active
+
     
-    in length onePlayerLeft <= 1 || allMatched
+    in length active <= 1 || allMatched
 {-
 -- | Check if a player have macthed the highest bet
 matchHBet :: Player -> Int -> Bool
