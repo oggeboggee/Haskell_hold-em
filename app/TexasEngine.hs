@@ -1,14 +1,17 @@
 module TexasEngine where
 
+-- Other files
 import Types
 import Cards
 import Actions
-import Control.Monad.State
-import Data.Char (toLower)
-import System.Random
 import HandEvaluation
 import Utilities
+
+-- Packages
+import Control.Monad.State
 import Control.Monad (void)
+import Data.Char (toLower)
+import System.Random
 
 -- Jonathan
 gameRound :: Game ()
@@ -56,9 +59,6 @@ runPhase = do
         _        -> do
                 printBettingRound (firstPlayerToBet table)
                 bettingRound
-
-
-
 
 
 -- Axel
