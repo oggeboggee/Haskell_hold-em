@@ -32,7 +32,7 @@ getPlayerEvent playerIndex = do
     let player = (players table) !! playerIndex
         hb     = (highBet table)
 
-        availableActions = if hb == 0
+        availableActions = if hb == 0 || commitedChips player == hb
                            then "Fold, Check, Raise <x>, All In"
                            else "Fold, Call, Raise <x>, All In"
     
