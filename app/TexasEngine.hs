@@ -21,15 +21,15 @@ gameRound = do
     liftIO $ putStrLn "              NEW HAND             "
     liftIO $ putStrLn "--------------------------------"
     
-    resetTable
-    resetBettingRound
+    state $ runState resetTable
+    state $ runState resetBettingRound
     initiateBlinds
     runShuffle
-    state (runState dealHands)
+    state $ runState dealHands
 
     -- PREFLOP -- (We don't use the helper here because its a special case.)
     printTable
-    moveToNextPhase
+    state $ runState moveToNextPhase
     table <- get
     printPhase (phase table) table
     printBettingRound (firstPlayerToBet table)
@@ -46,13 +46,14 @@ gameRound = do
 
     -- SHOWDOWN --
     void $ performEvent (EngineEvent RunShowdown)
+    printTable
 
 -- | Above is quite repetetive so I'll make a helper function to make it shorter and cleaner
 runPhase :: Game ()
 runPhase = do
-    moveToNextPhase
+    state (runState moveToNextPhase)
     state (runState dealCommunityCards)
-    resetBettingRound
+    state (runState resetBettingRound)
 
     table <- get
 
@@ -248,7 +249,7 @@ randomDoubles' n gen = ((x:xs), gen2)
 --------------------------- Functions to modify the game state (table) -------------------
 -- Jonathan
 -- | Reset the required fields in the table and the players in the table.
-resetTable :: Game ()
+resetTable :: State Table () -- Game ()
 resetTable = 
     modify (\t -> 
         let resetPlayer p = 
@@ -268,7 +269,7 @@ resetTable =
 
 -- | Reset after each betting round by clearing flags for players. Also resets relevant fields in the table
 -- | but preserves the higBet during the PreFlop phase of the game (makes BB be highBet during PreFlop).
-resetBettingRound :: Game ()
+resetBettingRound :: State Table () -- Game ()
 resetBettingRound = do
     table <- get
     
@@ -390,7 +391,7 @@ dealCommunityCards = do
 
                                 
 -- | Advance from the tables current phase to the next one.
-moveToNextPhase :: Game ()
+moveToNextPhase :: State Table () -- Game ()
 moveToNextPhase = modify (\t -> t { phase = nextPhase (phase t) })
 
 -- | Move where the dealer,SB, and BB are on the table. Mod helps us wrap around.
@@ -507,7 +508,6 @@ showWinners indexes = do
 {-
     TODO
     - Game () --> State
-    - Raise more then the amount of chips you have
     - When a Hand ends before river it should go directly to showdown, 
         skipping the remaining phases
 -}
