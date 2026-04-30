@@ -226,10 +226,10 @@ instance Show Table where
     --         " \nBoard: " ++ show (board t)
 
     show t = "Players:\n" ++ unlines (map show (players t)) ++ 
-            "\nTable State(print): " ++ 
+            --"\nTable State(print): " ++ 
             " \nPhase:" ++ show (phase t) ++
             " \nCommmunityCards: " ++ show (board t) ++
-            " \nHighbet:         " ++ show (highBet t)
+            " \nHighbet:         " ++ show (highBet t) ++ "\n"
             --" \nCurrent Pot:     " ++ show (pot t)
 
 

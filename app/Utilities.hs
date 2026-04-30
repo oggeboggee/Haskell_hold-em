@@ -124,12 +124,11 @@ roundOver2 players highBet = (and [(matchHBet p highBet && hasActed p) || hasFol
 bettingRoundOver :: Table -> Bool
 bettingRoundOver table = 
     let active = filter (not . folded) (players table)
-        hb         = (highBet table)
+        hb     = highBet table
 
         allMatched =
             all (\p ->
                 folded p ||
-
                 chips p <= 0 ||
                 (commitedChips p == hb && acted p)
             ) active

@@ -144,7 +144,7 @@ gameLoop playerIndex = do
     if bettingRoundOver table
         then return ()
     else do
-
+        printTable -- Only to see what happends with the state while working on buggs
         let playerList    = (players table)
             currentPlayer = playerList !! playerIndex
         
@@ -502,3 +502,12 @@ showWinners indexes = do
 
 
 --------------------------------------------------------------
+
+
+{-
+    TODO
+    - Game () --> State
+    - Raise more then the amount of chips you have
+    - When a Hand ends before river it should go directly to showdown, 
+        skipping the remaining phases
+-}
