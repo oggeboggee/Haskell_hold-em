@@ -182,29 +182,7 @@ runShowdown = do
     modify (\t -> t { players = updatedPlayers, pot = 0 })
     pure [ShowdownHappened (map name computedWinners)]
 
-{-
-showdown :: State Table [Int]
-showdown = do
-    table <- get
-    let players'       = filterFolded (players table)
-        communityCards = board table
-        hands          = [hand player | player <- players']
-        winners'       = winners communityCards hands
-        chips          = div (pot table) (length winners')
-        players''      = dealOutChips players' winners' chips
-    put table {players = players'', pot = 0} -- folded players get removed from the table here i think?
-    return winners'
--}
 
-  {-              
-dealOutChips :: [Player] -> [Int] -> Int -> [Player]
-dealOutChips players []      _     = players
-dealOutChips players (x:xs)  chips = dealOutChips players' indexes' chips
-    where
-        indexes' = xs
-        player   = incChips (players!!x) chips
-        players' = replacePlayer x player players
--}
 -- | This is the function that prints the events.
 eventMsg :: GameEvent -> Game ()
 eventMsg event = liftIO $ case event of
@@ -254,8 +232,6 @@ performEvent event = do
 -- replacePlayer :: PlayerIndex -> Player -> [Player] -> [Player]
 -- replacePlayer playerIndex updatedPlayer playerList = 
 --     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
-
-
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
 updatePlayerAtIndex playerIndex f table =
     let playerList = (players table)
@@ -295,47 +271,9 @@ playerHaveActed playerPos = do
     modify (updatePlayerAtIndex playerPos (\p -> p {acted = True}))
 
 
-{-
----- AXEL
---------------------------------------------------------------
--------------- All Actions a player can make -----------------
--- All actions end by passing the turn
-performAction :: Action -> Int -> State Table ()
-performAction action playerPos = do 
-    case action of
-        Check   -> check playerPos
-        Fold    -> fold playerPos
-        Call    -> call playerPos
-        Raise x -> raise playerPos x
-        AllIn   -> allIn playerPos
-    playerHaveActed playerPos
--}
-{-
---------------------------------------------------------------
-
--- | Change a players fold-status to True
-fold :: Int -> State Table ()
-fold playerPos = do
-    table <- get
-    let player   = players table!!playerPos
-        player'  = player {folded = True}
-        players' = replacePlayer playerPos player' (players table)
-    put table 
-        { players = players'}
-
-    
-    in tableUpdated
-            { pot = incPot (pot tableUpdated) bet,
-              bets = bet : (bets tableUpdated),
-              highBet = max (highBet tableUpdated) (commitedChips player)
-            }
-
 ---------------------------------------    
--- | Pass the turn to the next player -- Might not need this
-check :: Int -> State Table ()
-check playerPos = do return ()
 
-
+{-
 -- https://zvon.org/other/haskell/Outputprelude/read_f.html    
 
 -}

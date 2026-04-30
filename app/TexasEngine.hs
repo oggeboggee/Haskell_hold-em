@@ -13,7 +13,7 @@ import Control.Monad (void)
 import Data.Char (toLower)
 import System.Random
 
--- Jonathan
+
 gameRound :: Game ()
 gameRound = do
     
@@ -68,67 +68,7 @@ runPhase = do
                 bettingRound
 
 
--- Axel
-{-
-gameRound2:: Game ()
-gameRound = do
 
-    liftIO $ putStrLn "Game is starting.."
-    state (runState resetGameState)
-
-    liftIO $ putStrLn "Initiating blinds.."
-    state (runState initiateBlinds)
-
-    runShuffle2
-    liftIO $ putStrLn "Dealing hands.."
-    state (runState dealHands)
-    -- PreFlop
-    state (runState moveToNextPhase)
-    table <- get
-    printTable
-    liftIO $ putStrLn $ "First bettinground!" ++ show (phase table)
-    bettingRound (nextPlayerToAct (bigBlindPosition table) (players table))
-    printTable
-    
-    -- Flop
-    liftIO $ putStrLn "Moving to next phase: Flop"
-    state (runState moveToNextPhase)
-    
-    state (runState resetRound)
-    state (runState dealCommunityCards)
-    printTable
-    liftIO $ putStrLn "Second bettinground!"
-    bettingRound (nextPlayerToAct (dealerPosition table) (players table))
-    printTable
-
-    -- Turn
-    liftIO $ putStrLn "Moving to next phase: Turn"
-    state (runState moveToNextPhase)
-    
-    state (runState resetRound)
-    state (runState dealCommunityCards)
-    printTable
-    liftIO $ putStrLn "Third bettinground!"
-    bettingRound (nextPlayerToAct (dealerPosition table) (players table))
-    printTable
-
-    -- River
-    liftIO $ putStrLn "Moving to next phase: River"
-    state (runState moveToNextPhase)
-    state (runState resetRound)
-    state (runState dealCommunityCards)
-    printTable
-    liftIO $ putStrLn "Last bettinground!"
-    bettingRound (nextPlayerToAct (dealerPosition table) (players table))
-    printTable
-    
-    -- Showdown
-    state (runState moveToNextPhase)
-    win <- state (runState showdown)
-    --liftIO $ print win
-    showWinners win
-    printTable
--}
 
 -------------- All Game () - Functions -----------------------
 ------------------------------------------------------------
@@ -136,7 +76,7 @@ gameRound = do
 
 ------------------------------------------------------------------
 -------------- Bettinground, gameround, gameloop -----------------
--- Jonathan
+
 -- Looping through the bettinground and making playeractions
 gameLoop :: PlayerIndex -> Game ()
 gameLoop playerIndex = do
@@ -175,54 +115,6 @@ bettingRound = do
             gameLoop (firstPlayerToBet table)
 
 
---Axel
-{-
--- Gameloop for Game ().
-gameLoop :: Game ()
-gameLoop = do
-    gameRound
-
--- | Start the brtting round, recurisve with base case round over
---  Round over -> When all players have amtched the highest bet or folded and all have acted atleast once
-bettingRound :: Int -> Game ()
-bettingRound playerToAct = do
-    table <- get
-    if roundOver2 (players table) (highBet table) || onePlayerLeft (players table)
-        then do
-            return ()
-    else do
-        chooseAction playerToAct
-        printTable
-        bettingRound (nextPlayerToAct playerToAct (players table))
-
--- Axel
--- | Recive input from user and call for the correct actions depending on the input. 
-chooseAction :: Int -> Game ()
-chooseAction playerPos = do
-    table <- get
-    let playerToAct = players table!!playerPos
-    liftIO $ putStrLn $ "Available actions: " ++ availableActions table playerPos
-    liftIO $ putStrLn $ name playerToAct ++ ", choose action: "
-    input <- liftIO getLine
-    let s = (map toLower) input
-    case s of
-        "fold"  -> state $ runState (performAction Fold playerPos)
-        "call"  -> state $ runState (performAction Call playerPos)
-        "check" -> 
-            if (highBet table == 0) || matchHBet playerToAct (highBet table)
-                then state $ runState (performAction Check playerPos)
-            else do liftIO $ putStrLn "Invalid option"
-                    chooseAction playerPos
-        "raise" -> do 
-            liftIO $ putStrLn "Type in amount: " -- Crashes if no number is typen in
-            amount <- liftIO readLn  
-            state $ runState (performAction (Raise amount) playerPos)
-        "allin" -> state $ runState (performAction AllIn playerPos)
-        _       -> do 
-            liftIO $ putStrLn "Invalid option"
-            chooseAction playerPos
-
--}
 --------------------------------------------------------------
 --------------------------------------------------------------
 
@@ -279,40 +171,6 @@ resetBettingRound = do
     
     modify (\t -> t { players = map (\p -> p { acted = False, commitedChips = 0 }) (players t), highBet = hb})
 
-{-
--- Axel
--- | Reset the required fields in the table and the players in the table.
-resetGameState :: State Table ()--Game ()
-resetGameState = 
-    modify (\table -> 
-        let resetPlayer player = player 
-                { folded        = False,
-                  checked       = False,
-                  commitedChips = 0,
-                  hasActed      = False
-                }
-            resetPlayer' = map resetPlayer (players table)
-        
-        in table 
-            { players = resetPlayer',
-              highBet = 0,
-              bets = []
-            }
-    )
-
--- | reset after a betting round
-resetRound :: State Table ()
-resetRound = 
-    modify (\table -> 
-        let resetPlayer player = player {commitedChips = 0, hasActed = False}
-            resetPlayer'       = map resetPlayer (players table)
-        
-        in table 
-            { players = resetPlayer',
-              highBet = 0
-            }
-    )    
--}
 
 --------- Dealing of cards, hands, communitycards -----------
 
@@ -331,20 +189,10 @@ initiateBlinds = do
     void $ performEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
 
 
---AXEL
-{-
+
 --------------------------------------------------------------
 ---------- Dealing of cards, hands, communitycards -----------
-initiateBlinds :: Game ()
-initiateBlinds = do
-    let sbPlayer = smallBlindPosition table
-        bbPlayer = bigBlindPosition table
 
-    placeBet sbPlayer 50
-    placeBet bbPlayer 100
- -- We can later on introduce logic that increases blind amount per round
-
--}
 -- | Deal cards, update the deck after removing the cards
 --   and return the cards that have been delt.
 dealCards :: Int -> State Table [Card] --Game [Card] 
@@ -411,25 +259,6 @@ moveDealer = do
           bigBlindPosition   = newBigBlindPosition
         })
 
--- Axel
-{-
--- Maybe a away to do the showdown... simple way...
-showdown :: State Table [Int]
-showdown = do
-    table <- get
-    let players'       = filterFolded (players table)
-        communityCards = board table
-        hands          = [hand player | player <- players']
-        winners'       = winners communityCards hands
-        chips          = div (pot table) (length winners')
-        players''      = dealOutChips players' winners' chips
-    put table {players = players'', pot = 0}
-    return winners'
-
- -- | Advance from the tables current phase to the next one.
-moveToNextPhase :: State Table () --Game ()
-moveToNextPhase = modify (\table -> table { phase = nextPhase (phase table) })   
--}
 
 --------------------------------------------------------------
 ------------ Functions to print out sepcific things ----------
@@ -485,29 +314,5 @@ printTable = do
     table <- get
     liftIO $ print table
     --liftIO $ putStrLn ("Current table: " ++ show table)
-{-
-printCommunityCards :: Game ()
-printCommunityCards = do
-    table <- get
-    liftIO $ print (board table)
-
-
-showWinners :: [Int] -> Game ()
-showWinners indexes = do
-    table <- get
-    let names      = [name (players table!!i) | i <- indexes]
-        nameString = printNames names
-    liftIO $ putStrLn $ "The winners are: " ++ nameString
-
--}
-
 
 --------------------------------------------------------------
-
-
-{-
-    TODO
-    - Game () --> State
-    - When a Hand ends before river it should go directly to showdown, 
-        skipping the remaining phases
--}
