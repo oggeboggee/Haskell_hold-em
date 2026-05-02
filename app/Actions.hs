@@ -280,23 +280,6 @@ playerHaveActed playerPos = do
 printHand :: Player -> Game ()
 printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))
 
-{-
+
 --------------------------------------------------------------
 --------------------------------------------------------------
--- | Manual testing:
-player1 :: Player
-player1 = Player "Axel" hand1 400 0 False False NoBlind False
-
-player2 :: Player
-player2 = Player "Frodo" hand2 340 100 False False NoBlind False
-
-player3 :: Player
-player3 = Player "Sam" hand3 530 0 False False NoBlind False
-
-playerlist :: [Player]
-playerlist = [player1, player2, player3]
-
-table2 :: Table
-table2 = Table playerlist{- playerlist -}100 [] fullDeck [] PreFlop 200 0 1 2
-
--}

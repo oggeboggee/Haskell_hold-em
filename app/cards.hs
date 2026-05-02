@@ -9,7 +9,8 @@ module Cards
        rankValue,
        hand1,
        hand2,
-       hand3)
+       hand3
+      )
       where
 
 
