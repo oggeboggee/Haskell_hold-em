@@ -28,10 +28,11 @@ gameRound = do
     state $ runState dealHands
 
     -- PREFLOP -- (We don't use the helper here because its a special case.)
-    printTable
+    --printTable
     state $ runState moveToNextPhase
     table <- get
-    printPhase (phase table) table
+    --printPhase (phase table) table
+    printPhase'
     printBettingRound (firstPlayerToBet table)
     bettingRound
 
@@ -46,10 +47,11 @@ gameRound = do
 
     -- SHOWDOWN --
     state $ runState moveToNextPhase
+    printtHandsShowdown
     void $ performEvent (EngineEvent RunShowdown)
 
     -- NEXTHAND --
-    printTable
+    --printTable
     newHand
 
 -- | Above is quite repetetive so I'll make a helper function to make it shorter and cleaner
@@ -61,15 +63,17 @@ runPhase = do
 
     table <- get
 
-    --printPhase name table
+    --printPhase (phase table) table
+    printPhase'
     printBettingRound (firstPlayerToBet table)
+    --printCommunityCards
     bettingRound
 
     case phase table of
         Showdown -> pure ()
         --Showdown -> newRound
         _        -> do
-                printBettingRound (firstPlayerToBet table)
+                --printBettingRound (firstPlayerToBet table)
                 bettingRound
 
 
@@ -90,7 +94,7 @@ gameLoop playerIndex = do
     if bettingRoundOver table
         then return ()
     else do
-        printTable -- Only to see what happends with the state while working on buggs
+        --printTable -- Only to see what happends with the state while working on buggs
         let playerList    = (players table)
             currentPlayer = playerList !! playerIndex
         
@@ -280,16 +284,30 @@ moveDealer = do
 ------------ Functions to print out sepcific things ----------
 
 -- | Printing helpers
-printPhase :: GamePhase -> Table -> Game ()
-printPhase phase table = 
+-- printPhase :: GamePhase -> Table -> Game ()
+-- printPhase phase table = 
+--     liftIO $ do 
+--         putStrLn ("\n")
+--         putStrLn ("-------------------------")
+--         putStrLn ((show phase) ++ " (Pot: " ++ show (pot table) ++ ")")
+--         putStrLn ("-------------------------")
+--         putStrLn ("\n")
+--         --putStrLn (printTable table)
+--         putStrLn ("\n")
+
+
+printPhase' :: Game ()
+printPhase' = do
+    table <- get
     liftIO $ do 
-        putStrLn ("\n")
-        putStrLn ("-------------------------")
-        putStrLn ((show phase) ++ " (Pot: " ++ show (pot table) ++ ")")
-        putStrLn ("-------------------------")
-        putStrLn ("\n")
+        putStrLn "\n"
+        putStrLn "-------------------------"
+        putStrLn $ show (phase table) ++ " (Pot: " ++ show (pot table) ++ ")"
+        putStrLn $ "CommunityCards: " ++ show (board table)
+        putStrLn "-------------------------"
+        putStrLn "\n"
         --putStrLn (printTable table)
-        putStrLn ("\n")
+        putStrLn "\n"
 
 -- printTable :: Table -> String
 -- printTable table = 
@@ -321,7 +339,12 @@ printPhase phase table =
 
 
 printBettingRound :: PlayerIndex -> Game ()
-printBettingRound player = liftIO $ putStrLn ("First player to act: " ++ (show player))
+printBettingRound playerPos = do
+    table <- get
+    case phase table of
+        Showdown -> return ()
+        _        -> liftIO $ putStrLn $ "First player to act: " 
+                            ++ name (players table!!playerPos)
 
 --Axel
 
@@ -341,6 +364,16 @@ printBlinds = do
         pl = players table
 
     liftIO $ putStrLn $ "sb: " ++ name (pl!!sb) ++ "\nbb: " ++ name (pl!!bb)
+
+printtHandsShowdown :: Game ()
+printtHandsShowdown = do
+    table <- get
+    let ps = filter (not . folded) (players table)
+    if length ps <= 1 then return ()
+    else do
+        liftIO $ putStrLn "Showdown!\n"
+        liftIO $ mapM_ (\p -> putStrLn (name p ++ "'s hand: " ++ show (hand p))) ps
+
 --------------------------------------------------------------
 
 

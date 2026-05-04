@@ -21,6 +21,7 @@ import HandEvaluation
 -- 7. Repeat loop
 
 -- How do we separate events driven by the engine and driven by the player?
+-- Maybe move all game-type - functions to one file? 
 
 -- change getPlayerAction and convertAction to sue Event instead of Action?
 -- | Show a player what actions they can make (based on highBet), prompt player to type desired action,
@@ -29,14 +30,17 @@ getPlayerEvent :: PlayerIndex -> Game Event
 getPlayerEvent playerIndex = do
     table <- get
 
-    let player = (players table) !! playerIndex
-        hb     = (highBet table)
+    let player = players table !! playerIndex
+        hb     = highBet table
+        lowbet = lowestBet table player
 
         availableActions = if hb == 0 || commitedChips player == hb
                            then "Fold, Check, Raise <x>, All In"
-                           else "Fold, Call, Raise <x>, All In"
+                           else "Fold, Call (" ++ show lowbet ++"), Raise <x>, All In"
     
-    liftIO $ putStrLn ((name player) ++ " - Your available actions: " ++ availableActions)
+    liftIO $ putStrLn $ "\n" ++ name player ++ " - Your available actions: " ++ availableActions 
+                            ++ "\nCurrent high bet: " ++ show (highBet table) ++
+                                "\nYour commited chips: " ++ show (commitedChips player)
     printHand player
 
     input <- liftIO getLine
@@ -184,6 +188,7 @@ runShowdown = do
 
 
 -- | This is the function that prints the events.
+-- | Should maybe be in TexasEnginge??
 eventMsg :: GameEvent -> Game ()
 eventMsg event = liftIO $ case event of
     PlayerFolded p -> putStrLn (p ++ " folds.")
@@ -198,7 +203,7 @@ eventMsg event = liftIO $ case event of
 
     PlayerPlacedBlinds p blindType amount -> putStrLn (p ++ " placed the " ++ (show blindType) ++ " of " ++ (show amount) ++ " chips.")
 
-    ShowdownHappened ps -> mapM_ (\p -> putStrLn (p ++ " wins!")) ps
+    ShowdownHappened ps -> mapM_ (\p -> putStrLn (p ++ " wins!")) ps --Would be nice to see all active players cars at the end
 
 
 -- | https://stackoverflow.com/questions/27609062/what-is-the-difference-between-mapm-and-mapm-in-haskell
