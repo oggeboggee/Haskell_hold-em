@@ -1,6 +1,57 @@
 module Types where
 import Control.Monad.State
 
+-- | https://wiki.haskell.org/Real_World_Applications/Event_Driven_Applications
+
+-- | Attempt at making event data types.
+-- | Should we have events for players that are actions and then also have Events for things such as
+-- | dealing cards/hands, resetting rounds, etc? Does Blinds belong in this category. Thinking in terms
+-- | of future if we will need to send this in JSON? https://academy.fpblock.com/haskell/library/aeson/
+
+-- | An Event sent into the gameengine. An intention to change the game state.
+data Event = 
+    PlayerEvent PlayerIndex Action    -- Player attempts to perform an action.
+    | EngineEvent EngineAction        -- Game engine trigers something.
+
+-- | Actions initiated by the game.
+data EngineAction =
+    PlaceBlind PlayerIndex BlindType Bet   -- Engine places blind for player
+    -- | AdvancePhase
+    | RunShowdown                          -- Engine initiates showdown.
+
+-- | Specific events produced by the game after an Event is processed. Descirbe what happened and
+-- | is used for output or to log what happened.
+data GameEvent =
+    PlayerFolded PlayerName
+    | PlayerChecked PlayerName
+    | PlayerCalled PlayerName Bet
+    | PlayerRaised PlayerName Bet
+    | PlayerAllIn PlayerName Bet
+    | PlayerPlacedBlinds PlayerName BlindType Bet
+    | ShowdownHappened [PlayerName]
+    deriving (Show)
+
+-- | A players name (used for output)
+type PlayerName = String
+-- | An internal reference to a player. 
+type PlayerIndex = Int
+
+-- Data type for all the different types of actions a player can make
+data Action = 
+    Check
+    | Fold
+    | Call
+    | Raise Int
+    | AllIn
+
+instance Show Action where
+    show Check = "Check"
+    show Fold = "Fold"
+    show Call = "Call"
+    show (Raise x) = "Raise " ++ show x
+    show AllIn = "All-in"
+
+
 --------------------------------------------
 -- | https://cstml.github.io/2021/07/22/State-Monad.html
 -- | We can use StateT to get access to IO inside the state monad.
@@ -16,10 +67,10 @@ data Suit = Hearts | Spades | Diamonds | Clubs
 
 instance Show Suit where
     show s = case s of
-        Spades -> "S"
-        Hearts -> "H"
-        Diamonds -> "D"
-        Clubs -> "C"
+        Spades -> "\9824" --Spades -> "S"
+        Hearts -> "\9829" --Hearts -> "H"
+        Diamonds -> "\9830" --Diamonds -> "D"
+        Clubs -> "\9827" --Clubs -> "C"
 
 -- | All different ranks
 data Rank =  Two 
@@ -96,9 +147,8 @@ type Pot = Int
 
 ---------------------------------------------------------------------
 -- | Represent if a player have big, samll or no blind
-data Blind = 
-    NoBlind
-    | SmallBlind
+data BlindType = 
+    SmallBlind
     | BigBlind
     deriving (Show, Eq)
 
@@ -111,19 +161,9 @@ data GamePhase =
             | Turn
             | River
             | Showdown
-    deriving (Show)
-
----------------------------------------------------------------------
--- | Table positions a player can be in.
-data TablePosition =
-    Dealer
-    | SB
-    | BB
-    | UTG
-    | CutOff
     deriving (Show, Eq)
 
-
+{-
 ---------------------------------------------------------------------
 -- | Data type for a player
 data Player = Player
@@ -133,26 +173,40 @@ data Player = Player
             chips         :: Chip,
             commitedChips :: Chip,
             folded        :: Bool,
+            acted         :: Bool
             checked       :: Bool,
-            blind         :: Blind
+            blind         :: Blind,
+            hasActed      :: Bool,
+            playeState    :: PlayerState
+            }
+    deriving (Eq)
+-}
+data Player = Player
+            {
+            name          :: String,
+            hand          :: Hand,
+            chips         :: Chip,
+            commitedChips :: Chip,
+            folded        :: Bool,
+            acted         :: Bool
+            --blind         :: Blind
             --position      :: TablePosition
             }
     deriving (Eq)
 
 instance Show Player where
-    show p = "Name:" ++ show (name p) ++
-           " Hand:" ++ show (hand p) ++ 
-           " Chips:" ++ show (chips p) ++
-           " Commited:" ++ show (commitedChips p) ++
-           " Folded:" ++ show (folded p) ++
-           " Blind:" ++ show (blind p) ++ "\n"
+    show p = "Name: " ++ show (name p) ++
+           " Hand: " ++ show (hand p) ++ 
+           " Chips: " ++ show (chips p) ++
+           " Pot contribution: " ++ show (commitedChips p) ++
+           " Folded: " ++ show (folded p) ++
+           " Acted: " ++ show (acted p)
+           --" Blind:" ++ show (blind p) ++ "\n"
 ---------------------------------------------------------------------
 -- | The table represent the gamestate
 data Table = Table
             {
             players       :: [Player],
-            --playerTurn    :: (Player, Int), -- We have this with dealerposition.
-            activePlayers :: [Player],
             highBet       :: Bet,
             bets          :: [Bet],
             deck          :: Deck,
@@ -163,10 +217,32 @@ data Table = Table
             smallBlindPosition :: Int,
             bigBlindPosition :: Int
             }
-    -- deriving (Show)
-instance Show Table where
-    show t = show (players t) ++ 
-    --        " Playerturn:" ++ show (name (fst (playerTurn t))) ++
-            " \nHighbet:" ++ show (highBet t) ++
-            " \nPot:" ++ show (pot t)
 
+instance Show Table where
+
+    -- show t = "Players:\n" ++ unlines (map show (players t)) ++ 
+    --         " \nHighbet: " ++ show (highBet t) ++
+    --         " \nPot: " ++ show (pot t) ++
+    --         " \nBoard: " ++ show (board t)
+
+    show t = "Players:\n" ++ unlines (map show (players t)) ++ 
+            --"\nTable State(print): " ++ 
+            " \nPhase:" ++ show (phase t) ++
+            " \nCommmunityCards: " ++ show (board t) ++
+            " \nHighbet:         " ++ show (highBet t) ++
+            " \nsb: " ++ name (players t!!smallBlindPosition t) ++ 
+            "\nbb: " ++ name (players t!!bigBlindPosition t)
+
+
+
+---------------------------------------------------------------------
+
+
+
+data PlayerState =
+    NotActed
+    | HasFolded
+    | HasChecked
+    | HasBet
+    | HasAllin
+    deriving (Eq)

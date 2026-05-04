@@ -5,12 +5,13 @@ module Cards
        fullDeck,
        drawCard,
        shuffle,
-       runShuffle,
+       --runShuffle,
        rankValue,
        rankValueAceLow,
        hand1,
        hand2,
-       hand3)
+       hand3
+      )
       where
 
 
@@ -126,19 +127,19 @@ shuffle (x:xs) deck = card : shuffle xs deck'
 
 ---------------------------------------
 -- | Generate a list with random doubles, Help function for runShuffle
-randomDoubles :: Int -> StdGen -> ([Double], StdGen)
-randomDoubles 0 gen = ([], gen)
-randomDoubles n gen = ((x:xs), gen2)
-  where
-    (x, gen1)  = randomR (0.0,1.0) gen
-    (xs, gen2) = randomDoubles (n-1) gen1
+-- randomDoubles :: Int -> StdGen -> ([Double], StdGen)
+-- randomDoubles 0 gen = ([], gen)
+-- randomDoubles n gen = ((x:xs), gen2)
+--   where
+--     (x, gen1)  = randomR (0.0,1.0) gen
+--     (xs, gen2) = randomDoubles (n-1) gen1
 
--- | Create a new shuffled deck
-runShuffle :: IO Deck
-runShuffle = do
-  gen <- newStdGen
-  let (doubles, _) = randomDoubles 52 gen
-  return (shuffle doubles fullDeck)
+-- -- | Create a new shuffled deck
+-- runShuffle :: IO Deck
+-- runShuffle = do
+--   gen <- newStdGen
+--   let (doubles, _) = randomDoubles 52 gen
+--   return (shuffle doubles fullDeck)
 
 
 --------------------------------------------------------------

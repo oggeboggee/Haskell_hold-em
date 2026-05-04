@@ -1,130 +1,221 @@
 module TexasEngine where
 
+-- Other files
 import Types
 import Cards
 import Actions
+import HandEvaluation
+import Utilities
+
+-- Packages
 import Control.Monad.State
+import Control.Monad (void)
+import Data.Char (toLower)
+import System.Random
 
-------------------------------------------------------------
-------------------------------------------------------------
--- | Progress the phase to the next phase
-nextPhase :: GamePhase -> GamePhase
-nextPhase p = case p of
-    DealHands   -> PreFlop
-    PreFlop     -> Flop
-    Flop        -> Turn
-    Turn        -> River
-    River       -> Showdown
-    Showdown    -> DealHands
-
-
--- | Remake with StateT IO
-
-
-
-
-
--- https://cstml.github.io/2021/07/22/State-Monad.html
 
 gameRound :: Game ()
 gameRound = do
-    liftIO $ putStrLn "Game is starting.."
-    resetGameState
-
-
-    liftIO $ putStrLn "Initiating blinds.."
+    
+    liftIO $ putStrLn "\n--------------------------------"
+    liftIO $ putStrLn "              NEW HAND             "
+    liftIO $ putStrLn "--------------------------------"
+    
+    state $ runState resetTable
+    state $ runState resetBettingRound
     initiateBlinds
+    runShuffle
+    state $ runState dealHands
 
-    liftIO $ putStrLn "Dealing hands.."
-    dealHands
+    -- PREFLOP -- (We don't use the helper here because its a special case.)
+    --printTable
+    state $ runState moveToNextPhase
+    table <- get
+    --printPhase (phase table) table
+    printPhase'
+    printBettingRound (firstPlayerToBet table)
+    bettingRound
+
+    -- FLOP --
+    runPhase 
+
+    -- TURN --
+    runPhase 
+
+    -- RIVER --
+    runPhase
+
+    -- SHOWDOWN --
+    state $ runState moveToNextPhase
+    printtHandsShowdown
+    void $ performEvent (EngineEvent RunShowdown)
+
+    -- NEXTHAND --
+    --printTable
+    newHand
+
+-- | Above is quite repetetive so I'll make a helper function to make it shorter and cleaner
+runPhase :: Game ()
+runPhase = do
+    state (runState moveToNextPhase)
+    state (runState dealCommunityCards)
+    state (runState resetBettingRound)
 
     table <- get
-    liftIO $ print table
 
-    --bettingRound
-{-
-    moveToNextPhase
-    dealCommunityCards
+    --printPhase (phase table) table
+    printPhase'
+    printBettingRound (firstPlayerToBet table)
+    --printCommunityCards
     bettingRound
 
-    moveToNextPhase
-    dealCommunityCards
-    bettingRound
-
-    moveToNextPhase
-    dealCommunityCards
-    bettingRound
-
-    moveToNextPhase
-    dealCommunityCards
-    bettingRound
-
-    -- after this we need to do showdown and check winenr hand combination etc.
-
--}
+    case phase table of
+        Showdown -> pure ()
+        --Showdown -> newRound
+        _        -> do
+                --printBettingRound (firstPlayerToBet table)
+                bettingRound
 
 
 
-{-
+
+-------------- All Game () - Functions -----------------------
+------------------------------------------------------------
+-- https://cstml.github.io/2021/07/22/State-Monad.html
+
+------------------------------------------------------------------
+-------------- Bettinground, gameround, gameloop -----------------
+
+-- Looping through the bettinground and making playeractions
+gameLoop :: PlayerIndex -> Game ()
+gameLoop playerIndex = do
+    table <- get
+
+    if bettingRoundOver table
+        then return ()
+    else do
+        --printTable -- Only to see what happends with the state while working on buggs
+        let playerList    = (players table)
+            currentPlayer = playerList !! playerIndex
+        
+            inactive p = folded p || chips p == 0
+        
+        if inactive currentPlayer
+            then gameLoop (nextPlayerToAct playerIndex playerList)
+        else do
+            event <- getPlayerEvent playerIndex
+
+            result <- performEvent event
+
+            case result of
+                Left _ -> gameLoop playerIndex -- Same player retries
+
+                Right _ -> gameLoop (nextPlayerToAct playerIndex playerList)
+
+
+-- | Initiate the betting phase of the game.
 bettingRound :: Game ()
 bettingRound = do
-    resetCheckedPlayers    -- Need to make something to reset players, no fold,check.
     table <- get
-    let initiate = (firstPlayerToBet table)
--}
+
+    if bettingRoundOver table
+        then return ()
+        else do
+            gameLoop (firstPlayerToBet table)
+
+
+newHand :: Game ()
+newHand = do
+    liftIO $ putStrLn "Deal next hand? (yes/no)"
+    answer <- liftIO getLine
+    case map toLower answer of
+        "yes" -> do state $ runState moveToNextPhase
+                    state $ runState moveDealer
+                    --printBlinds
+                    gameRound
+        "no"  -> pure ()
+        _     -> liftIO $ putStrLn "Invalid input"
+--------------------------------------------------------------
+--------------------------------------------------------------
+
+-- | Return a shuffled deck with 52 cards
+runShuffle :: Game()
+runShuffle = do
+    gen <- newStdGen
+    let (doubles, _) = randomDoubles' 52 gen
+    let shuffledDeck = shuffle doubles fullDeck
+    modify(\table -> table {deck = shuffledDeck})
+
+-- | Helperfunction to runShuffle, generate a list of random doubles
+randomDoubles' :: Int -> StdGen -> ([Double], StdGen)
+randomDoubles' 0 gen = ([], gen)
+randomDoubles' n gen = ((x:xs), gen2)
+  where
+    (x, gen1)  = randomR (0.0,1.0) gen
+    (xs, gen2) = randomDoubles' (n-1) gen1
 
 
 ------------------------------------------------------------------------------------------
------------- Code for each step of the game ---------------------------------------------
-
-
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+--------------------------- Functions to modify the game state (table) -------------------
+-- Jonathan
 -- | Reset the required fields in the table and the players in the table.
-resetGameState :: Game ()
-resetGameState = 
-    modify (\table -> 
-        let resetPlayer player = player 
-                { folded = False,
-                  checked = False
-                }
-            resetPlayer' = map resetPlayer (players table)
+resetTable :: State Table () -- Game ()
+resetTable = 
+    modify (\t -> 
+        let resetPlayer p = 
+                p { folded = False,
+                    acted = False,
+                    commitedChips = 0 
+                  }
         
-        in table 
-            { players = resetPlayer',
-              activePlayers = resetPlayer',
+        in t
+            { players = map resetPlayer (players t),
               highBet = 0,
-              bets = []
+              pot = 0,
+              bets = [],
+              board = []
             }
-    )    
+    )
 
-
--- | Reset players who have checked their hands
-resetCheckedPlayers :: Game ()
-resetCheckedPlayers = do
+-- | Reset after each betting round by clearing flags for players. Also resets relevant fields in the table
+-- | but preserves the higBet during the PreFlop phase of the game (makes BB be highBet during PreFlop).
+resetBettingRound :: State Table () -- Game ()
+resetBettingRound = do
     table <- get
-    let uncheckPlayers = map (\players -> players {checked = False}) (players table)
+    
+    let hb = case (phase table) of
+                PreFlop -> (highBet table) 
+                _       -> 0
+    
+    modify (\t -> t { players = map (\p -> p { acted = False, commitedChips = 0 }) (players t), highBet = hb})
 
-    modify (\table -> table { players = uncheckPlayers})
 
+--------- Dealing of cards, hands, communitycards -----------
 
 -- | Initialisation of the blinds of the game.
+--initiateBlinds :: State Table ()
 initiateBlinds :: Game ()
 initiateBlinds = do
-    table <- get
-
-    let sbPlayer = (smallBlindPosition table)
-        bbPlayer = (bigBlindPosition table)
-
-    placeBet sbPlayer 50
-    placeBet bbPlayer 100
- -- We can later on introduce logic that increases blind amount per round
+    sbPlayer <- gets smallBlindPosition
+    bbPlayer <- gets bigBlindPosition
 
 
+    -- performEvent (EngineEvent (PlaceBlind sbPlayer SmallBlind 50))
+    -- performEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
 
+    void $ performEvent (EngineEvent (PlaceBlind sbPlayer SmallBlind 50))
+    void $ performEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
+
+
+
+--------------------------------------------------------------
 ---------- Dealing of cards, hands, communitycards -----------
 
 -- | Deal cards, update the deck after removing the cards
 --   and return the cards that have been delt.
-dealCards :: Int -> Game [Card]
+dealCards :: Int -> State Table [Card] --Game [Card] 
 dealCards n = do
     table <- get
     let (deltCards, newDeck) = splitAt n (deck table)
@@ -135,99 +226,179 @@ dealCards n = do
 --   and for each player in the list, use 'dealCards' to take two cards from the deck. Put
 --   the cards as the players hand, then put the list of players now with updated hands back
 --   into the table.
-dealHands :: Game ()
+dealHands :: State Table () --Game ()
 dealHands = do
-    table <- get
+
     playerList <- gets players
 
     playerList' <- mapM (\player -> do
         deltHand <- dealCards 2
         return player { hand = deltHand}
         ) playerList
-    modify (\table -> table {players = playerList', activePlayers = playerList'})
+
+    modify (\table -> table { players = playerList' })
+
 
 
 -- | Deal community cards to the board.
-dealCommunityCards :: Game ()
+dealCommunityCards :: State Table ()--Game () -- State Table ()
 dealCommunityCards = do
-    table <- get
-    let currentPhase = phase table
+    currentPhase <- gets phase
     cards <- case currentPhase of
-        Flop -> dealCards 3
-        Turn -> dealCards 1
+        Flop  -> dealCards 3
+        Turn  -> dealCards 1
         River -> dealCards 1
-        _ -> return []
+        _     -> return []
 
-    modify (\table -> table { board = board table ++ cards }) 
-
-
-roundOver :: Table -> Bool
-roundOver table = 
-    let playerList' = (activePlayers table)
-        hb          = (highBet table)   
-    in  length playerList' == 1 
-        || all (\p -> (commitedChips p) == hb || checked p) playerList'
+    modify (\t -> t { board = board t ++ cards }) 
 
 
-
--- | Who bets first varies depedning on if we are in PreFlop state or any other state. PreFlop it is
---   the player UTG (BB+1). In all postflop betting rounds action begins with the player in the SB position.
-firstPlayerToBet :: Table -> Int
-firstPlayerToBet table = case phase table of
-    PreFlop -> nextPlayerToAct (bigBlindPosition table) (activePlayers table)
-    _       -> (smallBlindPosition table)
+--------------------------------------------------------------
+------------------ Utility functions -------------------------
 
 
-
---startOfGame :: Table -> Bool
---startOfGame table | (table phase) == DealHands = True
---                  | (table phase) == _         = False
-
-
+                                
+-- | Advance from the tables current phase to the next one.
+moveToNextPhase :: State Table () -- Game ()
+moveToNextPhase = modify (\t -> t { phase = nextPhase (phase t) })
 
 -- | Move where the dealer,SB, and BB are on the table. Mod helps us wrap around.
+-- | Rotates the delaer button around the table and updates SB and BB positions based on where the dealer
+-- | button ends up.
 moveDealer :: State Table ()
 moveDealer = do
     table <- get
-    let numPlayers = length (players table)
-        newDealerPosition     = ((dealerPosition table) + 1) `mod` numPlayers
-        newSmallBlindPosition = ((newDealerPosition) + 1) `mod` numPlayers
-        newBigBlindPosition   = ((newSmallBlindPosition) + 1) `mod` numPlayers
+    let numPlayers            = length (players table)
+        newDealerPosition     = (dealerPosition table + 1) `mod` numPlayers
+        newSmallBlindPosition = (newDealerPosition + 1) `mod` numPlayers
+        newBigBlindPosition   = (newSmallBlindPosition + 1) `mod` numPlayers
 
-    modify (\table -> table 
+    modify (\t -> t
         { dealerPosition     = newDealerPosition,
           smallBlindPosition = newSmallBlindPosition,
           bigBlindPosition   = newBigBlindPosition
         })
 
 
+--------------------------------------------------------------
+------------ Functions to print out sepcific things ----------
 
--- | Decided the next player to (we can ONLY use activeplayers here. Should we maybe have a specific type
---   that guarantees it will work only for activePlayers list?)
-nextPlayerToAct :: Int -> [Player] -> Int
-nextPlayerToAct i activePlayers = nextActivePlayer
-    where nextActivePlayer = (i + 1) `mod` (length activePlayers)
+-- | Printing helpers
+-- printPhase :: GamePhase -> Table -> Game ()
+-- printPhase phase table = 
+--     liftIO $ do 
+--         putStrLn ("\n")
+--         putStrLn ("-------------------------")
+--         putStrLn ((show phase) ++ " (Pot: " ++ show (pot table) ++ ")")
+--         putStrLn ("-------------------------")
+--         putStrLn ("\n")
+--         --putStrLn (printTable table)
+--         putStrLn ("\n")
 
 
+printPhase' :: Game ()
+printPhase' = do
+    table <- get
+    liftIO $ do 
+        putStrLn "\n"
+        putStrLn "-------------------------"
+        putStrLn $ show (phase table) ++ " (Pot: " ++ show (pot table) ++ ")"
+        putStrLn $ "CommunityCards: " ++ show (board table)
+        putStrLn "-------------------------"
+        putStrLn "\n"
+        --putStrLn (printTable table)
+        putStrLn "\n"
+
+-- printTable :: Table -> String
+-- printTable table = 
+--     let playersList = (players table)
+--         d           = (dealerPosition table)
+--         sb          = (smallBlindPosition table)
+--         bb          = (bigBlindPosition table)
+
+--         pos i 
+--             | i == d = "(D)"
+--             | i == sb = "(SB)"
+--             | i == bb = "(BB)"
+--             | otherwise = ""
+
+--         showPlayer i p =
+--             "chips: " ++ show (chips p)
+--             ++ " | name: " ++ (name p)
+--             ++ " | pos: " ++ pos i
+
+
+--         indexedPlayers = zipWith showPlayer [0..] playersList
     
+--         -- put each player on a new line
+--         render [] = ""    
+--         render [x] = x
+--         render (x:xs) = x ++ "\n" ++ render xs
+
+    -- in render indexedPlayers
 
 
+printBettingRound :: PlayerIndex -> Game ()
+printBettingRound playerPos = do
+    table <- get
+    case phase table of
+        Showdown -> return ()
+        _        -> liftIO $ putStrLn $ "First player to act: " 
+                            ++ name (players table!!playerPos)
+
+--Axel
+
+printTable :: Game ()
+printTable = do
+    table <- get
+    liftIO $ print table
+    --liftIO $ putStrLn ("Current table: " ++ show table)
+
+
+printBlinds :: Game ()
+printBlinds = do 
+    table <- get
+    let 
+        sb = smallBlindPosition table
+        bb = bigBlindPosition table
+        pl = players table
+
+    liftIO $ putStrLn $ "sb: " ++ name (pl!!sb) ++ "\nbb: " ++ name (pl!!bb)
+
+printtHandsShowdown :: Game ()
+printtHandsShowdown = do
+    table <- get
+    let ps = filter (not . folded) (players table)
+    if length ps <= 1 then return ()
+    else do
+        liftIO $ putStrLn "Showdown!\n"
+        liftIO $ mapM_ (\p -> putStrLn (name p ++ "'s hand: " ++ show (hand p))) ps
 
 --------------------------------------------------------------
 
 
-                                
--- | Advance from the tables current phase to the next one.
-moveToNextPhase :: Game ()
-moveToNextPhase = modify (\table -> table { phase = nextPhase (phase table) })
 
+-- | Manual testing:
+player1 :: Player
+player1 = Player "Axel" hd11 400 0 False False
 
+player2 :: Player
+player2 = Player "Frodo" hd12 340 100 False False
 
+player3 :: Player
+player3 = Player "Sam" hd13 530 0 False False
 
+playerlist :: [Player]
+playerlist = [player1, player2, player3]
 
--- Gameloop for Game ().
-gameLoop :: Game ()
-gameLoop = do
-    gameRound
-    --gameLoop
+table2 :: Table
+table2 = Table playerlist{- playerlist -}100 [] fullDeck [] PreFlop 200 0 1 2
 
+hd11 :: Hand
+hd11 = [ Card Two Hearts, Card Jack Spades]
+
+hd12 :: Hand
+hd12 = [ Card Two Diamonds, Card Jack Spades]
+
+hd13 :: Hand
+hd13 = [ Card Ten Spades, Card King Clubs]
