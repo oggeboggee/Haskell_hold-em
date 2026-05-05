@@ -32,7 +32,7 @@ gameRound = do
     state $ runState moveToNextPhase
     table <- get
     --printPhase (phase table) table
-    printPhase'
+    printPhase
     printBettingRound (firstPlayerToBet table)
     bettingRound
 
@@ -64,7 +64,7 @@ runPhase = do
     table <- get
 
     --printPhase (phase table) table
-    printPhase'
+    printPhase
     printBettingRound (firstPlayerToBet table)
     --printCommunityCards
     bettingRound
@@ -296,8 +296,8 @@ moveDealer = do
 --         putStrLn ("\n")
 
 
-printPhase' :: Game ()
-printPhase' = do
+printPhase :: Game ()
+printPhase = do
     table <- get
     liftIO $ do 
         putStrLn "\n"

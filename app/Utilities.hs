@@ -41,7 +41,7 @@ nextPlayerToAct i playersList =
 firstPlayerToBet :: Table -> PlayerIndex
 firstPlayerToBet table = case phase table of
     PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
-    _       -> (smallBlindPosition table)
+    _       -> nextPlayerToAct (dealerPosition table) (players table)
 
 
 -- | We need a function to take a player at a specific index in a list, 
@@ -84,7 +84,6 @@ bettingRoundOver table =
 
 
 
--- From Actions
 ----------------------------------------------------------------
 -- | Pure function, decrease the amount of chips a player have by a certain amount
 decChips :: Player -> Bet -> Player

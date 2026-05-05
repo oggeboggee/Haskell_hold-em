@@ -39,8 +39,10 @@ getPlayerEvent playerIndex = do
                            else "Fold, Call (" ++ show lowbet ++"), Raise <x>, All In"
     
     liftIO $ putStrLn $ "\n" ++ name player ++ " - Your available actions: " ++ availableActions 
-                            ++ "\nCurrent high bet: " ++ show (highBet table) ++
-                                "\nYour commited chips: " ++ show (commitedChips player)
+                            ++ {-"\nCurrent high bet:    " ++ show (highBet table) ++-}
+                               "\nCurrent pot:      " ++ show (pot table) ++    
+                               "\nChips:          " ++ show (chips player) ++
+                               "\nCommited chips: " ++ show (commitedChips player)
     printHand player
 
     input <- liftIO getLine
