@@ -16,11 +16,11 @@ import System.Random
 
 gameRound :: Game ()
 gameRound = do
-    
+
     liftIO $ putStrLn "\n--------------------------------"
     liftIO $ putStrLn "              NEW HAND             "
     liftIO $ putStrLn "--------------------------------"
-    
+
     state $ runState resetTable
     state $ runState resetBettingRound
     initiateBlinds
@@ -37,10 +37,10 @@ gameRound = do
     bettingRound
 
     -- FLOP --
-    runPhase 
+    runPhase
 
     -- TURN --
-    runPhase 
+    runPhase
 
     -- RIVER --
     runPhase
@@ -57,26 +57,25 @@ gameRound = do
 -- | Above is quite repetetive so I'll make a helper function to make it shorter and cleaner
 runPhase :: Game ()
 runPhase = do
-    state (runState moveToNextPhase)
-    state (runState dealCommunityCards)
-    state (runState resetBettingRound)
-
     table <- get
 
-    --printPhase (phase table) table
-    printPhase
-    printBettingRound (firstPlayerToBet table)
-    --printCommunityCards
-    bettingRound
+    -- Stop running if winner is decided.
+    if handOver table
+        then pure ()
+        else do
+            state (runState moveToNextPhase)
+            state (runState dealCommunityCards)
+            state (runState resetBettingRound)
 
-    case phase table of
-        Showdown -> pure ()
-        --Showdown -> newRound
-        _        -> do
-                --printBettingRound (firstPlayerToBet table)
-                bettingRound
+            table' <- get
 
+            --printPhase (phase table) table
+            printPhase
+            printBettingRound (firstPlayerToBet table')
 
+            if bettingRoundCanRun table'
+                then bettingRound
+                else pure ()
 
 
 -------------- All Game () - Functions -----------------------
@@ -95,11 +94,11 @@ gameLoop playerIndex = do
         then return ()
     else do
         --printTable -- Only to see what happends with the state while working on buggs
-        let playerList    = (players table)
+        let playerList    = players table
             currentPlayer = playerList !! playerIndex
-        
+
             inactive p = folded p || chips p == 0
-        
+
         if inactive currentPlayer
             then gameLoop (nextPlayerToAct playerIndex playerList)
         else do
@@ -120,8 +119,7 @@ bettingRound = do
 
     if bettingRoundOver table
         then return ()
-        else do
-            gameLoop (firstPlayerToBet table)
+        else gameLoop (firstPlayerToBet table)
 
 
 newHand :: Game ()
@@ -144,12 +142,12 @@ runShuffle = do
     gen <- newStdGen
     let (doubles, _) = randomDoubles' 52 gen
     let shuffledDeck = shuffle doubles fullDeck
-    modify(\table -> table {deck = shuffledDeck})
+    modify (\table -> table {deck = shuffledDeck})
 
 -- | Helperfunction to runShuffle, generate a list of random doubles
 randomDoubles' :: Int -> StdGen -> ([Double], StdGen)
 randomDoubles' 0 gen = ([], gen)
-randomDoubles' n gen = ((x:xs), gen2)
+randomDoubles' n gen = (x:xs, gen2)
   where
     (x, gen1)  = randomR (0.0,1.0) gen
     (xs, gen2) = randomDoubles' (n-1) gen1
@@ -162,14 +160,14 @@ randomDoubles' n gen = ((x:xs), gen2)
 -- Jonathan
 -- | Reset the required fields in the table and the players in the table.
 resetTable :: State Table () -- Game ()
-resetTable = 
-    modify (\t -> 
-        let resetPlayer p = 
+resetTable =
+    modify (\t ->
+        let resetPlayer p =
                 p { folded = False,
                     acted = False,
-                    commitedChips = 0 
+                    commitedChips = 0
                   }
-        
+
         in t
             { players = map resetPlayer (players t),
               highBet = 0,
@@ -184,11 +182,11 @@ resetTable =
 resetBettingRound :: State Table () -- Game ()
 resetBettingRound = do
     table <- get
-    
-    let hb = case (phase table) of
-                PreFlop -> (highBet table) 
+
+    let hb = case phase table of
+                PreFlop -> highBet table
                 _       -> 0
-    
+
     modify (\t -> t { players = map (\p -> p { acted = False, commitedChips = 0 }) (players t), highBet = hb})
 
 
@@ -250,14 +248,14 @@ dealCommunityCards = do
         River -> dealCards 1
         _     -> return []
 
-    modify (\t -> t { board = board t ++ cards }) 
+    modify (\t -> t { board = board t ++ cards })
 
 
 --------------------------------------------------------------
 ------------------ Utility functions -------------------------
 
 
-                                
+
 -- | Advance from the tables current phase to the next one.
 moveToNextPhase :: State Table () -- Game ()
 moveToNextPhase = modify (\t -> t { phase = nextPhase (phase t) })
@@ -299,7 +297,7 @@ moveDealer = do
 printPhase :: Game ()
 printPhase = do
     table <- get
-    liftIO $ do 
+    liftIO $ do
         putStrLn "\n"
         putStrLn "-------------------------"
         putStrLn $ show (phase table) ++ " (Pot: " ++ show (pot table) ++ ")"
@@ -329,7 +327,7 @@ printPhase = do
 
 
 --         indexedPlayers = zipWith showPlayer [0..] playersList
-    
+
 --         -- put each player on a new line
 --         render [] = ""    
 --         render [x] = x
@@ -343,7 +341,7 @@ printBettingRound playerPos = do
     table <- get
     case phase table of
         Showdown -> return ()
-        _        -> liftIO $ putStrLn $ "First player to act: " 
+        _        -> liftIO $ putStrLn $ "First player to act: "
                             ++ name (players table!!playerPos)
 
 --Axel
@@ -356,9 +354,9 @@ printTable = do
 
 
 printBlinds :: Game ()
-printBlinds = do 
+printBlinds = do
     table <- get
-    let 
+    let
         sb = smallBlindPosition table
         bb = bigBlindPosition table
         pl = players table

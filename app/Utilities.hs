@@ -82,6 +82,30 @@ bettingRoundOver table =
     
     in length active <= 1 || allMatched
 
+--------
+-- Utility functions to make it cleaner in runPhase. Helpers for checking if betting round can start or not.
+
+-- | Helper to extract active players (players who haven't folded)
+activePlayers :: Table -> [Player]
+activePlayers table =
+    filter (not . folded) (players table)
+
+-- | At least one player still has chips (and can act) => bettinground may start.
+bettingRoundCanRun :: Table -> Bool
+bettingRoundCanRun table =
+    any (\p -> chips p > 0) (activePlayers table)
+
+-- | Only one player remains
+handOver :: Table -> Bool
+handOver table =
+    length (activePlayers table) <= 1
+
+-- | Everybody all-in
+allPlayersAllIn :: Table -> Bool
+allPlayersAllIn table =
+    let active = activePlayers table
+    in not (null active) && all (\p -> chips p == 0) active
+
 
 
 ----------------------------------------------------------------
