@@ -69,12 +69,11 @@ dealOutChips2 winners share p
 -- | either folded, is all-in, or matched the current highBet and taken an action.
 bettingRoundOver :: Table -> Bool
 bettingRoundOver table = 
-    let active = filter (not . folded) (players table)
+    let active = activePlayers table
         hb     = highBet table
 
         allMatched =
             all (\p ->
-                folded p ||
                 chips p <= 0 ||
                 (commitedChips p == hb && acted p)
             ) active
@@ -82,25 +81,28 @@ bettingRoundOver table =
     
     in length active <= 1 || allMatched
 
---------
--- Utility functions to make it cleaner in runPhase. Helpers for checking if betting round can start or not.
+----------------------------------------------------------------
+-- Utility functions to control flow of 'runPhase' and bettinglogic
 
--- | Helper to extract active players (players who haven't folded)
+-- | Helper to extract active players still in the hand (i.e not folded)
 activePlayers :: Table -> [Player]
 activePlayers table =
     filter (not . folded) (players table)
 
--- | At least one player still has chips (and can act) => bettinground may start.
+-- | Determine if a betting round can start. Can only happen if
+--   at least two players still have chips
 bettingRoundCanRun :: Table -> Bool
 bettingRoundCanRun table =
-    any (\p -> chips p > 0) (activePlayers table)
+    let canAct = filter (\p -> chips p > 0) (activePlayers table)
+    in length canAct > 1
 
--- | Only one player remains
+-- | Check if hand is over. This is true when only one or zero players remain active (everyone else folded).
+--   Does not consider the special case of everybody being all-in.
 handOver :: Table -> Bool
 handOver table =
     length (activePlayers table) <= 1
 
--- | Everybody all-in
+-- | Special case, for when no more betting can happen and the board should run out.
 allPlayersAllIn :: Table -> Bool
 allPlayersAllIn table =
     let active = activePlayers table

@@ -54,12 +54,14 @@ gameRound = do
     --printTable
     newHand
 
--- | Above is quite repetetive so I'll make a helper function to make it shorter and cleaner
+-- | Runs a single phase of the game (Flop, Turn, or River)
+-- | Handles moving to the next phase, dealing communitycards, resetting betting state,
+-- | and initiatess a bettinground if possible.
 runPhase :: Game ()
 runPhase = do
     table <- get
 
-    -- Stop running if winner is decided.
+    -- If only one player remains, the hand is already decided.
     if handOver table
         then pure ()
         else do
@@ -71,11 +73,15 @@ runPhase = do
 
             --printPhase (phase table) table
             printPhase
-            printBettingRound (firstPlayerToBet table')
-
+            
+            -- Only start a bettinground if it makes sense, requires > 1 player with chips in hand.
+            -- If everyone is allin, or only one player can act, we skip betting and move to next phase.
             if bettingRoundCanRun table'
-                then bettingRound
-                else pure ()
+                then do 
+                    printBettingRound (firstPlayerToBet table')
+                    bettingRound
+                else 
+                    pure ()
 
 
 -------------- All Game () - Functions -----------------------
