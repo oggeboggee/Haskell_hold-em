@@ -37,6 +37,7 @@ gameRound = do
     bettingRound
 
     -- FLOP --
+    printTable
     runPhase 
 
     -- TURN --
@@ -94,7 +95,7 @@ gameLoop playerIndex = do
     if bettingRoundOver table
         then return ()
     else do
-        --printTable -- Only to see what happends with the state while working on buggs
+        printTable -- Only to see what happends with the state while working on buggs
         let playerList    = (players table)
             currentPlayer = playerList !! playerIndex
         
@@ -380,13 +381,13 @@ printtHandsShowdown = do
 
 -- | Manual testing:
 player1 :: Player
-player1 = Player "Axel" hd11 400 0 False False
+player1 = Player "Axel" hd11 0 0 False False
 
 player2 :: Player
-player2 = Player "Frodo" hd12 340 100 False False
+player2 = Player "Frodo" hd12 0 100 False False
 
 player3 :: Player
-player3 = Player "Sam" hd13 530 0 False False
+player3 = Player "Sam" hd13 0 0 False False
 
 playerlist :: [Player]
 playerlist = [player1, player2, player3]

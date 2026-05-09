@@ -31,7 +31,7 @@ nextPlayerToAct i playersList =
     let n = (length playersList)
         nextPlayer = (i + 1) `mod` n
         player = playersList !! nextPlayer
-    in if ((folded player) || (chips player) == 0)
+    in if (folded player) || (chips player) == 0
        then nextPlayerToAct nextPlayer playersList
        else nextPlayer 
 
@@ -106,6 +106,3 @@ incPot pot bet = pot + bet
 lowestBet :: Table -> Player -> Bet
 lowestBet table player = highBet table - commitedChips player
 
-
-
-                            
