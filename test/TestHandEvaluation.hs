@@ -30,7 +30,15 @@ average' a b = (a+b)/2
 propAverage :: Float -> Float -> Bool
 propAverage a b = average' a b == a/2 + b/2
 
+----------------------------------------
+----------------------------------------
+----------------------------------------
+
+propRemCards :: [Card] -> [Card] -> Bool
+propRemCards cards _ = removeCards cards cards == []
+
 -- TODO
+
 -- function removeCards
 -- function combinationRoot
 -- function straightFlush
@@ -48,4 +56,8 @@ propAverage a b = average' a b == a/2 + b/2
 
 combinationsTests :: TestTree
 combinationsTests = testGroup "Combination Tests"
-  [ testProperty "prop_name" propAverage]
+  [ testProperty "prop_name" propAverage                             -- test test
+  , testCase     "Ace value" $ assertBool "AceLow < Ace" (rankValueAceLow Ace < rankValue Ace) -- aceValue high/low
+  , testProperty "removeCards" propRemCards
+  ]
+

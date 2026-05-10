@@ -1,5 +1,6 @@
 module Types where
 import Control.Monad.State
+import Test.QuickCheck
 
 -- | https://wiki.haskell.org/Real_World_Applications/Event_Driven_Applications
 
@@ -63,7 +64,7 @@ type Game = StateT Table IO
 -----------------------
  -- | All different suits
 data Suit = Hearts | Spades | Diamonds | Clubs 
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Enum, Bounded)
 
 instance Show Suit where
     show s = case s of
@@ -71,6 +72,9 @@ instance Show Suit where
         Hearts -> "\9829" --Hearts -> "H"
         Diamonds -> "\9830" --Diamonds -> "D"
         Clubs -> "\9827" --Clubs -> "C"
+
+instance Arbitrary Suit where
+  arbitrary = elements [minBound .. maxBound]
 
 -- | All different ranks
 data Rank =  Two 
@@ -86,7 +90,7 @@ data Rank =  Two
             | Queen 
             | King 
             | Ace 
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Enum, Bounded)
 
 instance Show Rank where
   show r = case r of
@@ -104,6 +108,9 @@ instance Show Rank where
     King  -> "K"
     Ace   -> "A"
 
+instance Arbitrary Rank where
+  arbitrary = elements [minBound .. maxBound]
+
 ---------------------------------------------------------------------
  -- | Card has an rank and a suit
 data Card = Card Rank Suit deriving 
@@ -118,6 +125,12 @@ instance Show Card where
 instance Ord Card where
   compare (Card r1 s1) (Card r2 s2) = 
       if r1 == r2 then compare s1 s2 else compare r1 r2
+
+instance Arbitrary Card where
+  arbitrary = do
+    rank <- arbitrary
+    suit <- arbitrary
+    return (Card rank suit)
 
 ---------------------------------------------------------------------
 -- | Hand is the two cards a player have on hand
