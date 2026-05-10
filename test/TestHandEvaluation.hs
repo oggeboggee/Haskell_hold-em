@@ -1,6 +1,7 @@
 module TestHandEvaluation where
 
 import Data.Maybe
+import Data.List
 import Data.Function (on)
 
 import Types
@@ -48,21 +49,25 @@ propRemCards cards c2 = (propRemCardsAll cards c2) && (propRemCardsNone cards c2
 
 
 -- | properties for function tripsTwoPairHigh
-propTrips :: [Card] -> Bool
-propTrips cards = undefined
---  where
---    lengthList = map length (groupBy ((==) `on` rank) cards)
+propCombinationTripTwoPairHigh :: [Card] -> Bool
+propCombinationTripTwoPairHigh cards
+    | elem 3 lengthList = comb == ThreeOfAKind
+    | pairs >= 2        = comb == TwoPairs
+    | pairs == 1        = comb == Pair
+    | otherwise         = comb == HighCard
+  where
+    lengthList = map length (groupBy ((==) `on` rank) cards)    
+    Just (comb, cards') = tripsTwoPairHigh cards
+    pairs = length $ filter (==2) lengthList
+  
+
+
 
 
 -- What do we want to test?
--- the function does only give nothing on a empty list
--- the function gives combination threeOfAKind if we have 3 of same rank
--- the function gives combination twoPair if we have 2 of same rank
--- the function gives combaination HighCard with the highest possible card first in the return-hand
-
-
--- maybe False (==1) Nothing (how to use maybe)
-
+-- gives right combination     CHECK
+-- gives right rank on combination
+-- gives best possible kickers
 
 
 
@@ -83,9 +88,11 @@ propTrips cards = undefined
 
 
 combinationsTests :: TestTree
-combinationsTests = testGroup "Combination Tests"
+combinationsTests = localOption (QuickCheckTests 5000) $
+                    testGroup "Combination Tests"
   [ testProperty "prop_name" propAverage                             -- test test
   , testCase     "Ace value" $ assertBool "AceLow < Ace" (rankValueAceLow Ace < rankValue Ace) -- aceValue high/low
   , testProperty "removeCards" propRemCards
+  , testProperty "tripsTwoPairHigh combination" propCombinationTripTwoPairHigh
   ]
 
