@@ -57,7 +57,7 @@ getPlayerEvent playerIndex = do
 -- | Take the user input and convert it into a Maybe Action.
 convertAction :: String -> Maybe Action
 convertAction userInput = 
-    let s = (map toLower) userInput
+    let s = map toLower userInput
     in case s of
         "fold" -> Just Fold
         "check" -> Just Check
@@ -65,7 +65,7 @@ convertAction userInput =
         "all in" -> Just AllIn
         "allin" -> Just AllIn
         _ | "raise " `isPrefixOf` s -> if all isDigit amount then Just (Raise (read amount)) else Nothing
-                                        where amount = (drop 6 s) 
+                                        where amount = drop 6 s
         _ -> Nothing
 
 -- | Source guide:

@@ -1,4 +1,3 @@
-
 module Cards 
       (rank,
        suit,
@@ -17,7 +16,7 @@ module Cards
 
 {- Card related data-types -}
 
-import System.Random
+
 import Types
 
 -----------------------
@@ -114,16 +113,17 @@ removeCard x (y:ys)
 
 -- | Use a double between 0-1 to find a index, Help function for shuffle
 pick :: Double -> Deck -> Card
-pick x deck = deck!!round ((fromIntegral (length deck - 1)) * x)
+pick x dk = dk!!round ((fromIntegral (length dk - 1)) * x)
 
 -- | Pick a random card using a double(for index) and put it in a new deck
     -- Note that the list of doubles need to be same or bigger length as deck
 shuffle :: [Double] -> Deck -> Deck
 shuffle _ [] = []
-shuffle (x:xs) deck = card : shuffle xs deck'
+shuffle [] _ = []
+shuffle (x:xs) dk = card : shuffle xs deck'
   where
-    card  = pick x deck
-    deck' = removeCard card deck
+    card  = pick x dk
+    deck' = removeCard card dk
 
 ---------------------------------------
 -- | Generate a list with random doubles, Help function for runShuffle
