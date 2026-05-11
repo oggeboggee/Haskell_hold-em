@@ -272,16 +272,30 @@ moveToNextPhase = modify (\t -> t { phase = nextPhase (phase t) })
 moveDealer :: State Table ()
 moveDealer = do
     table <- get
-    let numPlayers            = length (players table)
-        newDealerPosition     = (dealerPosition table + 1) `mod` numPlayers
-        newSmallBlindPosition = (newDealerPosition + 1) `mod` numPlayers
-        newBigBlindPosition   = (newSmallBlindPosition + 1) `mod` numPlayers
+    let numPlayers = length (players table)
 
-    modify (\t -> t
-        { dealerPosition     = newDealerPosition,
-          smallBlindPosition = newSmallBlindPosition,
-          bigBlindPosition   = newBigBlindPosition
-        })
+    if numPlayers == 2
+        then do
+            let newDealerPos = (dealerPosition table + 1) `mod` numPlayers
+                newSBPos     = newDealerPos
+                newBBPos     = (newDealerPos + 1) `mod` numPlayers
+
+            modify (\t -> t
+                { dealerPosition     = newDealerPos
+                , smallBlindPosition = newSBPos
+                , bigBlindPosition   = newBBPos
+                })
+        else do
+            let newDealerPos = (dealerPosition table + 1) `mod` numPlayers
+                newSBPos     = (newDealerPos + 1) `mod` numPlayers
+                newBBPos     = (newDealerPos + 2) `mod` numPlayers
+
+            modify (\t -> t
+                { dealerPosition     = newDealerPos
+                , smallBlindPosition = newSBPos
+                , bigBlindPosition   = newBBPos
+                })
+    
 
 
 --------------------------------------------------------------

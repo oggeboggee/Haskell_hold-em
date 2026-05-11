@@ -8,17 +8,20 @@ import Control.Monad.State
 -- | dealing cards/hands, resetting rounds, etc? Does Blinds belong in this category. Thinking in terms
 -- | of future if we will need to send this in JSON? https://academy.fpblock.com/haskell/library/aeson/
 
+-- | INPUT EVENTS
 -- | An Event sent into the gameengine. An intention to change the game state.
 data Event = 
     PlayerEvent PlayerIndex Action    -- Player attempts to perform an action.
     | EngineEvent EngineAction        -- Game engine trigers something.
 
--- | Actions initiated by the game.
+-- | ENGINE ACTIONS
+-- | Internal actions initiated automatically by the game.
 data EngineAction =
     PlaceBlind PlayerIndex BlindType Bet   -- Engine places blind for player
     -- | AdvancePhase
     | RunShowdown                          -- Engine initiates showdown.
 
+-- | OUTPUT EVENTS
 -- | Specific events produced by the game after an Event is processed. Descirbe what happened and
 -- | is used for output or to log what happened.
 data GameEvent =
@@ -29,6 +32,8 @@ data GameEvent =
     | PlayerAllIn PlayerName Bet
     | PlayerPlacedBlinds PlayerName BlindType Bet
     | ShowdownHappened [PlayerName]
+    -- | WinnersDeclared [PlayerName] Bet
+    -- | PlayersEliminated [PlayerName]
     deriving (Show)
 
 -- | A players name (used for output)

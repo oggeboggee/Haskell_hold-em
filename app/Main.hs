@@ -17,15 +17,18 @@ main = do
                        Player "Sam" [] 1000 0 False False,
                        Player "Jonathan" [] 1000 0 False False,
                        Player "Lewis" [] 1000 0 False False]
+
+        initPlayers2 = [Player "Bob" [] 1000 0 False False,
+                        Player "Sam" [] 1000 0 False False]
                    
         initialTable = Table 
-            { players = initPlayers,
+            { players = initPlayers2,
               deck = fullDeck,
               board = [],
               phase = DealHands,
               highBet = 0,
               pot = 0,
-              dealerPosition = 3,
+              dealerPosition = 0,
               smallBlindPosition = 0,
               bigBlindPosition = 1,
               bets = []

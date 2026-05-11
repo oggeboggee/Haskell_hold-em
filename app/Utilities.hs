@@ -24,7 +24,7 @@ nextPhase p = case p of
     Showdown    -> DealHands
 
 
- -- | Finds the next player in turn order who is eligible to act. I.e not folded and still has chips.
+-- | Finds the next player in turn order who is eligible to act. I.e not folded and still has chips.
 -- | It wraps around the table.
 nextPlayerToAct :: PlayerIndex -> [Player] -> PlayerIndex
 nextPlayerToAct i playersList = 
@@ -39,9 +39,18 @@ nextPlayerToAct i playersList =
 -- | Who bets first varies depedning on if we are in PreFlop state or any other state. PreFlop it is
 --   the player UTG (BB+1). In all postflop betting rounds action begins with the player in the SB position.
 firstPlayerToBet :: Table -> PlayerIndex
-firstPlayerToBet table = case phase table of
-    PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
-    _       -> nextPlayerToAct (dealerPosition table) (players table)
+firstPlayerToBet table = 
+    let playersList = (players table)
+    in case length playersList of
+        2 ->
+            case phase table of
+                PreFlop -> (dealerPosition table)
+                _       -> (bigBlindPosition table)
+        
+        _ ->
+            case phase table of
+                PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
+                _       -> nextPlayerToAct (dealerPosition table) (players table)
 
 
 -- | We need a function to take a player at a specific index in a list, 
