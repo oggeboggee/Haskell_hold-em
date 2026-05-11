@@ -60,6 +60,30 @@ propCombinationTripTwoPairHigh cards
     Just (comb, cards') = tripsTwoPairHigh cards
     pairs = length $ filter (==2) lengthList
   
+propKickersTrips :: [Card] -> Bool
+propKickersTrips cards
+    | comb /= ThreeOfAKind  = True
+    | and boolMap = True 
+    | otherwise = False
+  where
+    noDuplicates = sort $ nub cards
+    Just (comb, cards') = tripsTwoPairHigh noDuplicates
+    remTrip    = removeCards (take 3 cards') noDuplicates --removes the trip
+    notKickers = drop 2 $ reverse remTrip
+    boolMap = map (\x-> notElem x cards') notKickers -- to controll that illegal cards not is part of the final hand
+
+
+propKickersTwos :: [Card] -> Bool
+propKickersTwos cards
+    | comb /= TwoPairs      = True
+    | notElem False boolMap = True 
+    | otherwise = False
+  where
+    noDuplicates = sort $ nub cards
+    Just (comb, cards') = tripsTwoPairHigh noDuplicates
+    remTwoPairs    = removeCards (take 4 cards') noDuplicates --removes the trip
+    notKickers = drop 1 $ reverse remTwoPairs
+    boolMap = map (\x-> notElem x cards') notKickers -- to controll that illegal cards not is part of the final hand
 
 
 
@@ -67,7 +91,7 @@ propCombinationTripTwoPairHigh cards
 -- What do we want to test?
 -- gives right combination     CHECK
 -- gives right rank on combination
--- gives best possible kickers
+-- gives best possible kickers  
 
 
 
@@ -94,5 +118,7 @@ combinationsTests = localOption (QuickCheckTests 5000) $
   , testCase     "Ace value" $ assertBool "AceLow < Ace" (rankValueAceLow Ace < rankValue Ace) -- aceValue high/low
   , testProperty "removeCards" propRemCards
   , testProperty "tripsTwoPairHigh combination" propCombinationTripTwoPairHigh
+  , testProperty "Kickers for Trips in tripsTwoPairHigh" propKickersTrips
+  , testProperty "Kickers for Twopair in tripsTwoPairHigh" propKickersTwos
   ]
 
