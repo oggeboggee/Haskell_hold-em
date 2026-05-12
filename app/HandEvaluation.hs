@@ -11,21 +11,21 @@ import Data.Function (on)
 import Data.Ord (comparing)
 
 
---------------------
---------------------
+------------------------------------------------------------
 
+{- flowchart 
 
-{- structure:
-check flush (in combinationRoot)
-    if flush: check straightFlush                                               
-               if straight      --> straightFlush                               
-               else             --> flush                                       
-    else: check straight                                                        
-               if straight  --> straight                                        
-               else:        --> quads/fullHouse/trips/twoPair/pair/highCard     
-
-implement quads-fullHouse-trips-twoPairs-pair-highCard
-on function for straight instead of one in straighFlush and one one in straight
+value (checks if Flush)
+    if Flush: 
+        check Straight
+              if Straight -> return straightFlush
+              else        -> return Flush
+    
+    else:
+        check Straight
+              if Straight -> return Straight
+        check groups (quads, fullHouse, trips, TwoPairs, Pair, HighCard)
+              return best combinaion from group-combinations
 
 -}
 
@@ -64,13 +64,14 @@ ifFlush :: [Card] -> (Combination, [Card])
 ifFlush cards =
   maybe (Flush, take 5 cards) (StraightFlush,) (maybeStraight cards)
 
+------------------------------------------------------------
 
 lastNelems :: Int -> [a] -> [a]
 lastNelems n xs = foldl' (const . drop 1) xs (drop n xs)
 
 
 
-------------------------------------------------------------
+
 
 maybeFlush :: [Card] -> Maybe [Card]
 maybeFlush cs
