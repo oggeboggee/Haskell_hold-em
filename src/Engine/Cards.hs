@@ -1,5 +1,4 @@
-
-module Cards 
+module Engine.Cards 
       (rank,
        suit,
        fullDeck,
@@ -15,11 +14,11 @@ module Cards
       where
 
 
-{- Card related data-types -}
+import Types.GameTypes
 
 import System.Random
-import Types
 
+{- Card related data-types -}
 -----------------------
 -- Functions --
 

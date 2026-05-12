@@ -1,13 +1,14 @@
-module Utilities where
+module Engine.Utilities where
 
 
-import Types
-import Cards
---import Actions
+import Types.GameTypes
+import Engine.Cards
+import Engine.HandEvaluation
+
 import Control.Monad.State
 import Data.Char (toLower)
 import System.Random
-import HandEvaluation
+
 
 
 --------------------------------------------------------------------------------

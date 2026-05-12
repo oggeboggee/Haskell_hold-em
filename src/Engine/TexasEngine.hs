@@ -1,11 +1,17 @@
-module TexasEngine where
+module Engine.TexasEngine 
+    ( performEvent
+    , gameRound
+    , runPhase
+    , runShowdown
+    ) where
 
 -- Other files
-import Types
-import Cards
-import Actions
-import HandEvaluation
-import Utilities
+import Types.GameTypes
+import Engine.Cards
+import Engine.Actions
+import Engine.HandEvaluation
+import Engine.Utilities
+import Engine.TerminalUI
 
 -- Packages
 import Control.Monad.State
@@ -296,127 +302,3 @@ moveDealer = do
                 , bigBlindPosition   = newBBPos
                 })
     
-
-
---------------------------------------------------------------
------------- Functions to print out sepcific things ----------
-
--- | Printing helpers
--- printPhase :: GamePhase -> Table -> Game ()
--- printPhase phase table = 
---     liftIO $ do 
---         putStrLn ("\n")
---         putStrLn ("-------------------------")
---         putStrLn ((show phase) ++ " (Pot: " ++ show (pot table) ++ ")")
---         putStrLn ("-------------------------")
---         putStrLn ("\n")
---         --putStrLn (printTable table)
---         putStrLn ("\n")
-
-
-printPhase :: Game ()
-printPhase = do
-    table <- get
-    liftIO $ do
-        putStrLn "\n"
-        putStrLn "-------------------------"
-        putStrLn $ show (phase table) ++ " (Pot: " ++ show (pot table) ++ ")"
-        putStrLn $ "CommunityCards: " ++ show (board table)
-        putStrLn "-------------------------"
-        putStrLn "\n"
-        --putStrLn (printTable table)
-        putStrLn "\n"
-
--- printTable :: Table -> String
--- printTable table = 
---     let playersList = (players table)
---         d           = (dealerPosition table)
---         sb          = (smallBlindPosition table)
---         bb          = (bigBlindPosition table)
-
---         pos i 
---             | i == d = "(D)"
---             | i == sb = "(SB)"
---             | i == bb = "(BB)"
---             | otherwise = ""
-
---         showPlayer i p =
---             "chips: " ++ show (chips p)
---             ++ " | name: " ++ (name p)
---             ++ " | pos: " ++ pos i
-
-
---         indexedPlayers = zipWith showPlayer [0..] playersList
-
---         -- put each player on a new line
---         render [] = ""    
---         render [x] = x
---         render (x:xs) = x ++ "\n" ++ render xs
-
-    -- in render indexedPlayers
-
-
-printBettingRound :: PlayerIndex -> Game ()
-printBettingRound playerPos = do
-    table <- get
-    case phase table of
-        Showdown -> return ()
-        _        -> liftIO $ putStrLn $ "First player to act: "
-                            ++ name (players table!!playerPos)
-
---Axel
-
-printTable :: Game ()
-printTable = do
-    table <- get
-    liftIO $ print table
-    --liftIO $ putStrLn ("Current table: " ++ show table)
-
-
-printBlinds :: Game ()
-printBlinds = do
-    table <- get
-    let
-        sb = smallBlindPosition table
-        bb = bigBlindPosition table
-        pl = players table
-
-    liftIO $ putStrLn $ "sb: " ++ name (pl!!sb) ++ "\nbb: " ++ name (pl!!bb)
-
-printtHandsShowdown :: Game ()
-printtHandsShowdown = do
-    table <- get
-    let ps = filter (not . folded) (players table)
-    if length ps <= 1 then return ()
-    else do
-        liftIO $ putStrLn "Showdown!\n"
-        liftIO $ mapM_ (\p -> putStrLn (name p ++ "'s hand: " ++ show (hand p))) ps
-
---------------------------------------------------------------
-
-
-
--- | Manual testing:
-player1 :: Player
-player1 = Player "Axel" hd11 400 0 False False
-
-player2 :: Player
-player2 = Player "Frodo" hd12 340 100 False False
-
-player3 :: Player
-player3 = Player "Sam" hd13 530 0 False False
-
-playerlist :: [Player]
-playerlist = [player1, player2, player3]
-
-table2 :: Table
-table2 = Table playerlist{- playerlist -}100 [] fullDeck [] PreFlop 200 0 1 2
-
-hd11 :: Hand
-hd11 = [ Card Two Hearts, Card Jack Spades]
-
-hd12 :: Hand
-hd12 = [ Card Two Diamonds, Card Jack Spades]
-
-hd13 :: Hand
-hd13 = [ Card Ten Spades, Card King Clubs]

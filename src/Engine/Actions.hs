@@ -1,72 +1,20 @@
-module Actions where
+module Engine.Actions where
 
 {- Logic for the the different actions a player can make -}
 
-import Types
+import Types.GameTypes
+import Engine.Utilities
+import Engine.HandEvaluation
+import Engine.TerminalUI
 
-import Control.Monad.State
 import Data.Char
 import Data.List (isPrefixOf)
-import Utilities
-import HandEvaluation
+
+import Control.Monad.State
 
 
--- With these changes the gameloop for eventsshould become
--- 1. Pick a player
--- 2. Get input from player with IO
--- 3. Convert the input into an Event
--- 4. Apply the event to the table (the logci)
--- 5. As a result get the new table and the event(s) (table', [GameEvent])
--- 6. Print the resulting action with IO (eventMSg)
--- 7. Repeat loop
-
--- How do we separate events driven by the engine and driven by the player?
--- Maybe move all game-type - functions to one file? 
-
--- change getPlayerAction and convertAction to sue Event instead of Action?
--- | Show a player what actions they can make (based on highBet), prompt player to type desired action,
---   take action and convert it from a string into what happens in-game, prompt user if action is wrong.
-getPlayerEvent :: PlayerIndex -> Game Event
-getPlayerEvent playerIndex = do
-    table <- get
-
-    let player = players table !! playerIndex
-        hb     = highBet table
-        lowbet = lowestBet table player
-
-        availableActions = if hb == 0 || commitedChips player == hb
-                           then "Fold, Check, Raise <x>, All In"
-                           else "Fold, Call (" ++ show lowbet ++"), Raise <x>, All In"
-    
-    liftIO $ putStrLn $ "\n" ++ name player ++ " - Your available actions: " ++ availableActions 
-                            ++ {-"\nCurrent high bet:    " ++ show (highBet table) ++-}
-                               "\nCurrent pot:      " ++ show (pot table) ++    
-                               "\nChips:          " ++ show (chips player) ++
-                               "\nCommited chips: " ++ show (commitedChips player)
-    printHand player
-
-    input <- liftIO getLine
-
-    case convertAction input of
-        Just action -> return (PlayerEvent playerIndex action)
-        Nothing -> do
-            liftIO $ putStrLn "Input isn't valid."
-            getPlayerEvent playerIndex
 
 
--- | Take the user input and convert it into a Maybe Action.
-convertAction :: String -> Maybe Action
-convertAction userInput = 
-    let s = (map toLower) userInput
-    in case s of
-        "fold" -> Just Fold
-        "check" -> Just Check
-        "call" -> Just Call
-        "all in" -> Just AllIn
-        "allin" -> Just AllIn
-        _ | "raise " `isPrefixOf` s -> if all isDigit amount then Just (Raise (read amount)) else Nothing
-                                        where amount = (drop 6 s) 
-        _ -> Nothing
 
 -- | Source guide:
 -- | https://www.ahri.net/2019/07/practical-event-driven-and-sourced-programs-in-haskell/
@@ -79,20 +27,20 @@ applyEvent :: Event -> State Table (Either String [GameEvent])
 -- PLAYERACTIONS
 applyEvent (PlayerEvent playerIndex action) = do
     table <- get
-    let player = (players table) !! playerIndex
-        hb     = (highBet table)
-        cChips = (commitedChips player)
-        plName = (name player)
+    let player = players table !! playerIndex
+        hb     = highBet table
+        cChips = commitedChips player
+        plName = name player
         toCall = hb - cChips
 
     case action of
         Fold -> do
-            modify (\t -> pureFold t playerIndex) 
+            modify (\t -> pureFold t playerIndex)
             pure (Right [PlayerFolded plName])
-        
+
         Check -> do
             if toCall == 0
-            then do 
+            then do
                 modify (\t -> pureCheck t playerIndex)
                 pure (Right [PlayerChecked plName])
             else
@@ -104,7 +52,7 @@ applyEvent (PlayerEvent playerIndex action) = do
             else do
 
                 let amount = hb - cChips
-                modify (\t -> placePureBet table playerIndex amount)
+                modify (\t -> placePureBet t playerIndex amount)
                 playerHaveActed playerIndex -- Change a players acted to True
                 pure (Right [PlayerCalled plName amount])
 
@@ -119,15 +67,15 @@ applyEvent (PlayerEvent playerIndex action) = do
 
                 let callAmount = hb - cChips
                     totalAmount = callAmount + x
-                modify (\t -> placePureBet table playerIndex totalAmount)
+                modify (\t -> placePureBet t playerIndex totalAmount)
                 playerHaveActed playerIndex
 
                 pure (Right [PlayerRaised plName x])
 
         AllIn -> do
-            let amount = (chips player)
+            let amount = chips player
 
-            modify (\t -> placePureBet table playerIndex amount)
+            modify (\t -> placePureBet t playerIndex amount)
             playerHaveActed playerIndex -- Change a players acted to True
 
             pure (Right [PlayerAllIn plName amount])
@@ -137,8 +85,8 @@ applyEvent (EngineEvent engineAction) = do
     table <- get
     case engineAction of
         PlaceBlind playerIndex blindType bet -> do
-            let player = (players table) !! playerIndex
-                plName = (name player)
+            let player = players table !! playerIndex
+                plName = name player
             modify (\t -> placePureBet t playerIndex bet)
             pure (Right [PlayerPlacedBlinds plName blindType bet])
 
@@ -148,16 +96,14 @@ applyEvent (EngineEvent engineAction) = do
 
 
         RunShowdown -> do
-            resultOfShowdown <- runShowdown
+            Right <$> runShowdown
 
-            pure (Right resultOfShowdown)
-            
 runShowdown :: State Table [GameEvent]
 runShowdown = do
     table <- get
 
-    let playerList = (players table)
-        finalBoard = (board table)
+    let playerList = players table
+        finalBoard = board table
 
         -- only the players that are still in the hand
         -- ex. [Sam, Lewis]
@@ -172,8 +118,8 @@ runShowdown = do
         -- winners returns index of winner(s) in activePlayers list, need to map to who it is
         -- in activePlayers: ex. activePlayers !! 1 = Lewis
         computedWinners = map (\i -> activePlayers !! i) winnerIndexes
-                
-        potSize = (pot table)
+
+        potSize = pot table
 
         -- split the pot evenly
         evenShare =
@@ -189,23 +135,7 @@ runShowdown = do
     pure [ShowdownHappened (map name computedWinners)]
 
 
--- | This is the function that prints the events.
--- | Should maybe be in TexasEnginge??
-eventMsg :: GameEvent -> Game ()
-eventMsg event = liftIO $ case event of
-    PlayerFolded p -> putStrLn (p ++ " folds.")
 
-    PlayerChecked p -> putStrLn (p ++ " checks.")
-
-    PlayerCalled p amount -> putStrLn (p ++ " calls with " ++ (show amount) ++ " chips.")
-
-    PlayerRaised p amount -> putStrLn (p ++ " raises with " ++ (show amount) ++ " chips.")
-
-    PlayerAllIn p amount -> putStrLn (p ++ " goes all-in with " ++ (show amount) ++ " chips.")
-
-    PlayerPlacedBlinds p blindType amount -> putStrLn (p ++ " placed the " ++ (show blindType) ++ " of " ++ (show amount) ++ " chips.")
-
-    ShowdownHappened ps -> mapM_ (\p -> putStrLn (p ++ " wins!")) ps --Would be nice to see all active players cars at the end
 
 
 -- | https://stackoverflow.com/questions/27609062/what-is-the-difference-between-mapm-and-mapm-in-haskell
@@ -217,9 +147,9 @@ eventMsg event = liftIO $ case event of
 performEvent :: Event -> Game (Either String [GameEvent])
 performEvent event = do
     table <- get
-    
+
     let (result, newTable) = runState (applyEvent event) table
-    
+
     put newTable
 
     case result of
@@ -233,6 +163,9 @@ performEvent event = do
 
 
 
+--sendEvent :: GameEvent -> Connection -> IO ()
+
+
 
 -- | We need a function to take a player at a specific index in a list, 
 --   and then replace with the updated player
@@ -241,7 +174,7 @@ performEvent event = do
 --     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
 updatePlayerAtIndex playerIndex f table =
-    let playerList = (players table)
+    let playerList = players table
         player = playerList !! playerIndex
         updatedPlayer = f player
         updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
@@ -252,9 +185,9 @@ updatePlayerAtIndex playerIndex f table =
 --placeBet :: Int -> Bet -> State Table ()
 placePureBet :: Table -> PlayerIndex -> Bet -> Table
 placePureBet table playerIndex bet =
-    let tableUpdated = updatePlayerAtIndex playerIndex 
+    let tableUpdated = updatePlayerAtIndex playerIndex
                         (\player -> decChips player bet) table
-        
+
         player = (players tableUpdated) !! playerIndex
     in tableUpdated
             { pot = incPot (pot tableUpdated) bet,
@@ -268,7 +201,7 @@ pureFold table playerIndex =
 
 
 pureCheck :: Table -> PlayerIndex -> Table
-pureCheck table playerIndex = 
+pureCheck table playerIndex =
     updatePlayerAtIndex playerIndex (\p -> p { acted = True }) table
 
 
@@ -278,15 +211,9 @@ playerHaveActed playerPos = do
     modify (updatePlayerAtIndex playerPos (\p -> p {acted = True}))
 
 
----------------------------------------    
 
-{-
--- https://zvon.org/other/haskell/Outputprelude/read_f.html    
-
--}
-printHand :: Player -> Game ()
-printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))
-
+addPlayer :: PlayerName -> Table -> Table
+addPlayer name t = t { players = players t ++ [Player name [] 1000 0 False False]}
 
 --------------------------------------------------------------
 --------------------------------------------------------------

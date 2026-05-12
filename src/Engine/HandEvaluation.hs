@@ -1,7 +1,8 @@
-module HandEvaluation where
+module Engine.HandEvaluation where
 
-import Cards
-import Types
+import Engine.Cards
+import Types.GameTypes
+
 import Data.List
 import Data.Maybe
 import Data.Function (on)

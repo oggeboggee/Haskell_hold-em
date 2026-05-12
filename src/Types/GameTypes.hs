@@ -1,5 +1,13 @@
-module Types where
+{-# LANGUAGE DeriveGeneric #-}
+
+module Types.GameTypes where
+
 import Control.Monad.State
+import GHC.Generics
+import Data.Aeson
+
+
+
 
 -- | https://wiki.haskell.org/Real_World_Applications/Event_Driven_Applications
 
@@ -10,22 +18,32 @@ import Control.Monad.State
 
 -- | INPUT EVENTS
 -- | An Event sent into the gameengine. An intention to change the game state.
-data Event = 
-    PlayerEvent PlayerIndex Action    -- Player attempts to perform an action.
+data Event
+    = JoinEvent PlayerName              -- Player joins the table, affects serverState
+    | LeaveEvent PlayerName            -- Player leaves the table
+    | PlayerEvent PlayerIndex Action    -- Player attempts to perform an action. affetcs Table
     | EngineEvent EngineAction        -- Game engine trigers something.
+    deriving(Show, Generic)
+
+instance ToJSON Event
+instance FromJSON Event
 
 -- | ENGINE ACTIONS
 -- | Internal actions initiated automatically by the game.
-data EngineAction =
-    PlaceBlind PlayerIndex BlindType Bet   -- Engine places blind for player
+data EngineAction 
+    = PlaceBlind PlayerIndex BlindType Bet   -- Engine places blind for player
     -- | AdvancePhase
     | RunShowdown                          -- Engine initiates showdown.
+    deriving (Show, Generic)
+
+instance ToJSON EngineAction
+instance FromJSON EngineAction
 
 -- | OUTPUT EVENTS
 -- | Specific events produced by the game after an Event is processed. Descirbe what happened and
 -- | is used for output or to log what happened.
-data GameEvent =
-    PlayerFolded PlayerName
+data GameEvent 
+    = PlayerFolded PlayerName
     | PlayerChecked PlayerName
     | PlayerCalled PlayerName Bet
     | PlayerRaised PlayerName Bet
@@ -34,7 +52,10 @@ data GameEvent =
     | ShowdownHappened [PlayerName]
     -- | WinnersDeclared [PlayerName] Bet
     -- | PlayersEliminated [PlayerName]
-    deriving (Show)
+    deriving (Show, Generic)
+
+instance ToJSON GameEvent
+instance FromJSON GameEvent
 
 -- | A players name (used for output)
 type PlayerName = String
@@ -42,12 +63,16 @@ type PlayerName = String
 type PlayerIndex = Int
 
 -- Data type for all the different types of actions a player can make
-data Action = 
+data Action =
     Check
     | Fold
     | Call
     | Raise Int
     | AllIn
+    deriving (Generic)
+
+instance ToJSON Action
+instance FromJSON Action
 
 instance Show Action where
     show Check = "Check"
@@ -67,7 +92,7 @@ type Game = StateT Table IO
 ---------------------------------------------------------------------
 -----------------------
  -- | All different suits
-data Suit = Hearts | Spades | Diamonds | Clubs 
+data Suit = Hearts | Spades | Diamonds | Clubs
     deriving (Eq, Ord)
 
 instance Show Suit where
@@ -78,19 +103,19 @@ instance Show Suit where
         Clubs -> "C" --"\9827" --Clubs -> "C"
 
 -- | All different ranks
-data Rank =  Two 
-            | Three 
-            | Four 
-            | Five 
-            | Six 
-            | Seven 
-            | Eight 
-            | Nine 
-            | Ten 
-            | Jack 
-            | Queen 
-            | King 
-            | Ace 
+data Rank =  Two
+            | Three
+            | Four
+            | Five
+            | Six
+            | Seven
+            | Eight
+            | Nine
+            | Ten
+            | Jack
+            | Queen
+            | King
+            | Ace
   deriving (Eq, Ord)
 
 instance Show Rank where
@@ -111,7 +136,7 @@ instance Show Rank where
 
 ---------------------------------------------------------------------
  -- | Card has an rank and a suit
-data Card = Card Rank Suit deriving 
+data Card = Card Rank Suit deriving
     (Eq)
 
 
@@ -121,7 +146,7 @@ instance Show Card where
 
 -- | To compere two cards
 instance Ord Card where
-  compare (Card r1 s1) (Card r2 s2) = 
+  compare (Card r1 s1) (Card r2 s2) =
       if r1 == r2 then compare s1 s2 else compare r1 r2
 
 ---------------------------------------------------------------------
@@ -134,13 +159,13 @@ type Deck = [Card]
 ---------------------------------------------------------------------
  -- | Combinations
 data Combination =  HighCard
-                  | Pair 
-                  | TwoPairs 
-                  | ThreeOfAKind 
-                  | Straight 
-                  | Flush 
-                  | FullHouse 
-                  | Quads 
+                  | Pair
+                  | TwoPairs
+                  | ThreeOfAKind
+                  | Straight
+                  | Flush
+                  | FullHouse
+                  | Quads
                   | StraightFlush
                   deriving (Show, Eq, Ord)
 
@@ -152,14 +177,17 @@ type Pot = Int
 
 ---------------------------------------------------------------------
 -- | Represent if a player have big, samll or no blind
-data BlindType = 
+data BlindType =
     SmallBlind
     | BigBlind
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
+
+instance ToJSON BlindType
+instance FromJSON BlindType
 
 ---------------------------------------------------------------------
 -- | All phases of the game
-data GamePhase = 
+data GamePhase =
             DealHands
             | PreFlop
             | Flop
@@ -201,7 +229,7 @@ data Player = Player
 
 instance Show Player where
     show p = "Name: " ++ show (name p) ++
-           " Hand: " ++ show (hand p) ++ 
+           " Hand: " ++ show (hand p) ++
            " Chips: " ++ show (chips p) ++
            " Pot contribution: " ++ show (commitedChips p) ++
            " Folded: " ++ show (folded p) ++
@@ -230,12 +258,14 @@ instance Show Table where
     --         " \nPot: " ++ show (pot t) ++
     --         " \nBoard: " ++ show (board t)
 
-    show t = "Players:\n" ++ unlines (map show (players t)) ++ 
+    show t = "Players:\n" ++ unlines (map show (players t)) ++
+
+            
             --"\nTable State(print): " ++ 
             " \nPhase:" ++ show (phase t) ++
             " \nCommmunityCards: " ++ show (board t) ++
             " \nHighbet:         " ++ show (highBet t) ++
-            " \nsb: " ++ name (players t!!smallBlindPosition t) ++ 
+            " \nsb: " ++ name (players t!!smallBlindPosition t) ++
             "\nbb: " ++ name (players t!!bigBlindPosition t)
 
 

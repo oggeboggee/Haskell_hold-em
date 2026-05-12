@@ -63,12 +63,15 @@ executable Haskell-hold-em
 
     -- Modules included in this executable, other than Main.
     other-modules:
-            Cards
-            Types
-            TexasEngine
-            Actions
-            HandEvaluation
-            Utilities
+            Engine.Cards
+            Types.GameTypes
+            Engine.TexasEngine
+            Engine.Actions
+            Engine.HandEvaluation
+            Engine.Utilities
+            Server.TestJson
+            Engine.TerminalUI
+            Server.NetworkServer
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -77,11 +80,18 @@ executable Haskell-hold-em
 
     build-depends:    base >=4.18.3.0 && <5,
                       random ^>=1.2,
-                      mtl ^>=2.3
+                      mtl ^>=2.3,
                       --quickcheck ^>= 2.18.0.0
+                      aeson,
+                      aeson-pretty,
+                      bytestring,
+                      websockets,
+                      text,
+                      stm
 
     -- Directories containing source files.
-    hs-source-dirs:   app
+    hs-source-dirs:   app,
+                      src
 
     -- Base language which the package is written in.
     default-language: Haskell2010
