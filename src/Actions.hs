@@ -113,7 +113,7 @@ applyEvent (PlayerEvent playerIndex action) = do
 
 
         Raise x -> do
-            if x <= 0 || x > (chips player + lowestBet table player)
+            if x <= 0 || x > (chips player - lowestBet table player)
             then pure (Left "Raise amount must be larger than 0 and smaller then the amount of chips you have")
             else do
 
