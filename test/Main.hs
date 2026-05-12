@@ -3,7 +3,6 @@
 import Test.Tasty.QuickCheck as QC
 import Test.Tasty.HUnit as HU
 import Test.Tasty
-import Test.Tasty (defaultMain)
 
 import Game.UtilitiesTest
 --import Game.StateTest

@@ -78,6 +78,9 @@ executable Haskell-hold-em
     build-depends:    base >=4.18.3.0 && <5,
                       random ^>=1.2,
                       mtl ^>=2.3,
+                      tasty ^>=1.5.3, 
+                      tasty-hunit^>=0.10.2, 
+                      tasty-quickcheck^>=0.11.1
 
     -- Directories containing source files.
     hs-source-dirs:   app

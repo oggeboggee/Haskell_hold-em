@@ -8,13 +8,15 @@ import Test.Tasty (defaultMain)
 
 import TexasEngine
 import Cards
+import Types
 
 
 ------------- Testing pure utilites function ------------
 
 tests :: TestTree
 tests = testGroup "Utilites test"
-  [ testProperty "propSizeFullDeck" propSizeFullDeck
+  [ testProperty "propSizeFullDeck" propSizeFullDeck,
+    testProperty "propNoDup" propNoDup
   ]
 
 -- | A new fullDeck should have 52 cards and no duplicates
@@ -23,15 +25,15 @@ tests = testGroup "Utilites test"
 propSizeFullDeck :: Bool
 propSizeFullDeck = length fullDeck == 52
 
+-- | Check after duplicects in a full deck
+propNoDup :: Bool
+propNoDup = noDups fullDeck
 
+-- | Helper function, Return true if there are No duplicates
+noDups :: Deck -> Bool
+noDups []     = True
+noDups (x:xs) = not (x `elem` xs) || noDups xs
 
-
--- propNoDup :: Deck -> Bool
--- propNoDup (x:xs) = noDups card (x:xs)
-
--- noDups :: Card -> Deck -> Bool
--- noDups card []     = True
--- noDups card (x:xs) = card != x && noDups card xs
 
 
 

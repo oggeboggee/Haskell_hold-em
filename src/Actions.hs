@@ -104,7 +104,7 @@ applyEvent (PlayerEvent playerIndex action) = do
             else do
 
                 let amount = hb - cChips
-                modify (\t -> placePureBet table playerIndex amount)
+                modify (\t -> placePureBet t playerIndex amount)
                 playerHaveActed playerIndex -- Change a players acted to True
                 pure (Right [PlayerCalled plName amount])
 
@@ -119,7 +119,7 @@ applyEvent (PlayerEvent playerIndex action) = do
 
                 let callAmount = hb - cChips
                     totalAmount = callAmount + x
-                modify (\t -> placePureBet table playerIndex totalAmount)
+                modify (\t -> placePureBet t playerIndex totalAmount)
                 playerHaveActed playerIndex
 
                 pure (Right [PlayerRaised plName x])
@@ -127,7 +127,7 @@ applyEvent (PlayerEvent playerIndex action) = do
         AllIn -> do
             let amount = (chips player)
 
-            modify (\t -> placePureBet table playerIndex amount)
+            modify (\t -> placePureBet t playerIndex amount)
             playerHaveActed playerIndex -- Change a players acted to True
 
             pure (Right [PlayerAllIn plName amount])
