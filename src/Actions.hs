@@ -9,7 +9,7 @@ import Data.Char
 import Data.List (isPrefixOf)
 import Utilities
 import HandEvaluation
-
+import Cards
 
 -- With these changes the gameloop for eventsshould become
 -- 1. Pick a player
@@ -291,3 +291,25 @@ printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))
 
 --------------------------------------------------------------
 --------------------------------------------------------------
+
+
+
+-- playersExampel1 :: [Player]
+-- playersExampel1 = [Player "Bob" [] 1000 0 False False,
+--                        Player "Sam" [] 1000 0 False False,
+--                        Player "Jonathan" [] 1000 0 False False,
+--                        Player "Lewis" [] 1000 0 False False]
+
+-- table1 :: Table
+-- table1 = Table 
+--             { players = playersExampel1,
+--               deck = fullDeck,
+--               board = [],
+--               phase = PreFlop,
+--               highBet = 0,
+--               pot = 0,
+--               dealerPosition = 3,
+--               smallBlindPosition = 0,
+--               bigBlindPosition = 1,
+--               bets = []
+--             }

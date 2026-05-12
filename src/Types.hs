@@ -29,7 +29,7 @@ data GameEvent =
     | PlayerAllIn PlayerName Bet
     | PlayerPlacedBlinds PlayerName BlindType Bet
     | ShowdownHappened [PlayerName]
-    deriving (Show)
+    deriving (Show, Eq)
 
 -- | A players name (used for output)
 type PlayerName = String
