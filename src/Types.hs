@@ -43,6 +43,7 @@ data Action =
     | Call
     | Raise Int
     | AllIn
+    deriving (Eq)
 
 instance Show Action where
     show Check = "Check"

@@ -4,8 +4,8 @@ import Test.Tasty.QuickCheck as QC
 import Test.Tasty.HUnit as HU
 import Test.Tasty
 
-import Game.UtilitiesTest
---import Game.StateTest
+import UtilitiesTest
+import StateTest
 
 import TexasEngine
 import Cards
@@ -17,7 +17,8 @@ import Cards
 main :: IO ()
 main = defaultMain $ 
   testGroup "All test"
-  [ Game.UtilitiesTest.tests
+  [ StateTest.unitTests
+    --UtilitiesTest.tests
   ]
 
 

@@ -253,7 +253,8 @@ updatePlayerAtIndex playerIndex f table =
 placePureBet :: Table -> PlayerIndex -> Bet -> Table
 placePureBet table playerIndex bet =
     let tableUpdated = updatePlayerAtIndex playerIndex 
-                        (\player -> decChips player bet) table
+                                (`decChips` bet) table
+                        
         
         player = (players tableUpdated) !! playerIndex
     in tableUpdated

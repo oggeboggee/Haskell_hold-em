@@ -1,4 +1,4 @@
-module Game.UtilitiesTest (tests) where
+module UtilitiesTest where
 
 import Test.Tasty.QuickCheck as QC
 import Test.Tasty.HUnit as HU
