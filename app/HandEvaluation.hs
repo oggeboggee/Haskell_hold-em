@@ -50,6 +50,7 @@ handComparision list index = bestIds
           bestIds           = [ i | (i, h) <- remaining, map rank h == bestHandReference]
 
 
+
 ------------------------------------------------------------
 
 type RankGroup = Int

@@ -25,13 +25,45 @@ import Control.Exception
 main :: IO ()
 main = defaultMain combinationsTests
 
-
+------------------------------------------------
 -- just to see how tests is working in tasty
 average' :: Float -> Float -> Float
 average' a b = (a+b)/2
 
 propAverage :: Float -> Float -> Bool
 propAverage a b = average' a b == a/2 + b/2
+------------------------------------------------
+
+
+
+-- TODO
+-- write an flowchart CHECK
+-- organize the function: flow, helpers, helpers to helpers
+-- clean and write more clear: winners & handComparision
+-- give "javaDoc-comments" to functions and test:
+
+{-
+function winners
+    - HUnit tests for the most complicated cases (?)
+    - Try to get an error, fix it
+function handComparision
+    - try to compare same hand
+    - try to give wrong input, do we need to fix it if it crashes? why/why not?
+function value
+    - 
+function ifNotFlush
+    - 
+function ifFlush
+    -
+function lastNelem
+function maybeFlush
+function maybeStraight
+function maybeWheel
+function checkGroups
+function evalGroupedRanks
+function groupBySuccCards
+function sortByLength
+-}
 
 
 
