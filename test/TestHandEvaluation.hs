@@ -20,6 +20,9 @@ import Control.Exception
 -- HUnit -> tests specifik examples
 -- QuickCheck -> tests a lot of cases
 
+-- conditional testing
+-- own generator
+-- lenses ot seperate example specific things that we want to be visible for specifc players
 
 
 main :: IO ()
@@ -50,10 +53,16 @@ function handComparision
     - try to compare same hand
     - try to give wrong input, do we need to fix it if it crashes? why/why not?
 function value
-    - 
+    - test length with properties
+    - test edge-cases
+    -
 function ifNotFlush
+    - test length with properties
+    - test edge-cases
     - 
 function ifFlush
+    - test length with properties
+    - test edge-cases
     -
 function lastNelem
 function maybeFlush
@@ -63,12 +72,17 @@ function checkGroups
 function evalGroupedRanks
 function groupBySuccCards
 function sortByLength
+    - descending order of length of lists
 -}
 
+-- | function sortByLength
+sortByLengthProp :: [[Card]] -> Bool
+sortByLengthProp [] = True
+sortByLengthProp cardList = maximum  (map (\xs -> length xs ) cardList) == length ( head sortByLengthFunction)
+    where
+         sortByLengthFunction = sortByLength cardList
 
-
-
-
+-- bug found in maybeFlush: if running with aceLowStraight -> Gives cards in wrong order
 
 
 
@@ -76,7 +90,7 @@ combinationsTests :: TestTree
 combinationsTests = localOption (QuickCheckTests 5000) $
                     testGroup "Combination Tests"
   [ testProperty "prop_name" propAverage                             -- test test
-
+  , testProperty "headLength in sortByLength" sortByLengthProp
   ]
 
 
