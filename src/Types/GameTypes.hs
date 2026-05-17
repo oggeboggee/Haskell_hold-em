@@ -1,12 +1,8 @@
-{-# LANGUAGE DeriveGeneric #-}
+--{-# LANGUAGE DeriveGeneric #-}
 
 module Types.GameTypes where
 
 import Control.Monad.State
-import GHC.Generics
-import Data.Aeson
-
-
 
 
 -- | https://wiki.haskell.org/Real_World_Applications/Event_Driven_Applications
@@ -16,32 +12,32 @@ import Data.Aeson
 -- | dealing cards/hands, resetting rounds, etc? Does Blinds belong in this category. Thinking in terms
 -- | of future if we will need to send this in JSON? https://academy.fpblock.com/haskell/library/aeson/
 
--- | INPUT EVENTS
--- | An Event sent into the gameengine. An intention to change the game state.
+--------------------------------------------------------------------------------------------------------
+-- EVENTS (input to the engine)
+--------------------------------------------------------------------------------------------------------
+
+-- | An Event sent into the game engine. Represents an intention to change the game state.
+-- | PlayerEvent: a player does something (fold, call, raise, etc.)
+-- | EngineEvent: the engine does something automatically (deal blinds, run showdown, etc.)
 data Event
-    = JoinEvent PlayerName              -- Player joins the table, affects serverState
-    | LeaveEvent PlayerName            -- Player leaves the table
-    | PlayerEvent PlayerIndex Action    -- Player attempts to perform an action. affetcs Table
-    | EngineEvent EngineAction        -- Game engine trigers something.
-    deriving(Show, Generic)
+    = PlayerEvent PlayerIndex Action
+    | EngineEvent EngineAction 
+    deriving(Show)
 
-instance ToJSON Event
-instance FromJSON Event
-
--- | ENGINE ACTIONS
 -- | Internal actions initiated automatically by the game.
 data EngineAction 
-    = PlaceBlind PlayerIndex BlindType Bet   -- Engine places blind for player
+    = PlaceBlind PlayerIndex BlindType Bet 
     -- | AdvancePhase
-    | RunShowdown                          -- Engine initiates showdown.
-    deriving (Show, Generic)
+    | RunShowdown  
+    deriving (Show)
 
-instance ToJSON EngineAction
-instance FromJSON EngineAction
 
--- | OUTPUT EVENTS
--- | Specific events produced by the game after an Event is processed. Descirbe what happened and
--- | is used for output or to log what happened.
+--------------------------------------------------------------------------------------------------------
+-- GAME EVENTS (output from the engine)
+--------------------------------------------------------------------------------------------------------
+
+-- | Produced by the engine after processing an Event
+-- | Describes what actually happened. USed for broadcasting to clients.
 data GameEvent 
     = PlayerFolded PlayerName
     | PlayerChecked PlayerName
@@ -52,46 +48,44 @@ data GameEvent
     | ShowdownHappened [PlayerName]
     -- | WinnersDeclared [PlayerName] Bet
     -- | PlayersEliminated [PlayerName]
-    deriving (Show, Generic)
+    deriving (Show)
 
-instance ToJSON GameEvent
-instance FromJSON GameEvent
 
--- | A players name (used for output)
-type PlayerName = String
--- | An internal reference to a player. 
-type PlayerIndex = Int
+--------------------------------------------------------------------------------------------------------
+-- PLAYER ACTIONS
+--------------------------------------------------------------------------------------------------------
 
--- Data type for all the different types of actions a player can make
-data Action =
-    Check
+data Action
+    = Check
     | Fold
     | Call
     | Raise Int
     | AllIn
-    deriving (Generic)
-
-instance ToJSON Action
-instance FromJSON Action
+    deriving (Eq)
 
 instance Show Action where
-    show Check = "Check"
-    show Fold = "Fold"
-    show Call = "Call"
+    show Check     = "Check"
+    show Fold      = "Fold"
+    show Call      = "Call"
     show (Raise x) = "Raise " ++ show x
-    show AllIn = "All-in"
+    show AllIn     = "All-in"
 
 
---------------------------------------------
--- | https://cstml.github.io/2021/07/22/State-Monad.html
--- | We can use StateT to get access to IO inside the state monad.
--- I'll declare a new data type to see how this works.
--- We can use liftIO for now to get a working game in the terminal.
-type Game = StateT Table IO
+--------------------------------------------------------------------------------------------------------
+-- CARDS
+--------------------------------------------------------------------------------------------------------
 
----------------------------------------------------------------------
------------------------
- -- | All different suits
+data Card = Card Rank Suit 
+    deriving (Eq)
+
+instance Show Card where
+  show (Card r s) = show r ++ show s
+
+-- | To compere two cards
+instance Ord Card where
+  compare (Card r1 s1) (Card r2 s2) =
+      if r1 == r2 then compare s1 s2 else compare r1 r2
+
 data Suit = Hearts | Spades | Diamonds | Clubs
     deriving (Eq, Ord)
 
@@ -102,178 +96,129 @@ instance Show Suit where
         Diamonds -> "D" --"\9830" --Diamonds -> "D"
         Clubs -> "C" --"\9827" --Clubs -> "C"
 
--- | All different ranks
-data Rank =  Two
-            | Three
-            | Four
-            | Five
-            | Six
-            | Seven
-            | Eight
-            | Nine
-            | Ten
-            | Jack
-            | Queen
-            | King
-            | Ace
+data Rank 
+    = Two | Three | Four | Five | Six | Seven | Eight
+    | Nine | Ten | Jack | Queen | King | Ace
   deriving (Eq, Ord)
 
 instance Show Rank where
   show r = case r of
-    Two -> "2"
+    Two   -> "2"
     Three -> "3"
-    Four -> "4"
-    Five -> "5"
-    Six -> "6"
+    Four  -> "4"
+    Five  -> "5"
+    Six   -> "6"
     Seven -> "7"
     Eight -> "8"
-    Nine -> "9"
-    Ten -> "10"
+    Nine  -> "9"
+    Ten   -> "10"
     Jack  -> "J"
     Queen -> "Q"
     King  -> "K"
     Ace   -> "A"
 
----------------------------------------------------------------------
- -- | Card has an rank and a suit
-data Card = Card Rank Suit deriving
-    (Eq)
+
+--------------------------------------------------------------------------------------------------------
+-- TYPE ALIASES
+--------------------------------------------------------------------------------------------------------
+
+type PlayerName = String        -- A players name
+type PlayerIndex = Int          -- An internal reference to a player
+type Chip = Int                 -- Chips
+type Bet = Chip                 -- A bet of chips
+type Pot = Int                  -- The pot of the table
+type Hand = [Card]              -- The two cards a player has in their hand
+type CommunityCard = [Card]     -- The common cards on the table (board)
+type Deck = [Card]              -- The full deck of cards.
 
 
- -- | to show the cards in a nice way
-instance Show Card where
-  show (Card r s) = show r ++ show s
+--------------------------------------------------------------------------------------------------------
+-- BLINDS AND PHASES
+--------------------------------------------------------------------------------------------------------
 
--- | To compere two cards
-instance Ord Card where
-  compare (Card r1 s1) (Card r2 s2) =
-      if r1 == r2 then compare s1 s2 else compare r1 r2
-
----------------------------------------------------------------------
--- | Hand is the two cards a player have on hand
-type Hand = [Card]
--- | CommunityCards are the common cards on the table
-type CommunityCard = [Card]
--- | Deck is a list of cards
-type Deck = [Card]
----------------------------------------------------------------------
- -- | Combinations
-data Combination =  HighCard
-                  | Pair
-                  | TwoPairs
-                  | ThreeOfAKind
-                  | Straight
-                  | Flush
-                  | FullHouse
-                  | Quads
-                  | StraightFlush
-                  deriving (Show, Eq, Ord)
-
----------------------------------------------------------------------
--- | Chips and the pot is represented as Int
-type Chip = Int
-type Bet = Chip
-type Pot = Int
-
----------------------------------------------------------------------
--- | Represent if a player have big, samll or no blind
 data BlindType =
     SmallBlind
     | BigBlind
-    deriving (Show, Eq, Generic)
-
-instance ToJSON BlindType
-instance FromJSON BlindType
-
----------------------------------------------------------------------
--- | All phases of the game
-data GamePhase =
-            DealHands
-            | PreFlop
-            | Flop
-            | Turn
-            | River
-            | Showdown
     deriving (Show, Eq)
 
-{-
----------------------------------------------------------------------
--- | Data type for a player
+-- | All phases of the game
+data GamePhase 
+    = DealHands
+    | PreFlop
+    | Flop
+    | Turn
+    | River
+    | Showdown
+    deriving (Show, Eq)
+
+
+--------------------------------------------------------------------------------------------------------
+-- PLAYER
+--------------------------------------------------------------------------------------------------------
+
 data Player = Player
-            {
-            name          :: String,
-            hand          :: Hand,
-            chips         :: Chip,
-            commitedChips :: Chip,
-            folded        :: Bool,
-            acted         :: Bool
-            checked       :: Bool,
-            blind         :: Blind,
-            hasActed      :: Bool,
-            playeState    :: PlayerState
-            }
-    deriving (Eq)
--}
-data Player = Player
-            {
-            name          :: String,
-            hand          :: Hand,
-            chips         :: Chip,
-            commitedChips :: Chip,
-            folded        :: Bool,
-            acted         :: Bool
-            --blind         :: Blind
-            --position      :: TablePosition
-            }
+    { name          :: String
+    , hand          :: Hand
+    , chips         :: Chip
+    , commitedChips :: Chip
+    , folded        :: Bool
+    , acted         :: Bool
+    }
     deriving (Eq)
 
 instance Show Player where
-    show p = "Name: " ++ show (name p) ++
-           " Hand: " ++ show (hand p) ++
-           " Chips: " ++ show (chips p) ++
-           " Pot contribution: " ++ show (commitedChips p) ++
-           " Folded: " ++ show (folded p) ++
-           " Acted: " ++ show (acted p)
-           --" Blind:" ++ show (blind p) ++ "\n"
----------------------------------------------------------------------
--- | The table represent the gamestate
+    show p = 
+        "Name: " ++ show (name p) ++
+        --" | Hand: " ++ show (hand p) ++
+        " | Chips: " ++ show (chips p) ++
+        " | Pot contribution: " ++ show (commitedChips p) ++
+        " | Folded: " ++ show (folded p) ++
+        " | Acted: " ++ show (acted p)
+
+
+--------------------------------------------------------------------------------------------------------
+-- TABLE (full game state)
+--------------------------------------------------------------------------------------------------------
+
 data Table = Table
-            {
-            players       :: [Player],
-            highBet       :: Bet,
-            bets          :: [Bet],
-            deck          :: Deck,
-            board         :: CommunityCard,
-            phase         :: GamePhase,
-            pot           :: Pot,
-            dealerPosition :: Int,
-            smallBlindPosition :: Int,
-            bigBlindPosition :: Int
-            }
+    { players            :: [Player]
+    , highBet            :: Bet
+    , bets               :: [Bet]
+    , deck               :: Deck
+    , board              :: CommunityCard
+    , phase              :: GamePhase
+    , pot                :: Pot
+    , dealerPosition     :: Int
+    , smallBlindPosition :: Int
+    , bigBlindPosition   :: Int
+    }
 
 instance Show Table where
-
-    -- show t = "Players:\n" ++ unlines (map show (players t)) ++ 
-    --         " \nHighbet: " ++ show (highBet t) ++
-    --         " \nPot: " ++ show (pot t) ++
-    --         " \nBoard: " ++ show (board t)
-
-    show t = "Players:\n" ++ unlines (map show (players t)) ++
-
-            
-            --"\nTable State(print): " ++ 
-            " \nPhase:" ++ show (phase t) ++
-            " \nCommmunityCards: " ++ show (board t) ++
-            " \nHighbet:         " ++ show (highBet t) ++
-            " \nsb: " ++ name (players t!!smallBlindPosition t) ++
-            "\nbb: " ++ name (players t!!bigBlindPosition t)
+    show t = 
+        "Players:\n"        ++ unlines (map show (players t)) ++
+        "Phase: "           ++ show (phase t) ++ "\n" ++
+        "CommmunityCards: " ++ show (board t) ++ "\n" ++
+        "Highbet:         " ++ show (highBet t) ++ "\n" ++
+        "Pot: "             ++ show (pot t) ++ "\n" ++
+        "Dealer: "          ++ name (players t !! dealerPosition t)
+        --"sb: " ++ name (players t!!smallBlindPosition t) ++
+        --"bb: " ++ name (players t!!bigBlindPosition t)
 
 
+--------------------------------------------------------------------------------------------------------
+-- OTHERS
+--------------------------------------------------------------------------------------------------------
 
----------------------------------------------------------------------
+-- | StateT lets us thread Table through IO actions
+type Game = StateT Table IO
 
+ -- | Hand combinations
+data Combination 
+    = HighCard | Pair | TwoPairs | ThreeOfAKind | Straight
+    | Flush | FullHouse | Quads | StraightFlush
+    deriving (Show, Eq, Ord)
 
-
+-- | Not used currently
 data PlayerState =
     NotActed
     | HasFolded

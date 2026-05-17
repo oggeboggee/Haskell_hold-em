@@ -3,13 +3,15 @@ module Engine.TexasEngine
     , gameRound
     , runPhase
     , runShowdown
+    , removePlayer
+    , addPlayer
     ) where
 
 -- Other files
 import Types.GameTypes
 import Engine.Cards
 import Engine.Actions
-import Engine.HandEvaluation
+--import Engine.HandEvaluation  
 import Engine.Utilities
 import Engine.TerminalUI
 
@@ -302,3 +304,21 @@ moveDealer = do
                 , bigBlindPosition   = newBBPos
                 })
     
+
+removePlayer :: PlayerName -> Table -> Table
+removePlayer n table =
+    table { players = filter (\p -> name p /= n) (players table)}
+
+addPlayer :: PlayerName -> Table -> Table
+addPlayer n table =
+    table { players = players table ++ [newPlayer] }
+    where
+        newPlayer = 
+            Player {
+                name = n
+                , hand = []
+                , chips = 1000
+                , commitedChips = 0
+                , folded = False
+                , acted = False
+            }

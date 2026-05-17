@@ -28,7 +28,7 @@ check flush (in combinationRoot)
 ------------------------------------------------------------
 
 winnersWithComb :: [Card] -> [[Card]] -> ([Int], Combination)
-winnersWithComb com play = (indexes, (fst (handData  (play!!(head  indexes) ++ com))))
+winnersWithComb com play = (indexes, fst (handData (play !! head indexes ++ com)))
      where
           indexes = winners com play
 

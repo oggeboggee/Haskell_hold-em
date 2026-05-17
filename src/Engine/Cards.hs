@@ -13,10 +13,9 @@ module Engine.Cards
       )
       where
 
-
 import Types.GameTypes
 
-import System.Random
+--import System.Random
 
 {- Card related data-types -}
 -----------------------
@@ -55,15 +54,6 @@ rankValueAceLow r = case r of
   King  -> 13
 
 
-
---data Card = Card Rank Suit deriving (Eq, Ord)
-
-
---instance Show Card where
---  show (Card r s) = show r ++ show s
-
-
--- | Get functions:
 --------------------------------------------------------------
 --------------------------------------------------------------
 -------------------- Get functions for cards -----------------
@@ -75,7 +65,6 @@ rank (Card r _) = r
 -- | Extract the suit of a card
 suit :: Card -> Suit
 suit (Card _ s) = s
-
 
 
 --------------------------------------------------------------
@@ -100,8 +89,6 @@ drawCard (x:xs) = Just (x, xs)
 --dealCards :: Deck -> Int -> ([Card], Deck)
 --dealCards deck n = splitAt n deck --needs to be shuffled, check if n is bigger than the length of deck.
 
---text
-
 ---------------------------------------
 -- | Help function for shuffle
 -- | Removes the first card that matches a given card from the deck.
@@ -113,36 +100,18 @@ removeCard x (y:ys)
 
 -- | Use a double between 0-1 to find a index, Help function for shuffle
 pick :: Double -> Deck -> Card
-pick x deck = deck!!round ((fromIntegral (length deck - 1)) * x)
+pick x d = d !! round ((fromIntegral (length d - 1)) * x)
 
 -- | Pick a random card using a double(for index) and put it in a new deck
-    -- Note that the list of doubles need to be same or bigger length as deck
+--   Note that the list of doubles need to be same or bigger length as deck
 shuffle :: [Double] -> Deck -> Deck
 shuffle _ [] = []
-shuffle (x:xs) deck = card : shuffle xs deck'
+shuffle [] _ = []
+shuffle (x:xs) d = card : shuffle xs d'
   where
-    card  = pick x deck
-    deck' = removeCard card deck
+    card  = pick x d
+    d' = removeCard card d
 
----------------------------------------
--- | Generate a list with random doubles, Help function for runShuffle
--- randomDoubles :: Int -> StdGen -> ([Double], StdGen)
--- randomDoubles 0 gen = ([], gen)
--- randomDoubles n gen = ((x:xs), gen2)
---   where
---     (x, gen1)  = randomR (0.0,1.0) gen
---     (xs, gen2) = randomDoubles (n-1) gen1
-
--- -- | Create a new shuffled deck
--- runShuffle :: IO Deck
--- runShuffle = do
---   gen <- newStdGen
---   let (doubles, _) = randomDoubles 52 gen
---   return (shuffle doubles fullDeck)
-
-
---------------------------------------------------------------
---------------------------------------------------------------
 
 --------------------------------------------------------------
 ------------------------ For testing -------------------------

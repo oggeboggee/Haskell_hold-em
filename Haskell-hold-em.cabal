@@ -69,9 +69,9 @@ executable Haskell-hold-em
             Engine.Actions
             Engine.HandEvaluation
             Engine.Utilities
-            Server.TestJson
             Engine.TerminalUI
             Server.NetworkServer
+            Server.Protocol
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -87,7 +87,8 @@ executable Haskell-hold-em
                       bytestring,
                       websockets,
                       text,
-                      stm
+                      stm,
+                      containers
 
     -- Directories containing source files.
     hs-source-dirs:   app,

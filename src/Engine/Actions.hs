@@ -7,12 +7,7 @@ import Engine.Utilities
 import Engine.HandEvaluation
 import Engine.TerminalUI
 
-import Data.Char
-import Data.List (isPrefixOf)
-
 import Control.Monad.State
-
-
 
 
 
@@ -35,13 +30,13 @@ applyEvent (PlayerEvent playerIndex action) = do
 
     case action of
         Fold -> do
-            modify (\t -> pureFold t playerIndex)
+            modify (`pureFold` playerIndex)
             pure (Right [PlayerFolded plName])
 
         Check -> do
             if toCall == 0
             then do
-                modify (\t -> pureCheck t playerIndex)
+                modify (`pureCheck` playerIndex)
                 pure (Right [PlayerChecked plName])
             else
                 pure (Left "You can't check when behind the highbet.")
@@ -107,17 +102,17 @@ runShowdown = do
 
         -- only the players that are still in the hand
         -- ex. [Sam, Lewis]
-        activePlayers = filter (not . folded) playerList
+        activePl = filter (not . folded) playerList
 
         -- ex. [[5H,8C], [7H,9H]]
-        extractedHands = map hand activePlayers
+        extractedHands = map hand activePl
 
         -- ex- [1]  , indexes relative to the activeplayers
         winnerIndexes = winners finalBoard extractedHands
 
         -- winners returns index of winner(s) in activePlayers list, need to map to who it is
         -- in activePlayers: ex. activePlayers !! 1 = Lewis
-        computedWinners = map (\i -> activePlayers !! i) winnerIndexes
+        computedWinners = map (activePl !!) winnerIndexes
 
         potSize = pot table
 
@@ -162,7 +157,6 @@ performEvent event = do
             pure (Right events)
 
 
-
 --sendEvent :: GameEvent -> Connection -> IO ()
 
 
@@ -186,12 +180,12 @@ updatePlayerAtIndex playerIndex f table =
 placePureBet :: Table -> PlayerIndex -> Bet -> Table
 placePureBet table playerIndex bet =
     let tableUpdated = updatePlayerAtIndex playerIndex
-                        (\player -> decChips player bet) table
+                        (`decChips` bet) table
 
-        player = (players tableUpdated) !! playerIndex
+        player = players tableUpdated !! playerIndex
     in tableUpdated
             { pot = incPot (pot tableUpdated) bet,
-              bets = bet : (bets tableUpdated),
+              bets = bet : bets tableUpdated,
               highBet = max (highBet tableUpdated) (commitedChips player)
             }
 
@@ -212,8 +206,8 @@ playerHaveActed playerPos = do
 
 
 
-addPlayer :: PlayerName -> Table -> Table
-addPlayer name t = t { players = players t ++ [Player name [] 1000 0 False False]}
+--addPlayer :: PlayerName -> Table -> Table
+--addPlayer name t = t { players = players t ++ [Player name [] 1000 0 False False]}
 
 --------------------------------------------------------------
 --------------------------------------------------------------
