@@ -29,13 +29,11 @@ main :: IO ()
 main = defaultMain combinationsTests
 
 ------------------------------------------------
--- just to see how tests is working in tasty
-average' :: Float -> Float -> Float
-average' a b = (a+b)/2
 
-propAverage :: Float -> Float -> Bool
-propAverage a b = average' a b == a/2 + b/2
-------------------------------------------------
+{-
+tests :: TestTree
+tests = testGroup "Tests" [ testCase "2 + 2 = 4" $ 2 + 2 @?= 4 ]
+-}
 
 
 
@@ -71,29 +69,84 @@ function maybeWheel
 function checkGroups
 function evalGroupedRanks
 function groupBySuccCards
+
+   ------  CHECKed under this line ---------
+
 function sortByLength
-    - descending order of length of lists
 -}
 
--- | function sortByLength
-sortByLengthProp :: [[Card]] -> Bool
-sortByLengthProp [] = True
-sortByLengthProp cardList = maximum  (map (\xs -> length xs ) cardList) == length ( head sortByLengthFunction)
-    where
-         sortByLengthFunction = sortByLength cardList
+
 
 -- bug found in maybeFlush: if running with aceLowStraight -> Gives cards in wrong order
 
 
+----------------------groupBySuccCards------------------------------
+
+groupBySuccCardsTest1 :: Bool
+groupBySuccCardsTest1 = groupBySuccCards [Card King Hearts, Card Ace Hearts] ==  [[Card King Hearts, Card Ace Hearts]]
+
+
+--groupBySuccCardsTest2 :: Bool
+--groupBySuccCardsTest3 :: Bool
+--groupBySuccCardsTest4 :: Bool
+--groupBySuccCardsTest5 :: Bool
+--groupBySuccCardsTest6 :: Bool
+--groupBySuccCardsTest7 :: Bool
+--groupBySuccCardsTest8 :: Bool
+
+
+
+
+----------------------sortByLength------------------------------
+-- | tests if lists of cards is in falling order of length
+sortByLengthPropLength :: [[Card]] -> Bool
+sortByLengthPropLength xs = sortByLengthPropHelp (sortByLength xs)
+
+
+-- | tests if highest list of cards is in decending order
+-- | test with inner lists in the same size using gen Lists
+sortByLengthPropSize :: Property
+sortByLengthPropSize = forAll genLists (sortByLengthPropHelpSize . sortByLength)
+
+
+-- | tests order of lists, focusing on the length of the inner lists
+sortByLengthPropHelp :: [[Card]] -> Bool
+sortByLengthPropHelp [] = True
+sortByLengthPropHelp [_] = True
+sortByLengthPropHelp (c1:c2:rest)
+    | length c1 >= length c2 = sortByLengthPropHelp (c2:rest)
+    | otherwise = False
+
+sortByLengthPropHelpSize :: [[Card]] -> Bool
+sortByLengthPropHelpSize [] = True
+sortByLengthPropHelpSize [_] = True
+sortByLengthPropHelpSize all@(c1:c2:rest)
+    | maximum all == c1 = sortByLengthPropHelpSize (c2:rest)
+    | otherwise = False
+
+
+
+ -- | generates lists with lists that contains 5 card each
+genLists :: Gen [[Card]]
+genLists = listOf (vectorOf 5 arbitrary)
+
+
+-----------------------------------------------------------------
+------------------------   TESTTREE  ----------------------------
+-----------------------------------------------------------------
 
 combinationsTests :: TestTree
 combinationsTests = localOption (QuickCheckTests 5000) $
                     testGroup "Combination Tests"
-  [ testProperty "prop_name" propAverage                             -- test test
-  , testProperty "headLength in sortByLength" sortByLengthProp
+  [ 
+    testProperty "sortByLength length inner Lists" sortByLengthPropLength
+  , testProperty "sortByLength size innerLists" sortByLengthPropSize
+  , testCase "groupBySuccCardsTest1" $ groupBySuccCardsTest1 @?= True
   ]
 
-
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-----------------------------------------------------------------
 hand0 :: Hand
 hand0 = [Card Two Hearts, Card Four Spades ]
 
@@ -185,6 +238,9 @@ hand30 = [Card Ace Diamonds, Card Two Diamonds, Card Three Diamonds, Card Four D
 
 hand31 :: Hand
 hand31 = [Card Two Hearts, Card Three Spades, Card Four Hearts, Card Five Clubs]
+
+hand32 :: Hand -- Straight Ace Low
+hand32 = [ Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts, Card Ace Diamonds]
 
 ---------------------------------
 ----------- HandLists -----------
