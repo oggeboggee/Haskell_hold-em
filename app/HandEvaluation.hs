@@ -56,7 +56,7 @@ handComparision list index = bestIds
 
 ------------------------------------------------------------
 
-type RankGroup = Int
+
 
 value :: [Card] -> (Combination, [Card])
 value cards = maybe (ifNotFlush cards) ifFlush (maybeFlush cards)
@@ -110,6 +110,8 @@ checkGroups hand = (hRank, cards)
     cards = take 5 $ concat groups
     groupedRankLengths = length <$> groups
     hRank = evalGroupedRanks groupedRankLengths
+
+type RankGroup = Int
 
 evalGroupedRanks :: [RankGroup] -> Combination
 evalGroupedRanks groups =

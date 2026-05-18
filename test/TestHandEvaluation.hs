@@ -67,11 +67,13 @@ function maybeFlush
 function maybeStraight
 function maybeWheel
 function checkGroups
-function evalGroupedRanks
-function groupBySuccCards
+
+
 
    ------  CHECKed under this line ---------
 
+function evalGroupedRanks
+function groupBySuccCards
 function sortByLength
 -}
 
@@ -79,22 +81,51 @@ function sortByLength
 
 -- bug found in maybeFlush: if running with aceLowStraight -> Gives cards in wrong order
 
+----------------------evalGroupedRanks------------------------------
+
+evalGroupedRanksProp :: Property
+evalGroupedRanksProp = forAll genIntList evalGroupedRanksPropHelp
+
+
+evalGroupedRanksPropHelp :: [RankGroup] ->  Bool
+evalGroupedRanksPropHelp rankGroup
+    | (take 1 sorted == [4]  ) && (combination == Quads)        = True
+    | (take 2 sorted == [3,2]) && (combination == FullHouse)    = True
+    | (take 2 sorted == [3,3]) && (combination == FullHouse)    = True
+    | (take 2 sorted == [3,3]) && (combination == FullHouse)    = True
+    | (take 1 sorted == [3]  ) && (combination == ThreeOfAKind) = True
+    | (take 2 sorted == [2,2]) && (combination == TwoPairs)     = True
+    | (take 1 sorted == [2]  ) && (combination == Pair    )     = True
+    | (sorted /= []          ) && (combination == HighCard)     = True
+    | otherwise = False
+    where
+        sorted = reverse $ sort $ rankGroup
+        combination = evalGroupedRanks sorted
+
+
+genIntList :: Gen [RankGroup]
+genIntList =  vectorOf 7 (choose (1,4))
+
+
 
 ----------------------groupBySuccCards------------------------------
 
 groupBySuccCardsTest1 :: Bool
 groupBySuccCardsTest1 = groupBySuccCards [Card King Hearts, Card Ace Hearts] ==  [[Card King Hearts, Card Ace Hearts]]
 
-
---groupBySuccCardsTest2 :: Bool
---groupBySuccCardsTest3 :: Bool
---groupBySuccCardsTest4 :: Bool
---groupBySuccCardsTest5 :: Bool
---groupBySuccCardsTest6 :: Bool
---groupBySuccCardsTest7 :: Bool
---groupBySuccCardsTest8 :: Bool
+groupBySuccCardsTest2 :: Bool
+groupBySuccCardsTest2  = groupBySuccCards [Card Jack Hearts, Card Ace Hearts] ==  [[Card Jack Hearts] , [Card Ace Hearts]]
 
 
+groupBySuccCardsTest3 :: Bool
+groupBySuccCardsTest3 = groupBySuccCards [Card Five Hearts, Card Six Hearts, Card Jack Hearts, Card Queen Hearts] ==  [[Card Five Hearts, Card Six Hearts], [Card Jack Hearts, Card Queen Hearts]]
+
+groupBySuccCardsTest4 :: Bool
+groupBySuccCardsTest4 = groupBySuccCards [ Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts, Card Ace Diamonds] == [ [Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts] , [Card Ace Diamonds]]
+
+
+groupBySuccCardsTest5 :: Bool
+groupBySuccCardsTest5 =  groupBySuccCards [Card Jack Clubs, Card Jack Spades, Card King Hearts, Card King Spades, Card King Hearts, Card Ace Clubs] == [[Card Jack Clubs],[Card Jack Spades],[Card King Hearts],[Card King Spades],[Card King Hearts, Card Ace Clubs]]
 
 
 ----------------------sortByLength------------------------------
@@ -142,14 +173,21 @@ combinationsTests = localOption (QuickCheckTests 5000) $
     testProperty "sortByLength length inner Lists" sortByLengthPropLength
   , testProperty "sortByLength size innerLists" sortByLengthPropSize
   , testCase "groupBySuccCardsTest1" $ groupBySuccCardsTest1 @?= True
+  , testCase "groupBySuccCardsTest2" $ groupBySuccCardsTest2 @?= True
+  , testCase "groupBySuccCardsTest3" $ groupBySuccCardsTest3 @?= True
+  , testCase "groupBySuccCardsTest4" $ groupBySuccCardsTest4 @?= True
+  , testCase "groupBySuccCardsTest5" $ groupBySuccCardsTest5 @?= True
+  , testProperty "evalGroupedRanksProp" evalGroupedRanksProp
   ]
 
 -----------------------------------------------------------------
 -----------------------------------------------------------------
 -----------------------------------------------------------------
+
+                --- Manual testing ---
+
 hand0 :: Hand
 hand0 = [Card Two Hearts, Card Four Spades ]
-
 
 hand3s :: Hand
 hand3s = [ Card Two Spades,  Card Two Clubs, Card Five Clubs, Card Jack Spades ]
