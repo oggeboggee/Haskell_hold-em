@@ -81,7 +81,8 @@ applyEvent (PlayerEvent playerIndex action) = do
     table <- get
     let player = (players table) !! playerIndex
         hb     = (highBet table)
-        cChips = (commitedChips player)
+        --chips  = chips player
+        cChips = commitedChips player
         plName = (name player)
         toCall = hb - cChips
 
@@ -99,8 +100,8 @@ applyEvent (PlayerEvent playerIndex action) = do
                 pure (Left "You can't check when behind the highbet.")
 
         Call -> do
-            if toCall <= 0
-            then pure (Left "There isn't a bet to call.")
+            if toCall <= 0 || hb > chips player
+            then pure (Left "There isn't a bet to call or you don't have enough chips to call.") -- Should be no bet to call or higBet to big
             else do
 
                 let amount = hb - cChips
@@ -295,9 +296,9 @@ printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))
 
 
 -- playersExampel1 :: [Player]
--- playersExampel1 = [Player "Bob" [] 1000 0 False False,
---                        Player "Sam" [] 1000 0 False False,
---                        Player "Jonathan" [] 1000 0 False False,
+-- playersExampel1 = [Player "Bob" [] 950 50 False False,
+--                        Player "Sam" [] 900 100 False False,
+--                        Player "Jonathan" [] 50 0 False False,
 --                        Player "Lewis" [] 1000 0 False False]
 
 -- table1 :: Table
@@ -306,8 +307,8 @@ printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))
 --               deck = fullDeck,
 --               board = [],
 --               phase = PreFlop,
---               highBet = 0,
---               pot = 0,
+--               highBet = 100,
+--               pot = 150,
 --               dealerPosition = 3,
 --               smallBlindPosition = 0,
 --               bigBlindPosition = 1,

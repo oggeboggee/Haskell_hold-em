@@ -1,14 +1,12 @@
 
-
+import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 import Test.Tasty.HUnit as HU
-import Test.Tasty
+
 
 import UtilitiesTest
 import StateTest
 
-import TexasEngine
-import Cards
 
 
 --------------------- Main testing file -------------------------
@@ -17,7 +15,8 @@ import Cards
 main :: IO ()
 main = defaultMain $ 
   testGroup "All test"
-  [ StateTest.unitTests
+  [ StateTest.unitTests,
+    StateTest.propertyTests
     --UtilitiesTest.tests
   ]
 

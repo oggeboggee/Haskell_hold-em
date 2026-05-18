@@ -235,7 +235,6 @@ instance Show Table where
             "\nbb: " ++ name (players t!!bigBlindPosition t)
 
 
-
 ---------------------------------------------------------------------
 
 
