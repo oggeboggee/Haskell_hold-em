@@ -19,7 +19,8 @@ unitTests :: TestTree
 unitTests = testGroup "Unit tests State"
     [ 
      unitConvertAction,
-     unitApllyEventPlayerEvent
+     unitApllyEventPlayerEvent,
+     unitPlacePureBet
     ]
 
 -- propertyTests :: TestTree
@@ -136,13 +137,59 @@ unitApllyEventPlayerEvent = testGroup "applyEvent Unit tests"
     ]
 
 
+-----------------------------------------------------
+-- | placePureBet Unit tests
+unitPlacePureBet :: TestTree
+unitPlacePureBet = testGroup "placePureBet Unit tests"
+    [ -- placePureBet :: Table -> PlayerIndex -> Bet -> Table
+        -- Using Jonathan at index 2 at table1 for exampel
+    testCase "Player chips decrease when betting"
+        $ let chipsBefore = chips (players table1!!2)
+              bet         = 100
+              table       = placePureBet table1 2 bet
+              chipsAfter  = chips (players table!!2)
+
+          in chipsAfter @?= (chipsBefore - bet)
+    ,
+    testCase "Table pot increase when a player bets"
+        $ let potBefore = pot table1
+              bet       = 100
+              table     = placePureBet table1 2 bet
+              potAfter  = pot table
+
+          in potAfter @?= (potBefore + bet)
+
+    ,
+    testCase "Table higbet is uppdated when a player raise"
+        $ let highBetBefore  = highBet table1
+              bet            = 500
+              table          = placePureBet table1 2 bet
+              expectedHigbet = commitedChips (players table!!2)
+              highBetAfter   = highBet table
+
+          in highBetAfter @?= expectedHigbet
+
+    ,
+    testCase "Table higbet is NOT uppdated when a player call"
+        $ let highBetBefore  = highBet table1
+              bet            = 100
+              table          = placePureBet table1 2 bet
+              highBetAfter   = highBet table
+
+          in highBetAfter @?= highBetAfter
+    ]
+
+
+
 
 -- =========================================================== --  
    --------------------- Property Tests ----------------------
 
 propertyTests :: TestTree
 propertyTests = testGroup "Property tests State"
-    [ 
+    [ -- =================== Testing ApplyEvent ========================= --
+
+
     -- | A valid bet is bigger than zero and lower/equal than the amount of chips a player have 
         -- minus the amount they have to bet to match the current highBet
         -- An invalid bet should result in the left case and a valid in the right
@@ -185,7 +232,7 @@ propertyTests = testGroup "Property tests State"
 
                 in
                 case (evalState (applyEvent (PlayerEvent 3 Call)) state) of
-                    Left "There isn't a bet to call."
+                    Left "There isn't a bet to call or you don't have enough chips to call."
                         -> highBet state == 0 || x < highBet state
                     
                     Right [PlayerCalled "Lewis" amount]
