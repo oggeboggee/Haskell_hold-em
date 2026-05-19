@@ -20,14 +20,17 @@ unitTests = testGroup "Unit tests State"
     [ 
      unitConvertAction,
      unitApllyEventPlayerEvent,
-     unitPlacePureBet
+     unitPlacePureBet,
+     unitPureFold,
+     unitPureCheck
     ]
 
--- propertyTests :: TestTree
--- propertyTests = testGroup "Property tests State"
---     [ 
---      propertyTests
---     ]
+propertyTests :: TestTree
+propertyTests = testGroup "Property tests State"
+    [ 
+     propertyTestsApplyEvent,
+     propertyTestsPureFold
+    ]
 
 -----------------------------------------------------
 -- | Convert action unit tests
@@ -123,15 +126,15 @@ unitApllyEventPlayerEvent = testGroup "applyEvent Unit tests"
             @?= Left "Raise amount must be larger than 0 and smaller then the amount of chips you have"
 
     --------------- Testing PlayerEvent Call ---------
-    -- , -- Call should place a bet so thatt the player match highBet
-    -- testCase  "Call correct amount"
-    --     $ do
-    --         let chipsBefore    = chips (player table1!!2)
-    --             expectedAmount = highBet table - commitedChips (player table1!!2)
-    --             newState       = (execState (applyEvent (PlayerEvent 2 Call)) table1)
-    --             chipsAfter     = chips (player newState!!2)
+    , -- Call should place a bet so thatt the player match highBet
+    testCase  "Call correct amount"
+        $ do
+            let chipsBefore    = chips (players table1!!2)
+                expectedAmount = highBet table1 - commitedChips (players table1!!2)
+                newState       = (execState (applyEvent (PlayerEvent 2 Call)) table1)
+                chipsAfter     = chips (players newState!!2)
             
-    --         expectedAmount @?= (chipsBefore - chipsAfter)
+            expectedAmount @?= (chipsBefore - chipsAfter)
 
 
     ]
@@ -180,13 +183,71 @@ unitPlacePureBet = testGroup "placePureBet Unit tests"
     ]
 
 
+-----------------------------------------------------
+-- | pureFold Unit tests
+unitPureFold :: TestTree
+unitPureFold = 
+        let table       = pureFold table1 2
+            playerAfter = players table!!2
 
+        in
+            testGroup "pureFold Unit tests" 
+            [ -- When a aplyer ahve acted, acted should always be true untill a reset has happend
+            testCase "Player folded bool change correctly"
+                $ folded playerAfter @?= True
+            
+            , -- Check so that no other players acted state changes
+            testCase "No other player have change their folded state"
+                $   
+                let otherPlayersBefore = (take 2 (players table1) ++ drop 3 (players table1))
+                    otherPlayersAfter  = (take 2 (players table) ++ drop 3 (players table))
+                    
+                in and [folded b == folded a | 
+                        b <- otherPlayersBefore, 
+                        a <- otherPlayersAfter] 
+                        @?= True
+            ]
+
+
+-----------------------------------------------------
+-- | pureCheck Unit tests
+unitPureCheck :: TestTree
+unitPureCheck = 
+        let table       = pureCheck table1 2
+            playerAfter = players table!!2
+
+        in
+            testGroup "pureCheck Unit tests" 
+            [ -- Correctly change the acted state when checking
+            testCase "Player acted bool change correctly"
+                $ acted playerAfter @?= True
+            
+            , -- Checking should not effect a players chips
+            testCase "Player chips is unchanged when checking"
+                $ 
+                let chipsBefore = chips (playes table1!!2)
+                    chipsAfter  = chips (players table!!2)
+
+                in chipsBefore @?= chipsAfter
+
+            , -- Check that only one players acted state is changed
+            testCase "No other player have change their acted state"
+                $   
+                let otherPlayersBefore = (take 2 (players table1) ++ drop 3 (players table1))
+                    otherPlayersAfter  = (take 2 (players table) ++ drop 3 (players table))
+                    
+                in and [acted b == acted a | 
+                        b <- otherPlayersBefore, 
+                        a <- otherPlayersAfter] 
+                        @?= True
+            ]
+    
 
 -- =========================================================== --  
    --------------------- Property Tests ----------------------
 
-propertyTests :: TestTree
-propertyTests = testGroup "Property tests State"
+propertyTestsApplyEvent :: TestTree
+propertyTestsApplyEvent = testGroup "Property tests applyEvent"
     [ -- =================== Testing ApplyEvent ========================= --
 
 
@@ -202,12 +263,12 @@ propertyTests = testGroup "Property tests State"
                 
                 Right [PlayerRaised "Jonathan" x]
                     -> x > 0 && x < ((chips (players table1!!2)) - (lowestBet table1 (players table1!!2)))
-    
+
 
     , -- Simulating a bettingphase where one player raise and set the highBet to a random amount 
         -- and the next player have a random amount of chips. The next player tries to check 
         -- -> should only work if higbBet != 0 and The player have enough chips to match the higBet
-    QC.testProperty "Call when highBet is bigger than a players amount of chips"
+    QC.testProperty "Call when highBet is possibly bigger than a players amount of chips"
         $ QC.forAll (QC.choose(0, 900)) $ \ x -> -- The amount of chips Lewis have
           QC.forAll (QC.choose(100, 900)) $ \ y -> -- y is the highBet set by Jonathan
                 let players = [Player "Bob" [] 950 50 False False,
@@ -241,6 +302,71 @@ propertyTests = testGroup "Property tests State"
 
 
 -----------------------------------------------------
+-- | properties pureFold
+
+
+propertyTestsPureFold :: TestTree
+propertyTestsPureFold = testGroup "Property tests pureFold"
+    [  -- =================== Testing pureFold ========================= --
+    QC.testProperty "When a player fold their fold bool should be True"
+        -- Take a random player at the table and folds that player
+        $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
+            let table            = pureFold table1 x
+                foldedplayer     = players table!!x
+
+            in
+                (folded foldedplayer) == True
+    
+    ,
+    QC.testProperty "When a player fold their chips should remain the same"
+        $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
+            let beforeFold = players table1!!x
+                table      = pureFold table1 x
+                afterFold  = players table!!x
+
+            in
+                (chips beforeFold) == (chips afterFold)
+
+    , -- This function should never be called on a player that have already folded
+    QC.testProperty "When a player fold the number of folded players increase by one" 
+        $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
+            let table  = pureFold table1 x
+                before = filter folded (players table1) -- Amount of folded player before 
+                after  = filter folded (players table)  -- Amount of folded players after
+
+            in
+                (length after) == (length before + 1)
+    ]
+
+
+-----------------------------------------------------
+-- | properties pureCheck
+
+
+-- propertyTestsPureCheck :: TestTree
+-- propertyTestsPureCheck = testGroup "Property tests pureCheck"
+--     [  -- =================== Testing pureCheck ========================= --
+--     QC.testProperty "When a player fold their fold bool should be True"
+--         let players = [Player "Bob" [] 900 100 False True,
+--                                 Player "Sam" [] 900 100 False False,
+--                                 Player "Jonathan" [] 1000 0 True True,
+--                                 Player "Lewis" [] 900 100 False True]
+                    
+--             state = Table -- State where it's Sam's turn to act, he is BB and all other player have matched
+--                             -- meaning Sam can check
+--                         { players = players,
+--                             deck = fullDeck,
+--                             board = [],
+--                             phase = PreFlop,
+--                             highBet = y,
+--                             pot = 300,
+--                             dealerPosition = 3,
+--                             smallBlindPosition = 0,
+--                             bigBlindPosition = 1,
+--                             bets = []
+--                         }
+            
+--     ]
 
 
 
@@ -294,6 +420,7 @@ table1 = Table
 
 -- lenses
 
+------------------------------------------------------------------------
 
 
 
@@ -310,3 +437,33 @@ table1 = Table
 
 
 
+
+-- ================================================================= --
+------------------------------ TODO --------------------------------
+{-
+ TestSuite
+-- convertAction            [x]
+-- applyEvent               [x] -- Could be done tested more
+-- placePureBet             [x]
+-- pureFold                 [x]
+-- pureCheck                []
+-- updatePlayerAtIndex      []
+-- runShodown               []
+--------------------------------
+Eninge
+-- Waiting room             []
+-- Player with 0 chips      []
+-- Side pot                 []
+-- But in                   []
+
+-----------------------------------
+Documentation
+-- Checklist                []
+-- Future roadmap           []
+-- Hadock                   []
+
+
+
+
+
+-}

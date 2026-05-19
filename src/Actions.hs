@@ -9,7 +9,7 @@ import Data.Char
 import Data.List (isPrefixOf)
 import Utilities
 import HandEvaluation
-import Cards
+--import Cards
 
 -- With these changes the gameloop for eventsshould become
 -- 1. Pick a player
