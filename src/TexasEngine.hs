@@ -244,6 +244,11 @@ dealHands = do
 -- | Deal community cards to the board.
 dealCommunityCards :: State Table ()--Game () -- State Table ()
 dealCommunityCards = do
+    -- let active = filter (not . folded) (players table)
+    -- if length active <= 1 then return []
+
+    -- else 
+    pl <- gets players
     currentPhase <- gets phase
     cards <- case currentPhase of
         Flop  -> dealCards 3
@@ -251,7 +256,8 @@ dealCommunityCards = do
         River -> dealCards 1
         _     -> return []
 
-    modify (\t -> t { board = board t ++ cards }) 
+    if length (filter (not . folded) pl) <= 1 then return ()
+    else modify (\t -> t { board = board t ++ cards }) 
 
 
 --------------------------------------------------------------

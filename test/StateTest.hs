@@ -32,6 +32,8 @@ propertyTests = testGroup "Property tests State"
      propertyTestsPureFold
     ]
 
+
+-----------------------------------------------------
 -----------------------------------------------------
 -- | Convert action unit tests
 unitConvertAction :: TestTree
@@ -225,7 +227,7 @@ unitPureCheck =
             , -- Checking should not effect a players chips
             testCase "Player chips is unchanged when checking"
                 $ 
-                let chipsBefore = chips (playes table1!!2)
+                let chipsBefore = chips (players table1!!2)
                     chipsAfter  = chips (players table!!2)
 
                 in chipsBefore @?= chipsAfter
@@ -242,6 +244,15 @@ unitPureCheck =
                         @?= True
             ]
     
+
+
+-----------------------------------------------------
+-- | runShowdown Unit tests
+
+-- unitRunShowdown :: TestTree
+-- unitRunShowdown = 
+
+
 
 -- =========================================================== --  
    --------------------- Property Tests ----------------------
@@ -298,7 +309,33 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
                     
                     Right [PlayerCalled "Lewis" amount]
                         -> highBet state > 0  && x > highBet state
+
+
+    , -- Testing so that a player dont have negative chips after raising
+    QC.testProperty "Players should never have negative chips after raising"
+        $ QC.forAll (QC.choose(0, 1000000)) $ \x -> -- Amount to bet
+            let state = execState (applyEvent (PlayerEvent 2 (Raise x))) table1
+                
+            in ((chips (players state!!2)) >= 0) && (noNegativeChips state)
+            
+    , -- Testing so that a player 
+    QC.testProperty "After AllIn a players chips should always be 0"
+        $ QC.forAll (QC.choose(0, 1000000)) $ \x -> -- Amount to bet
+            let state1     = updatePlayerAtIndex 2 (\p -> p {chips = x}) table1
+                finalState = execState (applyEvent (PlayerEvent 2 AllIn)) state1
+
+            in ((chips (players finalState!!2)) == 0) && (noNegativeChips finalState)
+
     ]           
+
+
+-----------------------------------------------------
+-- | properties runShowdown
+
+
+
+
+
 
 
 -----------------------------------------------------
@@ -336,8 +373,20 @@ propertyTestsPureFold = testGroup "Property tests pureFold"
 
             in
                 (length after) == (length before + 1)
+
     ]
 
+
+
+
+
+
+----------------------------------------------------------------------
+-- Helper functions for checking so there is no negative values for chips, pot etc.
+-- | Checks all player chips and table pot for negative
+noNegativeChips :: Table -> Bool
+noNegativeChips table = let allChipValues = (map chips (players table)) ++ [pot table]
+                        in and (map (>=0) allChipValues)
 
 -----------------------------------------------------
 -- | properties pureCheck
@@ -446,15 +495,23 @@ table1 = Table
 -- applyEvent               [x] -- Could be done tested more
 -- placePureBet             [x]
 -- pureFold                 [x]
--- pureCheck                []
+-- pureCheck                [x]
 -- updatePlayerAtIndex      []
 -- runShodown               []
+        -- noNegativeChips
+        -- correct winners
+        -- Even pot distribution
+        -- Chips increase correctly
+
+-- NoNegativeChips          [x]
 --------------------------------
 Eninge
 -- Waiting room             []
 -- Player with 0 chips      []
 -- Side pot                 []
--- But in                   []
+-- Buy in                   []
+-- No comCards when -        
+    one players left        []
 
 -----------------------------------
 Documentation
