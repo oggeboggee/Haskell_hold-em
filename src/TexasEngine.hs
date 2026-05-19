@@ -386,26 +386,26 @@ printtHandsShowdown = do
 
 
 -- | Manual testing:
-player1 :: Player
-player1 = Player "Axel" hd11 0 0 False False
+-- player1 :: Player
+-- player1 = Player "Axel" hd11 0 0 False False
 
-player2 :: Player
-player2 = Player "Frodo" hd12 0 100 False False
+-- player2 :: Player
+-- player2 = Player "Frodo" hd12 0 100 False False
 
-player3 :: Player
-player3 = Player "Sam" hd13 0 0 False False
+-- player3 :: Player
+-- player3 = Player "Sam" hd13 0 0 False False
 
-playerlist :: [Player]
-playerlist = [player1, player2, player3]
+-- playerlist :: [Player]
+-- playerlist = [player1, player2, player3]
 
-table2 :: Table
-table2 = Table playerlist{- playerlist -}100 [] fullDeck [] PreFlop 200 0 1 2
+-- table2 :: Table
+-- table2 = Table playerlist{- playerlist -}100 [] fullDeck [] PreFlop 200 0 1 2
 
-hd11 :: Hand
-hd11 = [ Card Two Hearts, Card Jack Spades]
+-- hd11 :: Hand
+-- hd11 = [ Card Two Hearts, Card Jack Spades]
 
-hd12 :: Hand
-hd12 = [ Card Two Diamonds, Card Jack Spades]
+-- hd12 :: Hand
+-- hd12 = [ Card Two Diamonds, Card Jack Spades]
 
-hd13 :: Hand
-hd13 = [ Card Ten Spades, Card King Clubs]
+-- hd13 :: Hand
+-- hd13 = [ Card Ten Spades, Card King Clubs]

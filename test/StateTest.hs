@@ -11,6 +11,7 @@ import Cards
 import TexasEngine
 import Actions
 import Utilities
+import HandEvaluation
 
 -- =========================================================== --  
    ----------------------- Unit Tests ------------------------
@@ -29,7 +30,8 @@ propertyTests :: TestTree
 propertyTests = testGroup "Property tests State"
     [ 
      propertyTestsApplyEvent,
-     propertyTestsPureFold
+     propertyTestsPureFold,
+     propertyTestsRunShowdown
     ]
 
 
@@ -249,8 +251,14 @@ unitPureCheck =
 -----------------------------------------------------
 -- | runShowdown Unit tests
 
+-- Testing with a fixed state
 -- unitRunShowdown :: TestTree
--- unitRunShowdown = 
+-- unitRunShowdown =
+--     let state = table2 {board = [Card Five Hearts, 
+--                                  Card Six Spades, 
+--                                  Card Seven Clubs, 
+--                                  Card Eight Diamonds, 
+--                                  Card Ace Hearts]}
 
 
 
@@ -333,7 +341,24 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
 -- | properties runShowdown
 
 
+propertyTestsRunShowdown :: TestTree
+propertyTestsRunShowdown = testGroup "Property tests runShowdown"
+    [ -- Calculate the correct winners and compare to runShowdown calculation
+    QC.testProperty "Calculate the correct winners" $
+        QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
 
+            let activePlayers  = filter (not . folded) (players table)
+                playerHands   = map hand activePlayers
+                comCards      = board table
+                winnerIndexes = winners comCards playerHands
+                winnerPlayers = [activePlayers!!i | i <- winnerIndexes]
+                winnerNames   = map name winnerPlayers
+
+            in [ShowdownHappened winnerNames] == (evalState (runShowdown) table)
+
+    --, -- Check so that the correct amount of money is dealt out to the correct players
+    --QC.testProperty
+    ]
 
 
 
@@ -389,33 +414,6 @@ noNegativeChips table = let allChipValues = (map chips (players table)) ++ [pot 
                         in and (map (>=0) allChipValues)
 
 -----------------------------------------------------
--- | properties pureCheck
-
-
--- propertyTestsPureCheck :: TestTree
--- propertyTestsPureCheck = testGroup "Property tests pureCheck"
---     [  -- =================== Testing pureCheck ========================= --
---     QC.testProperty "When a player fold their fold bool should be True"
---         let players = [Player "Bob" [] 900 100 False True,
---                                 Player "Sam" [] 900 100 False False,
---                                 Player "Jonathan" [] 1000 0 True True,
---                                 Player "Lewis" [] 900 100 False True]
-                    
---             state = Table -- State where it's Sam's turn to act, he is BB and all other player have matched
---                             -- meaning Sam can check
---                         { players = players,
---                             deck = fullDeck,
---                             board = [],
---                             phase = PreFlop,
---                             highBet = y,
---                             pot = 300,
---                             dealerPosition = 3,
---                             smallBlindPosition = 0,
---                             bigBlindPosition = 1,
---                             bets = []
---                         }
-            
---     ]
 
 
 
@@ -424,7 +422,7 @@ noNegativeChips table = let allChipValues = (map chips (players table)) ++ [pot 
 -- =========================================================== --  
    ----------------------- Test Cases ------------------------
 
---  Exampel state 1: 
+--  Default state 1: 
 -- In preflop, Sb -> Bob, Bb -> Sam
 players1 :: [Player]
 players1 = [Player "Bob" [] 950 50 False False,
@@ -446,28 +444,77 @@ table1 = Table
               bets = []
             }
 
+----------
+-- | Default state 2
+-- | For showdown testing
+players2 :: [Player]
+players2 = [Player "Bob" [] 500 50 False False,
+            Player "Sam" [] 500 100 False False,
+            Player "Jonathan" [] 500 0 False False,
+            Player "Lewis" [] 500 0 False False]
 
+table2 :: Table
+table2 = Table 
+            { players = players1,
+              deck = fullDeck,
+              board = [],
+              phase = Showdown,
+              highBet = 0,
+              pot = 600,
+              dealerPosition = 3,
+              smallBlindPosition = 0,
+              bigBlindPosition = 1,
+              bets = []
+            }
 
+--------------------------------------------------
 ---------- Generate random game state -----------
 
-{-
-    How do I generate good random gmae states? Seems a little complicated.
-    A GameState is dependent on events happaning???
-     -- Is it possible to generate a fully random valid GameState
-     -- Generating Cards
-            --> No duplicates allowed
-            --> How many cards are in play depend on gamephase
+-- OBS! These generators can still produce duplicates
 
-    -- Pot and player chips are dependent on previus betting history
+-- | Helper to generate random hands
+randomiseHands :: [Player] -> QC.Gen [Player]
+randomiseHands = mapM oneHand
+    where
+        oneHand player = do
+            randomHand <- QC.vectorOf 2 (QC.elements fullDeck)
+            pure player {hand = randomHand}
+
+-- | Helper to generate random communityCards
+randomiseCommunityCards :: Int -> QC.Gen [Card]
+randomiseCommunityCards x = do
+    communityCards <- QC.vectorOf x (QC.elements fullDeck)
+    pure communityCards
+
+-- | Helper to randomise all cards at a table
+randomiseCardsAtTable :: Table -> Int -> QC.Gen Table
+randomiseCardsAtTable table x = do
+    newPlayers     <- randomiseHands (players table)
+    communityCards <- randomiseCommunityCards x
+
+    let allHands = [hand p | p <- newPlayers]
+        allCards = communityCards ++ (concat allHands)
+
+    if nuDupsHelper allCards 
+        then pure $ table {players = newPlayers, board = communityCards}
+    else 
+        randomiseCardsAtTable table x
 
 
-    Would it be better to simply construct part of the state and only 
-    randomly generate the parts that are interesting for the test.
+
+
+noDuplicatCards :: Table -> Bool
+noDuplicatCards table = 
+    let allHands = [hand p | p <- players table]
+        allCards = board table ++ (concat allHands)
     
--}
+    in noDupsHelper allCards
+
+noDupsHelper :: [Card] -> Bool
+noDupsHelper []     = True
+nuDupsHelper (x:xs) = x `elem` xs || noDupsHelper xs
 
 
--- lenses
 
 ------------------------------------------------------------------------
 
