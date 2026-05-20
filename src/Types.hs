@@ -245,6 +245,7 @@ instance Show Table where
             --"\nTable State(print): " ++ 
             " \nPhase:" ++ show (phase t) ++
             " \nCommmunityCards: " ++ show (board t) ++
+            " \nPot:         " ++ show (pot t) ++
             " \nHighbet:         " ++ show (highBet t) ++
             " \nsb: " ++ name (players t!!smallBlindPosition t) ++ 
             "\nbb: " ++ name (players t!!bigBlindPosition t)

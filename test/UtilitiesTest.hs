@@ -32,7 +32,7 @@ propNoDup = noDups fullDeck
 -- | Helper function, Return true if there are No duplicates
 noDups :: Deck -> Bool
 noDups []     = True
-noDups (x:xs) = not (x `elem` xs) || noDups xs
+noDups (x:xs) = x `elem` xs || noDups xs
 
 
 

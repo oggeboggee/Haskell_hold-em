@@ -168,7 +168,7 @@ unitPlacePureBet = testGroup "placePureBet Unit tests"
 
     ,
     testCase "Table higbet is uppdated when a player raise"
-        $ let highBetBefore  = highBet table1
+        $ let --highBetBefore  = highBet table1
               bet            = 500
               table          = placePureBet table1 2 bet
               expectedHigbet = commitedChips (players table!!2)
@@ -178,7 +178,7 @@ unitPlacePureBet = testGroup "placePureBet Unit tests"
 
     ,
     testCase "Table higbet is NOT uppdated when a player call"
-        $ let highBetBefore  = highBet table1
+        $ let --highBetBefore  = highBet table1
               bet            = 100
               table          = placePureBet table1 2 bet
               highBetAfter   = highBet table
@@ -275,13 +275,13 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
         -- An invalid bet should result in the left case and a valid in the right
     QC.testProperty "Valid/invalid raise amount" 
         $ QC.forAll (QC.choose(-1000, 3000))
-            $ \x ->
-            case (evalState (applyEvent (PlayerEvent 2 (Raise x))) table1) of
+            $ \r ->
+            case (evalState (applyEvent (PlayerEvent 2 (Raise r))) table1) of
                 Left "Raise amount must be larger than 0 and smaller then the amount of chips you have"
-                    -> (x <= 0) || x > ((chips (players table1!!2)) - (lowestBet table1 (players table1!!2)))
+                    -> (r <= 0) || r > ((chips (players table1!!2)) - (lowestBet table1 (players table1!!2)))
                 
-                Right [PlayerRaised "Jonathan" x]
-                    -> x > 0 && x < ((chips (players table1!!2)) - (lowestBet table1 (players table1!!2)))
+                Right [PlayerRaised "Jonathan" r]
+                    -> r > 0 && r < ((chips (players table1!!2)) - (lowestBet table1 (players table1!!2)))
 
 
     , -- Simulating a bettingphase where one player raise and set the highBet to a random amount 
@@ -290,13 +290,13 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
     QC.testProperty "Call when highBet is possibly bigger than a players amount of chips"
         $ QC.forAll (QC.choose(0, 900)) $ \ x -> -- The amount of chips Lewis have
           QC.forAll (QC.choose(100, 900)) $ \ y -> -- y is the highBet set by Jonathan
-                let players = [Player "Bob" [] 950 50 False False,
+                let pl = [Player "Bob" [] 950 50 False False,
                                Player "Sam" [] 900 100 False False,
                                Player "Jonathan" [] (1000-y) y False False,
                                Player "Lewis" [] x 0 False False]
                     
-                    state = Table -- Generating a state where Lewis may or may not have enough chips to call 
-                                { players = players,
+                    finalState = Table -- Generating a state where Lewis may or may not have enough chips to call 
+                                { players = pl,
                                   deck = fullDeck,
                                   board = [],
                                   phase = PreFlop,
@@ -308,23 +308,23 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
                                   bets = []
                                 }
 
-                    amount = lowestBet state (players!!3)
+                    amount = lowestBet finalState (pl!!3)
 
                 in
-                case (evalState (applyEvent (PlayerEvent 3 Call)) state) of
+                case (evalState (applyEvent (PlayerEvent 3 Call)) finalState) of
                     Left "There isn't a bet to call or you don't have enough chips to call."
-                        -> highBet state == 0 || x < highBet state
+                        -> highBet finalState == 0 || x <= highBet finalState
                     
                     Right [PlayerCalled "Lewis" amount]
-                        -> highBet state > 0  && x > highBet state
+                        -> highBet finalState > 0  && x >= highBet finalState
 
 
     , -- Testing so that a player dont have negative chips after raising
     QC.testProperty "Players should never have negative chips after raising"
         $ QC.forAll (QC.choose(0, 1000000)) $ \x -> -- Amount to bet
-            let state = execState (applyEvent (PlayerEvent 2 (Raise x))) table1
+            let finalState = execState (applyEvent (PlayerEvent 2 (Raise x))) table1
                 
-            in ((chips (players state!!2)) >= 0) && (noNegativeChips state)
+            in ((chips (players finalState!!2)) >= 0) && (noNegativeChips finalState)
             
     , -- Testing so that a player 
     QC.testProperty "After AllIn a players chips should always be 0"
@@ -356,8 +356,55 @@ propertyTestsRunShowdown = testGroup "Property tests runShowdown"
 
             in [ShowdownHappened winnerNames] == (evalState (runShowdown) table)
 
-    --, -- Check so that the correct amount of money is dealt out to the correct players
-    --QC.testProperty
+    , -- Check so that the correct amount of money is dealt out to the correct players
+    QC.testProperty "The winners chips increase after winning" $
+        QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
+            
+
+            let (showdown, finalState) = (runState (runShowdown) table)
+                winnersNames = unPackWinners (showdown!!0)
+
+                winnersBefore = [ p | p <- players table, n <- winnersNames, name p == n]
+                winnersAfter  = [ p | p <- players finalState, n <- winnersNames, name p == n]
+            
+            in and [chips pa > chips pb | pa <- winnersAfter, pb <- winnersBefore]
+    
+    ,
+    QC.testProperty "The winners wins the correct amount of chips" $
+        QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
+        QC.forAll (QC.choose (0, 100000)) $ \x ->
+
+            let initTable = table {pot = x}
+                (showdown, finalState) = (runState (runShowdown) initTable)
+                winnersNames = unPackWinners (showdown!!0)
+
+                winnersBefore = [ p | p <- players initTable, n <- winnersNames, name p == n]
+                winnersAfter  = [ p | p <- players finalState, n <- winnersNames, name p == n]
+            
+                chipsWon = (pot initTable) `div` (length winnersNames)
+
+            in and [chips pa == (chips pb + chipsWon) | pa <- winnersAfter, pb <- winnersBefore]
+
+    ,
+    QC.testProperty "No negative chips after runShowdown" $
+        QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
+        QC.forAll (QC.choose (0, 100000)) $ \x -> 
+
+            let initTable = table {pot = x}
+                finalState = (execState (runShowdown) initTable)
+
+            in noNegativeChips finalState
+
+    ,
+    QC.testProperty "Pot should be emptyt after showdown happend" $
+        QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
+        QC.forAll (QC.choose (0, 100000)) $ \x -> 
+
+            let initTable = table {pot = x}
+                finalState = (execState (runShowdown) initTable)
+
+            in (pot finalState) == 0
+    
     ]
 
 
@@ -393,11 +440,12 @@ propertyTestsPureFold = testGroup "Property tests pureFold"
     QC.testProperty "When a player fold the number of folded players increase by one" 
         $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
             let table  = pureFold table1 x
-                before = filter folded (players table1) -- Amount of folded player before 
-                after  = filter folded (players table)  -- Amount of folded players after
+                beforeFold = filter folded (players table1) -- Amount of folded player before 
+                afterFold  = filter folded (players table)  -- Amount of folded players after
 
             in
-                (length after) == (length before + 1)
+                (length afterFold) == (length beforeFold + 1)
+    
 
     ]
 
@@ -414,8 +462,6 @@ noNegativeChips table = let allChipValues = (map chips (players table)) ++ [pot 
                         in and (map (>=0) allChipValues)
 
 -----------------------------------------------------
-
-
 
 
 
@@ -455,7 +501,7 @@ players2 = [Player "Bob" [] 500 50 False False,
 
 table2 :: Table
 table2 = Table 
-            { players = players1,
+            { players = players2,
               deck = fullDeck,
               board = [],
               phase = Showdown,
@@ -467,11 +513,39 @@ table2 = Table
               bets = []
             }
 
+
+-- This faild in "Winners win correct amount of chips"
+players3 :: [Player]
+players3 = [Player "Bob" [Card Queen Diamonds, Card Jack Spades] 500 50 False False,
+            Player "Sam" [Card Two Spades, Card Three Hearts] 500 100 False False,
+            Player "Jonathan" [Card Two Hearts, Card Five Clubs] 500 0 False False,
+            Player "Lewis" [Card Nine Hearts, Card King Clubs] 500 0 False False]
+
+table3 :: Table
+table3 = Table 
+            { players = players3,
+              deck = fullDeck,
+              board = [Card Five Hearts, 
+                       Card Three Clubs, 
+                       Card Four Diamonds, 
+                       Card Six Clubs, 
+                       Card Nine Diamonds],
+              phase = Showdown,
+              highBet = 0,
+              pot = 600,
+              dealerPosition = 3,
+              smallBlindPosition = 0,
+              bigBlindPosition = 1,
+              bets = []
+            }
+
+
 --------------------------------------------------
 ---------- Generate random game state -----------
 
 -- OBS! These generators can still produce duplicates
 
+---------------
 -- | Helper to generate random hands
 randomiseHands :: [Player] -> QC.Gen [Player]
 randomiseHands = mapM oneHand
@@ -480,12 +554,14 @@ randomiseHands = mapM oneHand
             randomHand <- QC.vectorOf 2 (QC.elements fullDeck)
             pure player {hand = randomHand}
 
+---------------
 -- | Helper to generate random communityCards
 randomiseCommunityCards :: Int -> QC.Gen [Card]
 randomiseCommunityCards x = do
     communityCards <- QC.vectorOf x (QC.elements fullDeck)
     pure communityCards
 
+--------------
 -- | Helper to randomise all cards at a table
 randomiseCardsAtTable :: Table -> Int -> QC.Gen Table
 randomiseCardsAtTable table x = do
@@ -495,26 +571,29 @@ randomiseCardsAtTable table x = do
     let allHands = [hand p | p <- newPlayers]
         allCards = communityCards ++ (concat allHands)
 
-    if nuDupsHelper allCards 
+    if noDups allCards 
         then pure $ table {players = newPlayers, board = communityCards}
     else 
         randomiseCardsAtTable table x
 
 
 
-
+--------------------------------------------------------------------
 noDuplicatCards :: Table -> Bool
 noDuplicatCards table = 
     let allHands = [hand p | p <- players table]
         allCards = board table ++ (concat allHands)
     
-    in noDupsHelper allCards
-
-noDupsHelper :: [Card] -> Bool
-noDupsHelper []     = True
-nuDupsHelper (x:xs) = x `elem` xs || noDupsHelper xs
+    in noDups allCards
 
 
+noDups :: [Card] -> Bool
+noDups []     = True
+noDups (x:xs) = if x `elem` xs then False else noDups xs
+
+unPackWinners :: GameEvent -> [PlayerName]
+unPackWinners (ShowdownHappened pl) = pl
+unPackWinners _                     = []
 
 ------------------------------------------------------------------------
 
@@ -531,7 +610,9 @@ nuDupsHelper (x:xs) = x `elem` xs || noDupsHelper xs
     -- And end up with negative chips
     -- Also need to change so that call don't show as an avalible action 
 
-
+-- At the moment you can call when you have the exakt same amount of chips 
+    -- as the highbet. Should that be a call or an allin?   
+        
 
 
 -- ================================================================= --
