@@ -52,19 +52,6 @@ combinationsTests = localOption (QuickCheckTests 5000) $
 ------------------------------------------------
 
 {-
-tests :: TestTree
-tests = testGroup "Tests" [ testCase "2 + 2 = 4" $ 2 + 2 @?= 4 ]
--}
-
-
-
--- TODO
--- write an flowchart CHECK
--- organize the function: flow, helpers, helpers to helpers
--- clean and write more clear: winners & handComparision
--- give "javaDoc-comments" to functions and test:
-
-{-
 function winners
     - HUnit tests for the most complicated cases (?)
     - Try to get an error, fix it
@@ -82,8 +69,6 @@ function value
 
 function ifNotFlush
 function ifFlush
-function lastNelem
-
 
 
    ------  CHECKed under this line ---------
@@ -100,6 +85,15 @@ function sortByLength
 
 
 -- bug found in maybeFlush: if running with aceLowStraight -> Gives cards in wrong order
+
+
+-------------------------- winners -------------------------------
+----------------------- handComparision --------------------------
+--------------------------- value --------------------------------
+------------------------ ifNotFlush ------------------------------
+-------------------------- ifFlush -------------------------------
+
+
 
 ------------------------- maybeFlush --------------------------------
 

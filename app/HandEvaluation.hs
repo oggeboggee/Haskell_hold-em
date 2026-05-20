@@ -72,13 +72,12 @@ ifFlush cards =
 ------------------------------------------------------------
 
 
-
+{-
 lastNelems :: Int -> [a] -> [a]
 lastNelems n xs = foldl' (const . drop 1) xs (drop n xs)
-
+-}
 
 -- vi vill kolla specialfallet [A♦,5♦,4♦,3♦,2♦] och isåfall retunera [5♦,4♦,3♦,2♦,A♦]
-
 maybeFlush :: [Card] -> Maybe [Card]
 maybeFlush cs
   | map rank cs' == [Ace, Five, Four, Three, Two] = Just ((\(x:xs) -> xs ++ [x])cs')
