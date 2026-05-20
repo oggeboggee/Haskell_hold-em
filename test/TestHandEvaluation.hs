@@ -38,15 +38,13 @@ combinationsTests = localOption (QuickCheckTests 5000) $
   [ 
     testProperty "sortByLength length inner Lists" sortByLengthPropLength
   , testProperty "sortByLength size innerLists" sortByLengthPropSize
-  , testCase "groupBySuccCardsTest1" $ groupBySuccCardsTest1 @?= True
-  , testCase "groupBySuccCardsTest2" $ groupBySuccCardsTest2 @?= True
-  , testCase "groupBySuccCardsTest3" $ groupBySuccCardsTest3 @?= True
-  , testCase "groupBySuccCardsTest4" $ groupBySuccCardsTest4 @?= True
-  , testCase "groupBySuccCardsTest5" $ groupBySuccCardsTest5 @?= True
+  , testCase "groupBySuccCards " $ hUnitGroupBySucc @?= True
   , testProperty "evalGroupedRanksProp" evalGroupedRanksProp
   , testProperty "length property checkGroups" lengthCheckGroupsProp
-  , testCase "HUnit checkGroups "  $ hUnitCheckGroups @?= True
-  
+  , testCase "HUnit checkGroups  "  $ hUnitCheckGroups @?= True
+  , testCase "HUnit maybeWheel   "  $ hUnitmaybeWheel  @?= True
+  , testCase "HUnit maybeStraight"  $ hUnitMaybeStraight @?= True
+  , testProperty "maybeStraight length" lengthStraightprop
   ]
 
 ------------------------------------------------
@@ -79,25 +77,24 @@ function value
 
     - test length with properties
     - test edge-cases
-    -
+
 function ifNotFlush
     - test length with properties
     - test edge-cases
-    - 
+
 function ifFlush
     - test length with properties
     - test edge-cases
-    -
+
+
 function lastNelem
 function maybeFlush
-function maybeStraight
-function maybeWheel
-
-
 
 
    ------  CHECKed under this line ---------
 
+function maybeStraight
+function maybeWheel
 function checkGroups
 function evalGroupedRanks
 function groupBySuccCards
@@ -107,6 +104,224 @@ function sortByLength
 
 
 -- bug found in maybeFlush: if running with aceLowStraight -> Gives cards in wrong order
+
+------------------------- maybeStraight--------------------------------
+
+
+lengthStraightprop :: Property
+lengthStraightprop = forAll genListHand $ \hand ->
+         case maybeStraight hand of
+                Nothing    -> True
+                Just cards -> length cards == 5
+
+hUnitMaybeStraight :: Bool
+hUnitMaybeStraight = and [maybeStraight1,
+                          maybeStraight2,
+                          maybeStraight3,
+                          maybeStraight4,
+                          maybeStraight5,
+                          maybeStraight6,
+                          maybeStraight7]
+
+
+-- straight
+maybeStraight1 :: Bool
+maybeStraight1 = Just [ Card Nine Clubs,
+                        Card Eight Clubs,                    
+                        Card Seven Clubs,                    
+                        Card Six Hearts ,                    
+                        Card Five Hearts] == handData
+        where
+            hand = [Card Three Hearts,
+                    Card Five Hearts,
+                    Card Six Hearts,
+                    Card Seven Clubs,
+                    Card Eight Clubs,
+                    Card Nine Clubs,
+                    Card Ace Spades]
+            handData = maybeStraight hand
+
+-- Royal straight
+maybeStraight2 :: Bool
+maybeStraight2 = Just [ Card Ace Clubs,
+                         Card King Hearts,                    
+                         Card Queen Clubs,                    
+                         Card Jack Clubs,                    
+                         Card Ten Hearts] == handData
+        where
+            hand = [Card Three Hearts,
+                    Card Five Hearts,
+                    Card Six Hearts,
+                    Card Ten Hearts,
+                    Card Jack Clubs,   
+                    Card Queen Clubs,   
+                    Card King Hearts, 
+                    Card Ace Clubs]
+            handData = maybeStraight hand
+
+-- wheel-straight
+maybeStraight3 :: Bool
+maybeStraight3 = Just [Card Five Clubs,
+                       Card Four Clubs,
+                       Card Three Hearts,
+                       Card Two Hearts,                    
+                       Card Ace Hearts] == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Three Hearts,
+                    Card Four Clubs,
+                    Card Five Clubs,
+                    Card Ace Hearts]
+            handData = maybeStraight hand
+
+-- no straight
+maybeStraight4 :: Bool
+maybeStraight4 = Nothing == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Three Hearts,
+                    Card Seven Clubs,
+                    Card Ten Clubs,
+                    Card Jack Hearts,
+                    Card King Clubs,
+                    Card Ace Hearts]
+            handData = maybeStraight hand
+
+
+-- long straight [2,3,4,5,6,7,8]
+maybeStraight5 :: Bool
+maybeStraight5 = Just [Card Eight Spades,                    
+                       Card Seven Diamonds,
+                       Card Six Clubs,                                          
+                       Card Five Hearts, 
+                       Card Four Clubs ] == handData
+        where
+           hand = [ Card Two Clubs, 
+                    Card Three Diamonds, 
+                    Card Four Clubs, 
+                    Card Five Hearts, 
+                    Card Six Clubs, 
+                    Card Seven Diamonds, 
+                    Card Eight Spades]
+           handData = maybeStraight hand
+
+
+
+-- long straight with wheel [2,3,4,5,6,7,8,A]
+maybeStraight6 :: Bool
+maybeStraight6 = Just [Card Eight Spades,                    
+                       Card Seven Diamonds,
+                       Card Six Clubs,                                          
+                       Card Five Hearts, 
+                       Card Four Clubs ] == handData
+        where
+           hand = [ Card Two Clubs, 
+                    Card Three Diamonds, 
+                    Card Four Clubs, 
+                    Card Five Hearts, 
+                    Card Six Clubs, 
+                    Card Seven Diamonds, 
+                    Card Eight Spades,
+                    Card Ace Spades]
+           handData = maybeStraight hand
+
+
+-- straight with duplicates
+maybeStraight7 :: Bool
+maybeStraight7 = Just [ Card Nine Clubs,
+                        Card Eight Clubs,                    
+                        Card Seven Diamonds,                    
+                        Card Six Hearts ,                    
+                        Card Five Hearts] == handData
+        where
+            hand = [Card Three Hearts,
+                    Card Five Hearts,
+                    Card Six Hearts,
+                    Card Seven Diamonds,
+                    Card Seven Clubs,
+                    Card Eight Clubs,
+                    Card Nine Clubs]
+            handData = maybeStraight hand
+
+
+------------------------- maybeWheel--------------------------------
+
+hUnitmaybeWheel :: Bool
+hUnitmaybeWheel = and [maybeWheel1,
+                       maybeWheel2,
+                       maybeWheel3,
+                       maybeWheel4,
+                       maybeWheel5]
+
+-- wheel 
+maybeWheel1 :: Bool
+maybeWheel1 = Just [Card Five Clubs,
+                    Card Four Clubs,
+                    Card Three Hearts,
+                    Card Two Hearts,                    
+                    Card Ace Hearts] == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Three Hearts,
+                    Card Four Clubs,
+                    Card Five Clubs,
+                    Card Ace Hearts]
+            handData = maybeWheel hand
+
+-- wheel med avbrott
+maybeWheel2 :: Bool
+maybeWheel2 = Just [Card Five Clubs,
+                    Card Four Clubs,
+                    Card Three Hearts,
+                    Card Two Hearts,                    
+                    Card Ace Hearts] == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Three Hearts,
+                    Card Four Clubs,
+                    Card Five Clubs,
+                    Card Eight Spades,
+                    Card Ten Spades,
+                    Card Ace Hearts]
+            handData = maybeWheel hand
+
+-- not wheel
+maybeWheel3 :: Bool
+maybeWheel3 = Nothing == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Three Hearts,
+                    Card Five Clubs,
+                    Card Eight Spades,
+                    Card Ten Spades,
+                    Card Ace Hearts]
+            handData = maybeWheel hand
+
+
+-- Straight that not is wheel
+
+maybeWheel4 :: Bool
+maybeWheel4 = Nothing == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Three Hearts,
+                    Card Four Clubs,
+                    Card Five Clubs,
+                    Card Six Clubs,
+                    Card Eight Spades,
+                    Card Ten Spades]
+            handData = maybeWheel hand
+
+-- less than 5 cards
+maybeWheel5 :: Bool
+maybeWheel5 = Nothing == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Three Hearts,
+                    Card Four Clubs,
+                    Card Ace Hearts]
+            handData = maybeWheel hand
+
 
 -------------------------checkGroups--------------------------------
 
@@ -494,6 +709,13 @@ genIntList =  vectorOf 7 (choose (1,4))
 
 ----------------------groupBySuccCards------------------------------
 
+hUnitGroupBySucc :: Bool
+hUnitGroupBySucc = and [groupBySuccCardsTest1,
+                        groupBySuccCardsTest2,
+                        groupBySuccCardsTest3,
+                        groupBySuccCardsTest4,
+                        groupBySuccCardsTest5]
+
 groupBySuccCardsTest1 :: Bool
 groupBySuccCardsTest1 = groupBySuccCards [Card King Hearts, Card Ace Hearts] ==  [[Card King Hearts, Card Ace Hearts]]
 
@@ -637,16 +859,19 @@ hand28 :: Hand
 hand28 = [Card Five Hearts, Card Six Spades, Card Seven Clubs, Card Eight Diamonds, Card Ace Hearts]
 
 hand29 :: Hand -- Straight Ace Low
-hand29 = [Card Ace Diamonds, Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts]
+hand29 = [ Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts, Card Ace Diamonds]
 
 hand30 :: Hand -- Straight Ace Low
-hand30 = [Card Ace Diamonds, Card Two Diamonds, Card Three Diamonds, Card Four Diamonds, Card Five Diamonds]
+hand30 = [ Card Two Diamonds, Card Three Diamonds, Card Four Diamonds, Card Five Diamonds, Card Ace Diamonds]
+
+
+
 
 hand31 :: Hand
 hand31 = [Card Two Hearts, Card Three Spades, Card Four Hearts, Card Five Clubs]
 
 hand32 :: Hand -- Straight Ace Low
-hand32 = [ Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts, Card Ace Diamonds]
+hand32 = [ Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts, Card King Hearts, Card Ace Diamonds]
 
 ---------------------------------
 ----------- HandLists -----------

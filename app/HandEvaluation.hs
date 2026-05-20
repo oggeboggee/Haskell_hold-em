@@ -90,18 +90,23 @@ maybeFlush cs
 
 maybeStraight :: [Card] -> Maybe [Card]
 maybeStraight cards
-  | length cs'' >= 5 = Just (lastNelems 5 cs'')
+  | length cs'' >= 5 = Just (take 5 $ reverse cs'')
   | otherwise = maybeWheel cardsUniqRanks
   where
     cardsUniqRanks = nubBy ((==) `on` rank) cards
-    cs'' = head $ sortByLength $ groupBySuccCards $ sort cardsUniqRanks
+    cs'' = head $ sortByLength $ groupBySuccCards $ sort cardsUniqRanks --sorts by rank
 
+
+-- | Checks if Wheel (lowest possible straight ([A,2,3,4,5]))
+-- | if Wheel: returns [5,4,3,2,A]
+-- | Else:     returns Nothing 
 maybeWheel :: [Card] -> Maybe [Card]
 maybeWheel cards
-  | length filteredCards == 5 = Just (reverse filteredCards)
+  | length filteredCards == 5 = Just ((\(x:xs) -> xs ++ [x]) $ reverse filteredCards)
   | otherwise = Nothing
   where
     filteredCards = (flip elem [Ace, Two, Three, Four, Five] . rank) `filter` cards
+
 
 checkGroups :: [Card] -> (Combination, [Card])
 checkGroups hand = (hRank, cards)
