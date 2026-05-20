@@ -51,6 +51,11 @@ function handComparision
     - try to compare same hand
     - try to give wrong input, do we need to fix it if it crashes? why/why not?
 function value
+    - test hands when it could be different kind of combinations at the same time. see if we will get the right one -> HUnit-tests
+        
+        -- test flush at the same time as fullHouse., find svårigheter in the structure of the code.
+
+
     - test length with properties
     - test edge-cases
     -
@@ -81,6 +86,193 @@ function sortByLength
 
 -- bug found in maybeFlush: if running with aceLowStraight -> Gives cards in wrong order
 
+-------------------------checkGroups--------------------------------
+
+--length-prop <= 5
+
+-- | quads
+checkGroupsQuads :: Bool
+checkGroupsQuads = [Card Eight Hearts,
+                    Card Eight Spades,
+                    Card Eight Diamonds,
+                    Card Eight Clubs,
+                    Card Ten Clubs] == cards
+    where
+        hand          = [Card Seven Hearts,
+                         Card Eight Hearts,
+                         Card Eight Clubs,
+                         Card Eight Diamonds,
+                         Card Eight Spades,
+                         Card Nine Hearts,
+                         Card Ten Clubs] 
+        (comb, cards) = checkGroups hand
+
+-- | quads and threeOfAKind [4,3]
+checkGroupsQuads2 :: Bool
+checkGroupsQuads2 = [Card Eight Hearts, 
+                     Card Eight Spades, 
+                     Card Eight Diamonds, 
+                     Card Eight Clubs , 
+                     Card Ten Hearts] == cards
+    where
+        hand          = [Card Eight Hearts,
+                         Card Eight Spades, 
+                         Card Eight Diamonds, 
+                         Card Eight Clubs , 
+                         Card Ten Hearts, 
+                         Card Ten Spades, 
+                         Card Ten Diamonds]
+        (comb, cards) = checkGroups hand
+
+-- | quads and threeOfAKind [3, 4]
+checkGroupsQuads3 :: Bool
+checkGroupsQuads3 = [Card Ten Hearts, 
+                     Card Ten Spades, 
+                     Card Ten Diamonds, 
+                     Card Ten Clubs , 
+                     Card Eight Spades] == cards
+    where
+        hand          = [Card Eight Spades, 
+                         Card Eight Diamonds, 
+                         Card Eight Clubs , 
+                         Card Ten Hearts, 
+                         Card Ten Spades, 
+                         Card Ten Diamonds, 
+                         Card Ten Clubs]
+        (comb, cards) = checkGroups hand
+
+
+-- | fullHouse [3,2]
+checkGroupsFullHouse :: Bool
+checkGroupsFullHouse = [Card Five Hearts, 
+                        Card Five Spades, 
+                        Card Five Diamonds,
+                        Card Six Hearts, 
+                        Card Six Diamonds ] == cards
+        where
+            hand = [Card Five Hearts, 
+                    Card Five Spades, 
+                    Card Five Diamonds, 
+                    Card Six Hearts, 
+                    Card Six Diamonds, 
+                    Card Eight Hearts, 
+                    Card Ten Hearts]
+            (comb, cards) = checkGroups hand
+
+-- | fullHouse [2,3]
+checkGroupsFullHouse2 :: Bool
+checkGroupsFullHouse2 = [Card Six Hearts, 
+                        Card Six Diamonds,
+                        Card Six Clubs,
+                        Card Five Spades, 
+                        Card Five Diamonds  ] == cards
+        where
+            hand = [Card Five Spades, 
+                    Card Five Diamonds, 
+                    Card Six Hearts, 
+                    Card Six Diamonds,
+                    Card Six Clubs, 
+                    Card Eight Hearts, 
+                    Card Ten Hearts]
+            (comb, cards) = checkGroups hand
+
+-- | fullHouse [3,3]
+checkGroupsFullHouse3 :: Bool
+checkGroupsFullHouse3 = [Card Six Hearts, 
+                         Card Six Diamonds,
+                         Card Six Clubs,
+                         Card Five Hearts, 
+                         Card Five Spades  ] == cards
+        where
+            hand = [Card Five Hearts,
+                    Card Five Spades, 
+                    Card Five Diamonds, 
+                    Card Six Hearts, 
+                    Card Six Diamonds,
+                    Card Six Clubs, 
+                    Card Eight Hearts, 
+                    Card Ten Hearts]
+            (comb, cards) = checkGroups hand
+
+
+
+
+{-}
+checkGroupsFullHouse :: Bool
+checkGroupsFullHouse = [] == cards
+        where
+            hand = []
+            (comb, cards) = checkGroups hand
+-}
+
+-- threeOfAKind [3]
+checkGroupsTrips :: Bool
+checkGroupsTrips = [Card Eight Hearts, 
+                    Card Eight Diamonds, 
+                    Card Eight Clubs,
+                    Card Ace Hearts,
+                    Card Ten Clubs] == cards
+        where
+            hand = [Card Two Hearts,
+                    Card Three Spades, 
+                    Card Eight Diamonds, 
+                    Card Eight Hearts, 
+                    Card Eight Clubs,
+                    Card Ten Clubs, 
+                    Card Ace Hearts]
+            (comb, cards) = checkGroups hand
+
+-- threeOfAKind [3] & Flush (it should give ThreeOfAKind)
+checkGroupsTrips1 :: Bool
+checkGroupsTrips1 = (ThreeOfAKind, [Card Eight Hearts, 
+                                    Card Eight Diamonds, 
+                                    Card Eight Clubs,
+                                    Card Ace Clubs,
+                                    Card Jack Clubs]) == handData
+        where
+            hand = [Card Eight Diamonds, 
+                    Card Eight Hearts, 
+                    Card Eight Clubs,
+                    Card Nine Clubs,
+                    Card Jack Clubs,
+                    Card Ace Clubs]
+            handData = checkGroups hand
+
+
+-- threeOfAKind [3] & Straight (it should give ThreeOfAKind)
+checkGroupsTrips2 :: Bool
+checkGroupsTrips2 = (ThreeOfAKind, [Card Eight Hearts, 
+                                    Card Eight Diamonds, 
+                                    Card Eight Clubs,
+                                    Card Queen Diamonds,
+                                    Card Jack Clubs]) == handData
+        where
+            hand = [Card Eight Diamonds, 
+                    Card Eight Hearts, 
+                    Card Eight Clubs,
+                    Card Nine Clubs,
+                    Card Ten Hearts,
+                    Card Jack Clubs,
+                    Card Queen Diamonds]
+            handData = checkGroups hand
+
+
+{-
+-- threeOfAKind [3] & straight (it should give ThreeOfAKind)
+checkGroupsTrips2 :: Bool
+checkGroupsTrips2 = [] == cards
+        where
+            hand = []
+            (comb, cards) = checkGroups hand
+-}
+--TwoPairs
+
+-- Pair
+
+--HighCard
+
+
+
 ----------------------evalGroupedRanks------------------------------
 
 evalGroupedRanksProp :: Property
@@ -105,6 +297,8 @@ evalGroupedRanksPropHelp rankGroup
 
 genIntList :: Gen [RankGroup]
 genIntList =  vectorOf 7 (choose (1,4))
+
+
 
 
 
