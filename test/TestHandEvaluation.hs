@@ -45,6 +45,8 @@ combinationsTests = localOption (QuickCheckTests 5000) $
   , testCase "HUnit maybeWheel   "  $ hUnitmaybeWheel  @?= True
   , testCase "HUnit maybeStraight"  $ hUnitMaybeStraight @?= True
   , testProperty "maybeStraight length" lengthStraightprop
+  , testCase "HUnit checkGroups  "  $ hUnitMaybeFlush @?= True
+  , testProperty "same suit in maybeFlush" sameSuitFlushProp
   ]
 
 ------------------------------------------------
@@ -79,20 +81,14 @@ function value
     - test edge-cases
 
 function ifNotFlush
-    - test length with properties
-    - test edge-cases
-
 function ifFlush
-    - test length with properties
-    - test edge-cases
-
-
 function lastNelem
-function maybeFlush
+
 
 
    ------  CHECKed under this line ---------
 
+function maybeFlush
 function maybeStraight
 function maybeWheel
 function checkGroups
@@ -105,8 +101,88 @@ function sortByLength
 
 -- bug found in maybeFlush: if running with aceLowStraight -> Gives cards in wrong order
 
-------------------------- maybeStraight--------------------------------
+------------------------- maybeFlush --------------------------------
 
+hUnitMaybeFlush :: Bool
+hUnitMaybeFlush = and [maybeFlush1,
+                       maybeFlush2,
+                       maybeFlush3,
+                       maybeFlush4]
+
+
+sameSuitFlushProp :: Property
+sameSuitFlushProp = forAll genListHand $ \hand ->
+         case maybeFlush hand of
+                Nothing    -> True
+                Just cards -> all (==head suits) suits
+                 where
+                  suits = map suit cards
+
+
+-- Flush
+maybeFlush1 :: Bool
+maybeFlush1 = Just [Card Queen Clubs,
+                    Card Jack Clubs,
+                    Card Ten Clubs,
+                    Card Eight Clubs,
+                    Card Five Clubs] == handData
+        where
+            hand = [Card Four Hearts,
+                    Card Five Clubs,                    
+                    Card Eight Clubs,    
+                    Card Ten Clubs,
+                    Card Jack Clubs,
+                    Card Queen Clubs,
+                    Card Ace Diamonds ]
+            handData = maybeFlush hand
+
+
+-- Not Flush (HighCard)
+maybeFlush2 :: Bool
+maybeFlush2 = Nothing == handData
+        where
+            hand = [Card Four Hearts,
+                    Card Five Clubs,                    
+                    Card Eight Hearts,    
+                    Card Ten Clubs,
+                    Card Jack Hearts,
+                    Card Queen Clubs,
+                    Card Ace Diamonds ]
+            handData = maybeFlush hand
+
+
+
+-- same suit on all card should keep all cards, otherwise we could miss potential starightFlushes
+maybeFlush3 :: Bool
+maybeFlush3 = (Just $ reverse hand)  == handData
+        where
+            hand = [Card Four Clubs,
+                    Card Five Clubs,                    
+                    Card Eight Clubs,    
+                    Card Ten Clubs,
+                    Card Jack Clubs,
+                    Card Queen Clubs,
+                    Card Ace Clubs ]
+            handData = maybeFlush hand
+
+
+-- wheel-flush (should put ace last in list )
+maybeFlush4 :: Bool
+maybeFlush4 = Just [Card Five Hearts,
+                    Card Four Hearts,
+                    Card Three Hearts,
+                    Card Two Hearts,
+                    Card Ace Hearts]  == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Three Hearts,
+                    Card Four Hearts,
+                    Card Five Hearts,
+                    Card Ace Hearts]
+            handData = maybeFlush hand
+
+
+------------------------- maybeStraight--------------------------------
 
 lengthStraightprop :: Property
 lengthStraightprop = forAll genListHand $ \hand ->

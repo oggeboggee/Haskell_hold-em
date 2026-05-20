@@ -67,9 +67,11 @@ ifNotFlush cards = maybe (checkGroups cards) ((Straight,) . reverse ) (maybeStra
 
 ifFlush :: [Card] -> (Combination, [Card])
 ifFlush cards =
-  maybe (Flush, take 5 cards) ((StraightFlush,) . reverse) (maybeStraight cards)
-
+  maybe (Flush, take 5 cards) (StraightFlush,) (maybeStraight cards)
+   
 ------------------------------------------------------------
+
+
 
 lastNelems :: Int -> [a] -> [a]
 lastNelems n xs = foldl' (const . drop 1) xs (drop n xs)
@@ -93,7 +95,7 @@ maybeStraight cards
   | length cs'' >= 5 = Just (take 5 $ reverse cs'')
   | otherwise = maybeWheel cardsUniqRanks
   where
-    cardsUniqRanks = nubBy ((==) `on` rank) cards
+    cardsUniqRanks = nubBy ((==) `on` rank) $ sort cards
     cs'' = head $ sortByLength $ groupBySuccCards $ sort cardsUniqRanks --sorts by rank
 
 
