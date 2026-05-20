@@ -23,7 +23,8 @@ unitTests = testGroup "Unit tests State"
      unitApllyEventPlayerEvent,
      unitPlacePureBet,
      unitPureFold,
-     unitPureCheck
+     unitPureCheck,
+     unitRunShowdown
     ]
 
 propertyTests :: TestTree
@@ -251,14 +252,43 @@ unitPureCheck =
 -----------------------------------------------------
 -- | runShowdown Unit tests
 
--- Testing with a fixed state
--- unitRunShowdown :: TestTree
--- unitRunShowdown =
---     let state = table2 {board = [Card Five Hearts, 
---                                  Card Six Spades, 
---                                  Card Seven Clubs, 
---                                  Card Eight Diamonds, 
---                                  Card Ace Hearts]}
+-- Testing with a fixed state, using table3 --> winners should be Sam and Jonathan,
+    -- They should split the pot evenly --> Gaining 300 chips each
+unitRunShowdown :: TestTree
+unitRunShowdown = testGroup "Unit test runShowdown"
+    [ -- Calculate winners
+    testCase "Correct winners"
+        $   let showdownHappend = (evalState (runShowdown) table3)
+                winnersName     = unPackWinners (showdownHappend!!0)
+
+            in winnersName @?= ["Sam", "Jonathan"]
+    
+    , -- Both players should get 300 chips
+    testCase "Correct dealout of chips to winners first"
+        $   let finalState          = (execState (runShowdown) table3)
+                samChipsBefore      = chips (players table3!!1)
+                --jonathanChipsBefore = chips (players table3!!2)
+
+                samChipsAfter       = chips (players finalState!!1)
+                --jonathanChipsAfter  = chips (players finalState!!2)
+            
+            in samChipsAfter @?= (samChipsBefore + 300)
+    
+    , -- Both players should get 300 chips
+    testCase "Correct dealout of chips to winners second"
+        $   let finalState          = (execState (runShowdown) table3)
+                jonathanChipsBefore = chips (players table3!!2)
+                jonathanChipsAfter  = chips (players finalState!!2)
+            
+            in jonathanChipsAfter @?= (jonathanChipsBefore + 300)
+
+    , -- Pot is set to 0
+    testCase "Pot is set to zero"
+        $   let finalState = (execState (runShowdown) table3)
+
+            in (pot finalState) @?= 0
+    ]
+    
 
 
 
@@ -515,6 +545,7 @@ table2 = Table
 
 
 -- This faild in "Winners win correct amount of chips"
+-- DO NOT CHANGE, is used to test runShowdown in unit tests
 players3 :: [Player]
 players3 = [Player "Bob" [Card Queen Diamonds, Card Jack Spades] 500 50 False False,
             Player "Sam" [Card Two Spades, Card Three Hearts] 500 100 False False,
@@ -625,7 +656,7 @@ unPackWinners _                     = []
 -- pureFold                 [x]
 -- pureCheck                [x]
 -- updatePlayerAtIndex      []
--- runShodown               []
+-- runShodown               [x]
         -- noNegativeChips
         -- correct winners
         -- Even pot distribution
