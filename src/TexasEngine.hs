@@ -4,7 +4,7 @@ module TexasEngine where
 import Types
 import Cards
 import Actions
-import HandEvaluation
+--import HandEvaluation
 import Utilities
 
 -- Packages
@@ -37,7 +37,9 @@ gameRound = do
     bettingRound
 
     -- FLOP --
-    runPhase
+
+    printTable
+    runPhase 
 
     -- TURN --
     runPhase
@@ -247,6 +249,11 @@ dealHands = do
 -- | Deal community cards to the board.
 dealCommunityCards :: State Table ()--Game () -- State Table ()
 dealCommunityCards = do
+    -- let active = filter (not . folded) (players table)
+    -- if length active <= 1 then return []
+
+    -- else 
+    pl <- gets players
     currentPhase <- gets phase
     cards <- case currentPhase of
         Flop  -> dealCards 3
@@ -254,7 +261,8 @@ dealCommunityCards = do
         River -> dealCards 1
         _     -> return []
 
-    modify (\t -> t { board = board t ++ cards })
+    if length (filter (not . folded) pl) <= 1 then return ()
+    else modify (\t -> t { board = board t ++ cards }) 
 
 
 --------------------------------------------------------------
@@ -393,30 +401,3 @@ printtHandsShowdown = do
         liftIO $ mapM_ (\p -> putStrLn (name p ++ "'s hand: " ++ show (hand p))) ps
 
 --------------------------------------------------------------
-
-
-
--- | Manual testing:
-player1 :: Player
-player1 = Player "Axel" hd11 400 0 False False
-
-player2 :: Player
-player2 = Player "Frodo" hd12 340 100 False False
-
-player3 :: Player
-player3 = Player "Sam" hd13 530 0 False False
-
-playerlist :: [Player]
-playerlist = [player1, player2, player3]
-
-table2 :: Table
-table2 = Table playerlist{- playerlist -}100 [] fullDeck [] PreFlop 200 0 1 2
-
-hd11 :: Hand
-hd11 = [ Card Two Hearts, Card Jack Spades]
-
-hd12 :: Hand
-hd12 = [ Card Two Diamonds, Card Jack Spades]
-
-hd13 :: Hand
-hd13 = [ Card Ten Spades, Card King Clubs]

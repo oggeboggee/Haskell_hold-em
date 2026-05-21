@@ -9,7 +9,7 @@ import Data.Char
 import Data.List (isPrefixOf)
 import Utilities
 import HandEvaluation
-
+--import Cards
 
 -- With these changes the gameloop for eventsshould become
 -- 1. Pick a player
@@ -57,7 +57,7 @@ getPlayerEvent playerIndex = do
 -- | Take the user input and convert it into a Maybe Action.
 convertAction :: String -> Maybe Action
 convertAction userInput = 
-    let s = (map toLower) userInput
+    let s = map toLower userInput
     in case s of
         "fold" -> Just Fold
         "check" -> Just Check
@@ -65,7 +65,7 @@ convertAction userInput =
         "all in" -> Just AllIn
         "allin" -> Just AllIn
         _ | "raise " `isPrefixOf` s -> if all isDigit amount then Just (Raise (read amount)) else Nothing
-                                        where amount = (drop 6 s) 
+                                        where amount = drop 6 s
         _ -> Nothing
 
 -- | Source guide:
@@ -81,7 +81,8 @@ applyEvent (PlayerEvent playerIndex action) = do
     table <- get
     let player = (players table) !! playerIndex
         hb     = (highBet table)
-        cChips = (commitedChips player)
+        --chips  = chips player
+        cChips = commitedChips player
         plName = (name player)
         toCall = hb - cChips
 
@@ -99,12 +100,12 @@ applyEvent (PlayerEvent playerIndex action) = do
                 pure (Left "You can't check when behind the highbet.")
 
         Call -> do
-            if toCall <= 0
-            then pure (Left "There isn't a bet to call.")
+            if toCall <= 0 || hb > chips player
+            then pure (Left "There isn't a bet to call or you don't have enough chips to call.") -- Should be no bet to call or higBet to big
             else do
 
                 let amount = hb - cChips
-                modify (\t -> placePureBet table playerIndex amount)
+                modify (\t -> placePureBet t playerIndex amount)
                 playerHaveActed playerIndex -- Change a players acted to True
                 pure (Right [PlayerCalled plName amount])
 
@@ -113,13 +114,13 @@ applyEvent (PlayerEvent playerIndex action) = do
 
 
         Raise x -> do
-            if x <= 0 || x > (chips player + lowestBet table player)
+            if x <= 0 || x > (chips player - lowestBet table player)
             then pure (Left "Raise amount must be larger than 0 and smaller then the amount of chips you have")
             else do
 
                 let callAmount = hb - cChips
                     totalAmount = callAmount + x
-                modify (\t -> placePureBet table playerIndex totalAmount)
+                modify (\t -> placePureBet t playerIndex totalAmount)
                 playerHaveActed playerIndex
 
                 pure (Right [PlayerRaised plName x])
@@ -127,7 +128,7 @@ applyEvent (PlayerEvent playerIndex action) = do
         AllIn -> do
             let amount = (chips player)
 
-            modify (\t -> placePureBet table playerIndex amount)
+            modify (\t -> placePureBet t playerIndex amount)
             playerHaveActed playerIndex -- Change a players acted to True
 
             pure (Right [PlayerAllIn plName amount])
@@ -241,11 +242,14 @@ performEvent event = do
 --     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
 updatePlayerAtIndex playerIndex f table =
-    let playerList = (players table)
-        player = playerList !! playerIndex
-        updatedPlayer = f player
-        updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
-    in table { players = updatePlayerList }
+    if playerIndex < 0 || playerIndex > (length (players table) - 1)
+        then error "Invalid index in updatePlayerAtIndex"
+    else
+        let playerList = (players table)
+            player = playerList !! playerIndex
+            updatedPlayer = f player
+            updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
+        in table { players = updatePlayerList }
 
 
 -- placeBet that works with Gaem() 
@@ -253,7 +257,8 @@ updatePlayerAtIndex playerIndex f table =
 placePureBet :: Table -> PlayerIndex -> Bet -> Table
 placePureBet table playerIndex bet =
     let tableUpdated = updatePlayerAtIndex playerIndex 
-                        (\player -> decChips player bet) table
+                                (`decChips` bet) table
+                        
         
         player = (players tableUpdated) !! playerIndex
     in tableUpdated
@@ -290,3 +295,25 @@ printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))
 
 --------------------------------------------------------------
 --------------------------------------------------------------
+
+
+
+-- playersExampel1 :: [Player]
+-- playersExampel1 = [Player "Bob" [] 950 50 False False,
+--                        Player "Sam" [] 900 100 False False,
+--                        Player "Jonathan" [] 50 0 False False,
+--                        Player "Lewis" [] 1000 0 False False]
+
+-- table1 :: Table
+-- table1 = Table 
+--             { players = playersExampel1,
+--               deck = fullDeck,
+--               board = [],
+--               phase = PreFlop,
+--               highBet = 100,
+--               pot = 150,
+--               dealerPosition = 3,
+--               smallBlindPosition = 0,
+--               bigBlindPosition = 1,
+--               bets = []
+--             }

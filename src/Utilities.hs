@@ -2,12 +2,12 @@ module Utilities where
 
 
 import Types
-import Cards
---import Actions
-import Control.Monad.State
-import Data.Char (toLower)
-import System.Random
-import HandEvaluation
+-- import Cards
+-- --import Actions
+-- import Control.Monad.State
+-- import Data.Char (toLower)
+-- import System.Random
+-- import HandEvaluation
 
 
 --------------------------------------------------------------------------------
@@ -28,10 +28,10 @@ nextPhase p = case p of
 -- | It wraps around the table.
 nextPlayerToAct :: PlayerIndex -> [Player] -> PlayerIndex
 nextPlayerToAct i playersList = 
-    let n = (length playersList)
+    let n = length playersList
         nextPlayer = (i + 1) `mod` n
         player = playersList !! nextPlayer
-    in if ((folded player) || (chips player) == 0)
+    in if folded player || chips player == 0
        then nextPlayerToAct nextPlayer playersList
        else nextPlayer 
 
@@ -122,12 +122,12 @@ allPlayersAllIn table =
 ----------------------------------------------------------------
 -- | Pure function, decrease the amount of chips a player have by a certain amount
 decChips :: Player -> Bet -> Player
-decChips player bet = player {chips         = (chips player)-bet,
-                              commitedChips = (commitedChips player)+bet}
+decChips player bet = player {chips         = chips player - bet,
+                              commitedChips = commitedChips player + bet}
 
 -- | increase the amount of chips a player have by a certain amount
 incChips :: Player -> Pot -> Player
-incChips player pot = player {chips = (chips player)+pot}
+incChips player currentPot = player {chips = chips player + currentPot}
 
 -- | Reset the commited chips a player have made to zero
 resetCommited :: Player -> Player
@@ -135,12 +135,9 @@ resetCommited player = player {commitedChips = 0}
 
 -- | Increase the Pot by a certain amount
 incPot :: Pot -> Bet -> Pot
-incPot pot bet = pot + bet
+incPot currentPot bet = currentPot + bet
 
 -- | Helper function to calculate lowest bet a player can make
 lowestBet :: Table -> Player -> Bet
 lowestBet table player = highBet table - commitedChips player
 
-
-
-                            
