@@ -1,7 +1,7 @@
 
 import Test.Tasty
-import Test.Tasty.QuickCheck as QC
-import Test.Tasty.HUnit as HU
+-- import Test.Tasty.QuickCheck as QC
+-- import Test.Tasty.HUnit as HU
 
 
 import UtilitiesTest
@@ -16,21 +16,12 @@ main :: IO ()
 main = defaultMain $ 
   testGroup "All test"
   [ StateTest.unitTests,
-    StateTest.propertyTests
-    --UtilitiesTest.tests
+    StateTest.propertyTests,
+    UtilitiesTest.unitTests,
+    UtilitiesTest.propertyTests
   ]
 
 
--- average' :: Float-> Float -> Float
--- average' a b = (a+b)/2
-
--- propAverage :: Float -> Float -> Bool
--- propAverage a b = average' a b == a/2 + b/2
-
--- tests :: TestTree
--- tests = testGroup "All test"
---   [ Game.UtilitiesTest.tests
---   ]
 
 
 

@@ -1,5 +1,6 @@
 module StateTest where
 
+import Control.Exception
 import Test.Tasty.QuickCheck as QC
 import Test.Tasty.HUnit as HU
 import Test.Tasty
@@ -13,6 +14,7 @@ import Actions
 import Utilities
 import HandEvaluation
 
+import TestHelpers
 -- =========================================================== --  
    ----------------------- Unit Tests ------------------------
 -- | Group all unit tests
@@ -24,15 +26,17 @@ unitTests = testGroup "Unit tests State"
      unitPlacePureBet,
      unitPureFold,
      unitPureCheck,
-     unitRunShowdown
+     unitRunShowdown,
+     unitUpdatePlayerAtIndex
     ]
 
 propertyTests :: TestTree
 propertyTests = testGroup "Property tests State"
-    [ 
+    [
      propertyTestsApplyEvent,
      propertyTestsPureFold,
-     propertyTestsRunShowdown
+     propertyTestsRunShowdown,
+     propertyTestsPureCheck
     ]
 
 
@@ -89,8 +93,6 @@ unitApllyEventPlayerEvent = testGroup "applyEvent Unit tests"
             
             length newFoldedPlayers @?= length oldFoldedPlayers + 1
 
-
-
     --------------- Testing PlayerEvent Check -------
     , -- Player checking while not not matching highBet, should not be possible
     testCase "Player unable to check when behind highBet" 
@@ -141,9 +143,8 @@ unitApllyEventPlayerEvent = testGroup "applyEvent Unit tests"
             
             expectedAmount @?= (chipsBefore - chipsAfter)
 
-
     ]
-
+-----------------------------------------------------
 
 -----------------------------------------------------
 -- | placePureBet Unit tests
@@ -186,7 +187,7 @@ unitPlacePureBet = testGroup "placePureBet Unit tests"
 
           in highBetAfter @?= highBetAfter
     ]
-
+-----------------------------------------------------
 
 -----------------------------------------------------
 -- | pureFold Unit tests
@@ -289,6 +290,46 @@ unitRunShowdown = testGroup "Unit test runShowdown"
             in (pot finalState) @?= 0
     ]
     
+
+-----------------------------------------------------
+-- | runShowdown Unit tests
+
+unitUpdatePlayerAtIndex :: TestTree
+unitUpdatePlayerAtIndex = testGroup "Unit test updatePlayerAtIndex"
+    [ -- 10 is a invalid index 
+    testCase "Negative index should give an error"
+        $   assertThrows 
+            (evaluate 
+                (updatePlayerAtIndex 100 (\p -> p { acted = True }) table1)) 
+                "Invalid index in updatePlayerAtIndex"
+
+    ,
+    testCase "Negative index should give an error"
+        $   assertThrows 
+            (evaluate 
+                (updatePlayerAtIndex (-1) (\p -> p { acted = True }) table1)) 
+                "Invalid index in updatePlayerAtIndex"
+        
+    , 
+    testCase "Only one player should change their state (first player in list)"
+        $   let playerBefore = tail (players table1)
+                finalState   = updatePlayerAtIndex 0 (\p -> p { acted = True }) table1
+                playersAfter = tail (players finalState)
+            
+            in playerBefore @?= playersAfter
+
+    , -- 
+    testCase "Only one player should change their state (last player in list)"
+        $   let playerBefore = (tail . reverse) (players table1)
+                index        = (length (players table1) - 1)
+                finalState   = updatePlayerAtIndex index (\p -> p { acted = True }) table1
+                playersAfter = (tail . reverse) (players finalState)
+            
+            in playerBefore @?= playersAfter
+    ]
+
+-- =========================================================== --  
+
 
 
 
@@ -479,207 +520,31 @@ propertyTestsPureFold = testGroup "Property tests pureFold"
 
     ]
 
-
-
-
-
-
-----------------------------------------------------------------------
--- Helper functions for checking so there is no negative values for chips, pot etc.
--- | Checks all player chips and table pot for negative
-noNegativeChips :: Table -> Bool
-noNegativeChips table = let allChipValues = (map chips (players table)) ++ [pot table]
-                        in and (map (>=0) allChipValues)
-
 -----------------------------------------------------
+-- | properties pureCheck
 
 
+propertyTestsPureCheck :: TestTree
+propertyTestsPureCheck = testGroup "Property tests pureCheck"
+    [  -- =================== Testing pureFold ========================= --
+    QC.testProperty "When a player check their acted state should update"
+        -- Take a random player at the table and checks, should mean acted is true
+        -- Note that a player should only be able to check i certain situations but pureCheck dont care about that
+        $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
+            let table            = pureCheck table1 x
+                checkdPlayer     = players table!!x
 
--- =========================================================== --  
-   ----------------------- Test Cases ------------------------
+            in
+                (acted checkdPlayer) == True
 
---  Default state 1: 
--- In preflop, Sb -> Bob, Bb -> Sam
-players1 :: [Player]
-players1 = [Player "Bob" [] 950 50 False False,
-            Player "Sam" [] 900 100 False False,
-            Player "Jonathan" [] 1000 0 False False,
-            Player "Lewis" [] 1000 0 False False]
+    , -- Checking means no bet is placed, meaning a players chips should remain the same
+    QC.testProperty "When a player fold their chips should remain the same"
+        $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
+            let beforeCheck = players table1!!x
+                table      = pureCheck table1 x
+                afterCheck  = players table!!x
 
-table1 :: Table
-table1 = Table 
-            { players = players1,
-              deck = fullDeck,
-              board = [],
-              phase = PreFlop,
-              highBet = 100,
-              pot = 150,
-              dealerPosition = 3,
-              smallBlindPosition = 0,
-              bigBlindPosition = 1,
-              bets = []
-            }
+            in
+                (chips beforeCheck) == (chips afterCheck)
+    ]
 
-----------
--- | Default state 2
--- | For showdown testing
-players2 :: [Player]
-players2 = [Player "Bob" [] 500 50 False False,
-            Player "Sam" [] 500 100 False False,
-            Player "Jonathan" [] 500 0 False False,
-            Player "Lewis" [] 500 0 False False]
-
-table2 :: Table
-table2 = Table 
-            { players = players2,
-              deck = fullDeck,
-              board = [],
-              phase = Showdown,
-              highBet = 0,
-              pot = 600,
-              dealerPosition = 3,
-              smallBlindPosition = 0,
-              bigBlindPosition = 1,
-              bets = []
-            }
-
-
--- This faild in "Winners win correct amount of chips"
--- DO NOT CHANGE, is used to test runShowdown in unit tests
-players3 :: [Player]
-players3 = [Player "Bob" [Card Queen Diamonds, Card Jack Spades] 500 50 False False,
-            Player "Sam" [Card Two Spades, Card Three Hearts] 500 100 False False,
-            Player "Jonathan" [Card Two Hearts, Card Five Clubs] 500 0 False False,
-            Player "Lewis" [Card Nine Hearts, Card King Clubs] 500 0 False False]
-
-table3 :: Table
-table3 = Table 
-            { players = players3,
-              deck = fullDeck,
-              board = [Card Five Hearts, 
-                       Card Three Clubs, 
-                       Card Four Diamonds, 
-                       Card Six Clubs, 
-                       Card Nine Diamonds],
-              phase = Showdown,
-              highBet = 0,
-              pot = 600,
-              dealerPosition = 3,
-              smallBlindPosition = 0,
-              bigBlindPosition = 1,
-              bets = []
-            }
-
-
---------------------------------------------------
----------- Generate random game state -----------
-
--- OBS! These generators can still produce duplicates
-
----------------
--- | Helper to generate random hands
-randomiseHands :: [Player] -> QC.Gen [Player]
-randomiseHands = mapM oneHand
-    where
-        oneHand player = do
-            randomHand <- QC.vectorOf 2 (QC.elements fullDeck)
-            pure player {hand = randomHand}
-
----------------
--- | Helper to generate random communityCards
-randomiseCommunityCards :: Int -> QC.Gen [Card]
-randomiseCommunityCards x = do
-    communityCards <- QC.vectorOf x (QC.elements fullDeck)
-    pure communityCards
-
---------------
--- | Helper to randomise all cards at a table
-randomiseCardsAtTable :: Table -> Int -> QC.Gen Table
-randomiseCardsAtTable table x = do
-    newPlayers     <- randomiseHands (players table)
-    communityCards <- randomiseCommunityCards x
-
-    let allHands = [hand p | p <- newPlayers]
-        allCards = communityCards ++ (concat allHands)
-
-    if noDups allCards 
-        then pure $ table {players = newPlayers, board = communityCards}
-    else 
-        randomiseCardsAtTable table x
-
-
-
---------------------------------------------------------------------
-noDuplicatCards :: Table -> Bool
-noDuplicatCards table = 
-    let allHands = [hand p | p <- players table]
-        allCards = board table ++ (concat allHands)
-    
-    in noDups allCards
-
-
-noDups :: [Card] -> Bool
-noDups []     = True
-noDups (x:xs) = if x `elem` xs then False else noDups xs
-
-unPackWinners :: GameEvent -> [PlayerName]
-unPackWinners (ShowdownHappened pl) = pl
-unPackWinners _                     = []
-
-------------------------------------------------------------------------
-
-
-
-
--- ================================================================= --
-   ------------------------- Documentation -------------------------
---- One bug found so far
-    -- Player could get negative chips when raising an amount close to their max chips
-    -- Inbetween the amount of chips and lowest bet...
-
--- Another bug.. If someone can not match highBet, they can still call..
-    -- And end up with negative chips
-    -- Also need to change so that call don't show as an avalible action 
-
--- At the moment you can call when you have the exakt same amount of chips 
-    -- as the highbet. Should that be a call or an allin?   
-        
-
-
--- ================================================================= --
------------------------------- TODO --------------------------------
-{-
- TestSuite
--- convertAction            [x]
--- applyEvent               [x] -- Could be done tested more
--- placePureBet             [x]
--- pureFold                 [x]
--- pureCheck                [x]
--- updatePlayerAtIndex      []
--- runShodown               [x]
-        -- noNegativeChips
-        -- correct winners
-        -- Even pot distribution
-        -- Chips increase correctly
-
--- NoNegativeChips          [x]
---------------------------------
-Eninge
--- Waiting room             []
--- Player with 0 chips      []
--- Side pot                 []
--- Buy in                   []
--- No comCards when -        
-    one players left        []
-
------------------------------------
-Documentation
--- Checklist                []
--- Future roadmap           []
--- Hadock                   []
-
-
-
-
-
--}

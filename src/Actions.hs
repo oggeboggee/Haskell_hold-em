@@ -242,11 +242,14 @@ performEvent event = do
 --     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
 updatePlayerAtIndex playerIndex f table =
-    let playerList = (players table)
-        player = playerList !! playerIndex
-        updatedPlayer = f player
-        updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
-    in table { players = updatePlayerList }
+    if playerIndex < 0 || playerIndex > (length (players table) - 1)
+        then error "Invalid index in updatePlayerAtIndex"
+    else
+        let playerList = (players table)
+            player = playerList !! playerIndex
+            updatedPlayer = f player
+            updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
+        in table { players = updatePlayerList }
 
 
 -- placeBet that works with Gaem() 

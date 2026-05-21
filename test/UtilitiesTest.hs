@@ -9,17 +9,41 @@ import Test.Tasty (defaultMain)
 import TexasEngine
 import Cards
 import Types
+import Utilities
 
+import TestHelpers
 
 ------------- Testing pure utilites function ------------
 
-tests :: TestTree
-tests = testGroup "Utilites test"
-  [ testProperty "propSizeFullDeck" propSizeFullDeck,
-    testProperty "propNoDup" propNoDup
+
+unitTests :: TestTree
+unitTests = testGroup "Unit tests Utility"
+    [ 
+
+    ]
+
+
+
+propertyTests :: TestTree
+propertyTests = testGroup "Property tests utility"
+  [ QC.testProperty "Fulldeck --> 52 cards" propSizeFullDeck,
+    QC.testProperty "Fulldeck --> No duplicates" propNoDup,
+    
+    QC.testProperty "nextPlayerToAct --> always give valid index" 
+      -- Choose a random player at the table
+      $ QC.forAll (QC.choose(0, (length (players table2) - 1))) $ \x -> 
+        let nextIndex = (nextPlayerToAct x (players table2))
+        in (nextIndex < (length (players table2))) && (nextIndex >= 0)
   ]
 
--- | A new fullDeck should have 52 cards and no duplicates
+ -- ======================================================= --
+ ----------------------- Unit tests --------------------------
+
+
+
+
+ -- ======================================================= --
+ -------------------- Properties tests -----------------------
 
 -- | Size full deck
 propSizeFullDeck :: Bool
@@ -28,11 +52,6 @@ propSizeFullDeck = length fullDeck == 52
 -- | Check after duplicects in a full deck
 propNoDup :: Bool
 propNoDup = noDups fullDeck
-
--- | Helper function, Return true if there are No duplicates
-noDups :: Deck -> Bool
-noDups []     = True
-noDups (x:xs) = x `elem` xs || noDups xs
 
 
 
