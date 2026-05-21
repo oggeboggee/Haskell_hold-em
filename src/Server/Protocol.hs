@@ -77,6 +77,8 @@ data ServerMsg
     | JoinedTable PlayerName        -- broadcast when any player joins
     | LeftTable PlayerName          -- broadcast when any player leaves
     | GameEventMsgs [GameEvent]     -- what just happened (players folded, raised, shwodown etc.)
+    | LobbyJoined PlayerName Int    -- Player joins lobby, at position
+    | LobbyUpdate [PlayerName]      -- current lobby queue
     | Snapshot                      -- full public table state, sent after every state change.
         { snapPlayers :: [PlayerSnapshot]
         , snapPot     :: Chip
@@ -103,6 +105,17 @@ instance ToJSON ServerMsg where
 
     toJSON (GameEventMsgs events) =
         object ["type" .= ("game_events" :: String), "events" .= map GameEventJSON events] -- Wrap each GameEvent to serialise it.
+
+    toJSON (LobbyJoined n pos) =
+        object ["type"      .= ("lobby_joined" :: String)
+               , "name"     .= n
+               , "position" .= pos
+               ]
+
+    toJSON (LobbyUpdate ns) =
+        object ["type"   .= ("lobby_update" :: String)
+               , "queue" .= ns
+               ]
 
     toJSON s@(Snapshot{}) =
         object

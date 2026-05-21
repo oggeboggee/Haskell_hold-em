@@ -61,6 +61,7 @@ data ServerState = ServerState
     { table        :: Table     -- poker game state (engine)
     , clients      :: Clients   -- all connected websocket clients
     , nextClientId :: ClientId  -- counter to generate unique cIDs.
+    , lobby        :: [PlayerName] -- queue of players waiting to join the game
     }
 
 -- | A shared mutable state across all websocket threads.
@@ -74,9 +75,10 @@ type SharedServerState = TVar ServerState
 initServerState :: Table -> ServerState
 initServerState t = 
     ServerState
-        { table = t
-        , clients = M.empty
-        , nextClientId = 0
+        { table        = t          -- Engine owned initial table
+        , clients      = M.empty    -- Websocket connections
+        , nextClientId = 0          -- Client identifier
+        , lobby        = []         -- Server owned, waiting queue
         }
 
 ------------------------------------------------------------------------------------------------
@@ -255,6 +257,9 @@ serverLoop stateVar cid conn = loop `catch` onDisconnect
                     broadcastToClients st2 (LeftTable pName)
                     broadcastToClients st2 (makeSnapshot (table st2)) 
 
+                    -- CHANGE TO ADD PLAYER TO GAME IF DISCONNECTED.
+
+
 ------------------------------------------------------------------------------------------
 -- STATE HELPERS
 ------------------------------------------------------------------------------------------
@@ -294,7 +299,18 @@ handleClientMsg st cid _ (JoinMsg n)
     | clientExists n st = do
         sendToClientById cid st (ErrorMsg "Name already taken")
         pure st
+
+    -- If table is full, put them in lobby.
+    | isTableFull st = do
+        let st1 = nameClient cid n st
+            st2 = addPlayerToLobby n st1
+        
+        sendToClientById cid st2 (LobbyJoined n (length (lobby st2)))
+        broadcastToClients st2 (LobbyUpdate (lobby st2))
+
+        pure st2
     
+    -- Table isn't full, seat them at table.
     | otherwise = do
         let st1 = nameClient cid n st
             st2 = st1 { table = addPlayer n (table st1) }
@@ -321,15 +337,27 @@ handleClientMsg st cid _ (JoinMsg n)
 handleClientMsg st cid _ LeaveMsg =
     case lookupPlayer cid st of
         Nothing -> pure st
-        Just n -> do
+        Just plName -> 
+            if isInLobby plName st
+                then do
+                    -- Remove from lobby and remove client
+                    let st1 = removeClient cid st
+                        st2 = removePlayerFromLobby plName st1
+                    
+                    broadcastToClients st2 (LobbyUpdate (lobby st2))
+                    pure st2
+                else do
+                    -- Remove from table and then move player from lobby to game.
+                    let st1 = removeClient cid st
+                        st2 = st1 { table = removePlayer plName (table st1) }
 
-            let st1 = removeClient cid st
-                st2 = st1 { table = removePlayer n (table st1) }
+                    broadcastToClients st2 (LeftTable plName)
+                    broadcastToClients st2 (makeSnapshot (table st2))
 
-            broadcastToClients st2 (LeftTable n)
-            broadcastToClients st2 (makeSnapshot (table st2))
+                    st3 <- moveFromLobbyToTable st2
 
-            pure st2
+                    pure st3
+
 
 ------------------
 -- Player Action
@@ -393,6 +421,7 @@ broadcastExcept excludedId st msg =
                 else pure ())
         (M.toList (clients st))
 
+
 -- | Send a message to one specific client using their ClientID.
 --   This is used for private messages like initial snapshot on join or errormessages.
 sendToClientById :: ClientId -> ServerState -> ServerMsg -> IO ()
@@ -407,6 +436,52 @@ sendMsg conn msg =
     WS.sendTextData conn (Aeson.encode msg)
 
 
+------------------------------------------------------------------------------------------------
+-- LOBBY ( QUEUE OF PLAYERS WAITING AT TO JOIN TABLE )
+--
+--
+--
+------------------------------------------------------------------------------------------------
+
+-- | Constant for max amount of players at table
+maxSeats :: Int
+maxSeats = 6
+
+-- | Check whether table is full
+isTableFull :: ServerState -> Bool
+isTableFull st = length (players (table st)) >= maxSeats
+
+-- | Add a player to the lobby waiting list.
+--   Added to end of queue.
+addPlayerToLobby :: PlayerName -> ServerState -> ServerState
+addPlayerToLobby plName st = st { lobby = lobby st ++ [plName] } 
+
+-- | Remove a player from the lobby.
+removePlayerFromLobby :: PlayerName -> ServerState -> ServerState
+removePlayerFromLobby plName st = st { lobby = filter (/= plName) (lobby st) }
+
+-- | Check if a player is in the lobby queue.
+isInLobby :: PlayerName -> ServerState -> Bool
+isInLobby n st = n `elem` lobby st
+
+-- | Move the first player in the lobby to the table if there is any space. Called when a player
+--   leaves or is eliminated.
+moveFromLobbyToTable :: ServerState -> IO ServerState
+moveFromLobbyToTable st = 
+    case lobby st of
+        []    -> pure st -- lobby is empty.
+        (n:_) -> 
+            if isTableFull st
+                then pure st    -- Table is still full of players
+                else do         -- Table is not full, add player to players list.
+                    let st1 = removePlayerFromLobby n st
+                        st2 = st1 { table = addPlayer n (table st1) }
+                    
+                    broadcastToClients st2 (JoinedTable n)
+                    broadcastToClients st2 (makeSnapshot (table st2))
+                    broadcastToClients st2 (LobbyUpdate (lobby st2))
+
+                    pure st2
 
 ------------------------------------------------------------------------------------------
 -- SNAPSHOT BUILDER
