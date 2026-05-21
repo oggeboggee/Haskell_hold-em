@@ -309,18 +309,6 @@ moveDealer = do
 --------------------------------------------------------------
 ------------ Functions to print out sepcific things ----------
 
--- | Printing helpers
--- printPhase :: GamePhase -> Table -> Game ()
--- printPhase phase table = 
---     liftIO $ do 
---         putStrLn ("\n")
---         putStrLn ("-------------------------")
---         putStrLn ((show phase) ++ " (Pot: " ++ show (pot table) ++ ")")
---         putStrLn ("-------------------------")
---         putStrLn ("\n")
---         --putStrLn (printTable table)
---         putStrLn ("\n")
-
 
 printPhase :: Game ()
 printPhase = do
@@ -335,34 +323,6 @@ printPhase = do
         --putStrLn (printTable table)
         putStrLn "\n"
 
--- printTable :: Table -> String
--- printTable table = 
---     let playersList = (players table)
---         d           = (dealerPosition table)
---         sb          = (smallBlindPosition table)
---         bb          = (bigBlindPosition table)
-
---         pos i 
---             | i == d = "(D)"
---             | i == sb = "(SB)"
---             | i == bb = "(BB)"
---             | otherwise = ""
-
---         showPlayer i p =
---             "chips: " ++ show (chips p)
---             ++ " | name: " ++ (name p)
---             ++ " | pos: " ++ pos i
-
-
---         indexedPlayers = zipWith showPlayer [0..] playersList
-
---         -- put each player on a new line
---         render [] = ""    
---         render [x] = x
---         render (x:xs) = x ++ "\n" ++ render xs
-
-    -- in render indexedPlayers
-
 
 printBettingRound :: PlayerIndex -> Game ()
 printBettingRound playerPos = do
@@ -372,7 +332,6 @@ printBettingRound playerPos = do
         _        -> liftIO $ putStrLn $ "First player to act: "
                             ++ name (players table!!playerPos)
 
---Axel
 
 printTable :: Game ()
 printTable = do

@@ -74,27 +74,27 @@ convertAction userInput =
 -- | We handle errors if wanted action isn't allowed. We produce GameEvents.
 -- | This is instead of having applyPureAction.
 applyEvent :: Event -> State Table (Either String [GameEvent])
---applyEvent :: Event -> Table -> Either String (Table, [GameEvent])
 
 -- PLAYERACTIONS
 applyEvent (PlayerEvent playerIndex action) = do
     table <- get
-    let player = (players table) !! playerIndex
-        hb     = (highBet table)
-        --chips  = chips player
+    let player = players table !! playerIndex
+        hb     = highBet table
         cChips = commitedChips player
-        plName = (name player)
+        plName = name player
         toCall = hb - cChips
 
     case action of
         Fold -> do
-            modify (\t -> pureFold t playerIndex) 
+            --modify (\t -> pureFold t playerIndex) 
+            modify (`pureFold` playerIndex)
             pure (Right [PlayerFolded plName])
         
         Check -> do
             if toCall == 0
             then do 
-                modify (\t -> pureCheck t playerIndex)
+                --modify (\t -> pureCheck t playerIndex)
+                modify (`pureCheck` playerIndex)
                 pure (Right [PlayerChecked plName])
             else
                 pure (Left "You can't check when behind the highbet.")
@@ -108,9 +108,6 @@ applyEvent (PlayerEvent playerIndex action) = do
                 modify (\t -> placePureBet t playerIndex amount)
                 playerHaveActed playerIndex -- Change a players acted to True
                 pure (Right [PlayerCalled plName amount])
-
-                -- modify (\t -> placePureBet t playerIndex toCall)
-                -- pure (Right [PlayerCalled plName toCall])
 
 
         Raise x -> do
@@ -126,7 +123,7 @@ applyEvent (PlayerEvent playerIndex action) = do
                 pure (Right [PlayerRaised plName x])
 
         AllIn -> do
-            let amount = (chips player)
+            let amount = chips player
 
             modify (\t -> placePureBet t playerIndex amount)
             playerHaveActed playerIndex -- Change a players acted to True
@@ -138,43 +135,40 @@ applyEvent (EngineEvent engineAction) = do
     table <- get
     case engineAction of
         PlaceBlind playerIndex blindType bet -> do
-            let player = (players table) !! playerIndex
-                plName = (name player)
+            let player = players table !! playerIndex
+                plName = name player
             modify (\t -> placePureBet t playerIndex bet)
             pure (Right [PlayerPlacedBlinds plName blindType bet])
 
 
-        -- Showdown_ -> do
-        --     resultOfShowdown <- state (runState runShowDown)
-
-
         RunShowdown -> do
-            resultOfShowdown <- runShowdown
+            Right <$> runShowdown
+            -- resultOfShowdown <- runShowdown
 
-            pure (Right resultOfShowdown)
+            -- pure (Right resultOfShowdown)
             
 runShowdown :: State Table [GameEvent]
 runShowdown = do
     table <- get
 
-    let playerList = (players table)
-        finalBoard = (board table)
+    let playerList = players table
+        finalBoard = board table
 
         -- only the players that are still in the hand
         -- ex. [Sam, Lewis]
-        activePlayers = filter (not . folded) playerList
+        nonFoldedPlayers = filter (not . folded) playerList
 
         -- ex. [[5H,8C], [7H,9H]]
-        extractedHands = map hand activePlayers
+        extractedHands = map hand nonFoldedPlayers
 
         -- ex- [1]  , indexes relative to the activeplayers
         winnerIndexes = winners finalBoard extractedHands
 
         -- winners returns index of winner(s) in activePlayers list, need to map to who it is
         -- in activePlayers: ex. activePlayers !! 1 = Lewis
-        computedWinners = map (\i -> activePlayers !! i) winnerIndexes
+        computedWinners = map (nonFoldedPlayers !!) winnerIndexes
                 
-        potSize = (pot table)
+        potSize = pot table
 
         -- split the pot evenly
         evenShare =
@@ -198,13 +192,13 @@ eventMsg event = liftIO $ case event of
 
     PlayerChecked p -> putStrLn (p ++ " checks.")
 
-    PlayerCalled p amount -> putStrLn (p ++ " calls with " ++ (show amount) ++ " chips.")
+    PlayerCalled p amount -> putStrLn (p ++ " calls with " ++ show amount ++ " chips.")
 
-    PlayerRaised p amount -> putStrLn (p ++ " raises with " ++ (show amount) ++ " chips.")
+    PlayerRaised p amount -> putStrLn (p ++ " raises with " ++ show amount ++ " chips.")
 
-    PlayerAllIn p amount -> putStrLn (p ++ " goes all-in with " ++ (show amount) ++ " chips.")
+    PlayerAllIn p amount -> putStrLn (p ++ " goes all-in with " ++ show amount ++ " chips.")
 
-    PlayerPlacedBlinds p blindType amount -> putStrLn (p ++ " placed the " ++ (show blindType) ++ " of " ++ (show amount) ++ " chips.")
+    PlayerPlacedBlinds p blindType amount -> putStrLn (p ++ " placed the " ++ show blindType ++ " of " ++ show amount ++ " chips.")
 
     ShowdownHappened ps -> mapM_ (\p -> putStrLn (p ++ " wins!")) ps --Would be nice to see all active players cars at the end
 
@@ -245,7 +239,7 @@ updatePlayerAtIndex playerIndex f table =
     if playerIndex < 0 || playerIndex > (length (players table) - 1)
         then error "Invalid index in updatePlayerAtIndex"
     else
-        let playerList = (players table)
+        let playerList = players table
             player = playerList !! playerIndex
             updatedPlayer = f player
             updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
@@ -260,10 +254,10 @@ placePureBet table playerIndex bet =
                                 (`decChips` bet) table
                         
         
-        player = (players tableUpdated) !! playerIndex
+        player = players tableUpdated !! playerIndex
     in tableUpdated
             { pot = incPot (pot tableUpdated) bet,
-              bets = bet : (bets tableUpdated),
+              bets = bet : bets tableUpdated,
               highBet = max (highBet tableUpdated) (commitedChips player)
             }
 
@@ -295,25 +289,3 @@ printHand player = liftIO $ putStrLn ("Hand: " ++ show (hand player))
 
 --------------------------------------------------------------
 --------------------------------------------------------------
-
-
-
--- playersExampel1 :: [Player]
--- playersExampel1 = [Player "Bob" [] 950 50 False False,
---                        Player "Sam" [] 900 100 False False,
---                        Player "Jonathan" [] 50 0 False False,
---                        Player "Lewis" [] 1000 0 False False]
-
--- table1 :: Table
--- table1 = Table 
---             { players = playersExampel1,
---               deck = fullDeck,
---               board = [],
---               phase = PreFlop,
---               highBet = 100,
---               pot = 150,
---               dealerPosition = 3,
---               smallBlindPosition = 0,
---               bigBlindPosition = 1,
---               bets = []
---             }

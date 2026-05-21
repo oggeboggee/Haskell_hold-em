@@ -72,10 +72,10 @@ data Suit = Hearts | Spades | Diamonds | Clubs
 
 instance Show Suit where
     show s = case s of
-        Spades -> "S" --"\9824" --Spades -> "S"
-        Hearts -> "H"  --"\9829" --Hearts -> "H"
-        Diamonds -> "D" --"\9830" --Diamonds -> "D"
-        Clubs -> "C" --"\9827" --Clubs -> "C"
+        Spades -> "\9824" --Spades -> "S"
+        Hearts -> "\9829" --Hearts -> "H"
+        Diamonds -> "\9830" --Diamonds -> "D"
+        Clubs -> "\9827" --Clubs -> "C"
 
 instance Arbitrary Suit where
   arbitrary = elements [minBound .. maxBound]
@@ -182,9 +182,10 @@ data GamePhase =
             | Showdown
     deriving (Show, Eq)
 
-{-
+
 ---------------------------------------------------------------------
 -- | Data type for a player
+
 data Player = Player
             {
             name          :: String,
@@ -193,23 +194,6 @@ data Player = Player
             commitedChips :: Chip,
             folded        :: Bool,
             acted         :: Bool
-            checked       :: Bool,
-            blind         :: Blind,
-            hasActed      :: Bool,
-            playeState    :: PlayerState
-            }
-    deriving (Eq)
--}
-data Player = Player
-            {
-            name          :: String,
-            hand          :: Hand,
-            chips         :: Chip,
-            commitedChips :: Chip,
-            folded        :: Bool,
-            acted         :: Bool
-            --blind         :: Blind
-            --position      :: TablePosition
             }
     deriving (Eq)
 
@@ -238,12 +222,6 @@ data Table = Table
             }
 
 instance Show Table where
-
-    -- show t = "Players:\n" ++ unlines (map show (players t)) ++ 
-    --         " \nHighbet: " ++ show (highBet t) ++
-    --         " \nPot: " ++ show (pot t) ++
-    --         " \nBoard: " ++ show (board t)
-
     show t = "Players:\n" ++ unlines (map show (players t)) ++ 
             --"\nTable State(print): " ++ 
             " \nPhase:" ++ show (phase t) ++
