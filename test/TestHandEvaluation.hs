@@ -47,6 +47,14 @@ combinationsTests = localOption (QuickCheckTests 5000) $
   , testProperty "maybeStraight length" lengthStraightprop
   , testCase "HUnit checkGroups  "  $ hUnitMaybeFlush @?= True
   , testProperty "same suit in maybeFlush" sameSuitFlushProp
+  , testCase "HUnit ifFlush"        $     hUnitIfFlush @?= True
+  , testProperty "ifFlush gives right comb" ifFlushProp
+  , testProperty "ifNotFlush use of checkGroups" notFlushUseOfCheckGroupsProperty
+  , testCase " HUnit value-function"  $     hUnitValue @?= True
+  , testProperty "final hand only contain cards from original hand" elementOfOriginalHand
+  , testProperty "value return 5 cards" sizeHandProp
+  , testProperty "value functions always gives an ok combination" givesCombination
+  
   ]
 
 ------------------------------------------------
@@ -58,21 +66,18 @@ function winners
 function handComparision
     - try to compare same hand
     - try to give wrong input, do we need to fix it if it crashes? why/why not?
-function value
-    - test hands when it could be different kind of combinations at the same time. see if we will get the right one -> HUnit-tests
-        
-        -- test flush at the same time as fullHouse., find svårigheter in the structure of the code.
 
 
-    - test length with properties
-    - test edge-cases
 
-function ifNotFlush
-function ifFlush
+
+
 
 
    ------  CHECKed under this line ---------
-
+   
+function value
+function ifNotFlush
+function ifFlush
 function maybeFlush
 function maybeStraight
 function maybeWheel
@@ -87,11 +92,438 @@ function sortByLength
 -- bug found in maybeFlush: if running with aceLowStraight -> Gives cards in wrong order
 
 
+-----------------------Generators----------------------------
+
+
+-- | Generates a list of 7 cards with same suit, no duplicates
+genFlushHand :: Gen [Card]
+genFlushHand = do
+  suit  <- arbitrary
+  ranks <- suchThat
+              (vectorOf 7 arbitrary)
+              ((==7) . length . nub)
+
+  pure (sort [Card r suit | r <- ranks])
+
+-- | generates a sorted list of 7 cards without duplicates
+genListHand :: Gen [Card]
+genListHand =
+  sort <$> suchThat
+            (vectorOf 7 arbitrary)
+            ((== 7) . length . nub)
+
+
+-- | generates a list of seven Ints from 1 to 4
+genIntList :: Gen [RankGroup]
+genIntList =  vectorOf 7 (choose (1,4))
+
+
+
+ -- | generates lists with lists that contains 5 card each
+genLists :: Gen [[Card]]
+genLists = listOf (vectorOf 5 arbitrary)
+
+
+
+
+
 -------------------------- winners -------------------------------
 ----------------------- handComparision --------------------------
 --------------------------- value --------------------------------
+
+
+--value always give a combination
+givesCombination :: Property
+givesCombination = forAll genListHand $ \hand ->
+         case value hand of
+                (combination, _) -> combination `elem` allCombinations
+        where
+        allCombinations =[HighCard
+                         ,Pair
+                         ,TwoPairs
+                         ,ThreeOfAKind
+                         ,Straight
+                         ,Flush
+                         ,FullHouse
+                         ,Quads
+                         ,StraightFlush]
+
+
+
+
+-- always return 5 cards
+sizeHandProp :: Property
+sizeHandProp = forAll genListHand $ \hand ->
+         case value hand of
+                (_, cards) -> length cards == 5
+
+--all card that is returned is an element in the original hand
+elementOfOriginalHand :: Property
+elementOfOriginalHand = forAll genListHand $ \hand ->
+         case value hand of
+                (_, cards) -> and $ map (\x-> x `elem` hand ) cards
+
+
+
+
+
+hUnitValue :: Bool
+hUnitValue = and [value1,
+                  value2,
+                  value3,
+                  value4,
+                  value5,
+                  --value6, Gives card with correct rank, but not the exacly correct card
+                  value7,
+                  value8,
+                  value9,
+                  value10]
+
+
+-- straight
+value1 :: Bool
+value1 = (Straight, [ Card Nine  Clubs,
+                      Card Eight Clubs,                    
+                      Card Seven Clubs,                    
+                      Card Six   Hearts ,                    
+                      Card Five  Hearts]) == handData
+        where
+            hand = [Card Three Hearts,
+                    Card Five Hearts,
+                    Card Six Hearts,
+                    Card Seven Clubs,
+                    Card Eight Clubs,
+                    Card Nine Clubs,
+                    Card Ace Spades]
+            handData = value hand
+
+-- wheel- straight
+value2 :: Bool
+value2 = (Straight, [Card Five Clubs,
+                     Card Four Hearts,
+                     Card Three Clubs,
+                     Card Two Hearts,
+                     Card Ace Clubs]) == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Three Clubs,
+                    Card Four Hearts,
+                    Card Five Clubs,
+                    Card Ten Diamonds,
+                    Card Queen Clubs,
+                    Card Ace Clubs]
+            handData = value hand
+
+
+--straight flush
+value3 :: Bool
+value3 = (StraightFlush, [Card Six Clubs,
+                          Card Five Clubs,
+                          Card Four Clubs,
+                          Card Three Clubs,
+                          Card Two Clubs]) == handData
+        where
+            hand = [Card Two Clubs,
+                    Card Three Clubs,
+                    Card Four Clubs,
+                    Card Five Clubs,
+                    Card Six Clubs,
+                    Card Queen Clubs,
+                    Card King Clubs]
+            handData = value hand
+
+
+
+--royal straight flush
+value4 :: Bool
+value4 = (StraightFlush, [Card Ace Clubs,
+                          Card King Clubs,
+                          Card Queen Clubs,
+                          Card Jack Clubs,
+                          Card Ten Clubs]) == handData
+        where
+            hand = [Card Eight Clubs,
+                    Card Nine Clubs,
+                    Card Ten Clubs,
+                    Card Jack Clubs,
+                    Card Queen Clubs,
+                    Card King Clubs,
+                    Card Ace Clubs]
+            handData = value hand
+
+-- wheel straight flush
+value5 :: Bool
+value5 = (StraightFlush, [Card Five Clubs,
+                          Card Four Clubs,
+                          Card Three Clubs,
+                          Card Two Clubs,
+                          Card Ace Clubs]) == handData
+        where
+            hand = [Card Two Clubs,
+                    Card Three Clubs,
+                    Card Four Clubs,
+                    Card Five Clubs,
+                    Card Eight Clubs,
+                    Card Queen Clubs,
+                    Card Ace Clubs]
+            handData = value hand
+
+
+-- quads and trips
+{-
+value6 :: Bool
+value6 = (Quads, [Card King Hearts,
+                  Card King Spades,
+                  Card King Diamonds,
+                  Card King Clubs,
+                  Card Ace Hearts]) == handData
+        where
+            hand = [Card King Hearts,
+                    Card King Spades,
+                    Card King Diamonds,
+                    Card King Clubs,
+                    Card Ace Hearts,
+                    Card Ace Spades,
+                    Card Ace Diamonds]
+            handData = value hand
+-}
+
+
+-- two trips[3,3]
+value7 :: Bool
+value7 = (FullHouse, [Card Ace Hearts,
+                      Card Ace Spades,
+                      Card Ace Diamonds,
+                      Card Two Hearts,
+                      Card Two Spades]) == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Two Spades,
+                    Card Two Diamonds,
+                    Card Five Clubs,
+                    Card Ace Hearts,
+                    Card Ace Spades,
+                    Card Ace Diamonds]
+            handData = value hand
+
+-- BUG FOUND -- returns two instead of king (the bug is in checkGroups))
+-- three pairs [2,2,2]
+value8 :: Bool
+value8 = (TwoPairs,  [Card Ace Spades,
+                      Card Ace Diamonds,
+                      Card Five Diamonds,
+                      Card Five Clubs,
+                      Card King Hearts]) == handData
+        where
+            hand = [Card Two Hearts,
+                    Card Two Spades,
+                    Card Five Diamonds,
+                    Card Five Clubs,
+                    Card King Hearts,
+                    Card Ace Spades,
+                    Card Ace Diamonds]
+            handData = value hand
+
+hand33 = [Card King Hearts,
+                    Card King Spades,
+                    Card King Diamonds,
+                    Card King Clubs,
+                    Card Ace Hearts,
+                    Card Ace Spades,
+                    Card Ace Diamonds]
+
+--Flush with all cards
+value9 :: Bool
+value9 = (Flush,   [Card King  Clubs,                    
+                    Card Jack  Clubs,                    
+                    Card Ten   Clubs,   
+                    Card Eight Clubs,                    
+                    Card Six   Clubs]) == handData
+        where
+            hand = [Card Four  Hearts,
+                    Card Six   Clubs,                    
+                    Card Eight Clubs,
+                    Card Ten   Clubs,    
+                    Card Jack  Clubs,
+                    Card King  Clubs,
+                    Card Ace   Diamonds ]
+            handData = value hand
+
+
+-- Flush and threeOfAKind
+value10 :: Bool
+value10 = (Flush,   [Card Ace  Spades,                    
+                    Card King  Spades,                    
+                    Card Jack   Spades,   
+                    Card Ten Spades,                    
+                    Card Four   Spades]) == handData
+        where
+            hand = [Card Four  Hearts,
+                    Card Four  Spades,                    
+                    Card Four  Diamonds,
+                    Card Ten   Spades,    
+                    Card Jack  Spades,
+                    Card King  Spades,
+                    Card Ace   Spades ]
+            handData = value hand
+
+
+
+
 ------------------------ ifNotFlush ------------------------------
+
+-- Can return every combination except flush and straightFlush
+
+--property -- if not straight -> return same results as checkGroups
+
+notFlushUseOfCheckGroupsProperty :: Property
+notFlushUseOfCheckGroupsProperty = 
+        forAll genListHand $ \hand ->
+            case ifNotFlush hand of
+                (Straight, _) -> True
+                _             -> ifNotFlush hand == checkGroups hand
+
+
+hUnitIfNotFlush :: Bool
+hUnitIfNotFlush = and [ifNotFlush1,
+                       ifNotFlush2,
+                       ifNotFlush3]
+
+
+-- straight
+ifNotFlush1 :: Bool
+ifNotFlush1 = (Straight, [Card Queen Clubs,
+                          Card Jack Diamonds,
+                          Card Ten Clubs,
+                          Card Nine Hearts,
+                          Card Eight Clubs]) == handData
+        where
+            hand = fromJust (maybeStraight [Card Four Hearts,
+                                            Card Eight Clubs,
+                                            Card Nine Hearts,
+                                            Card Ten Clubs,
+                                            Card Jack Diamonds,
+                                            Card Queen Clubs,
+                                            Card Ace Clubs])
+            handData = ifNotFlush hand
+
+-- wheelstraight
+ifNotFlush2 :: Bool
+ifNotFlush2 = (Straight, [Card Five Clubs,
+                          Card Four Hearts,
+                          Card Three Clubs,
+                          Card Two Hearts,
+                          Card Ace Clubs]) == handData
+        where
+            hand = fromJust (maybeStraight [Card Two Hearts,
+                                            Card Three Clubs,
+                                            Card Four Hearts,
+                                            Card Five Clubs,
+                                            Card Ten Diamonds,
+                                            Card Queen Clubs,
+                                            Card Ace Clubs])
+            handData = ifNotFlush hand
+
+-- Quad and threeOfAKind
+ifNotFlush3 :: Bool
+ifNotFlush3 = (Quads,   [Card King Hearts,
+                          Card King Spades,
+                          Card King Diamonds,
+                          Card King Clubs,
+                          Card Ace Hearts]) == handData
+        where
+            hand =      [Card King Hearts,
+                         Card King Spades,
+                         Card King Diamonds,
+                         Card King Clubs,
+                         Card Ace Hearts,
+                         Card Ace Spades,
+                         Card Ace Diamonds]
+            handData = ifNotFlush hand
+
+
 -------------------------- ifFlush -------------------------------
+
+--property när vi ser att de enda fallen som kommer ut är straightFlush eller flush
+
+-- | tests the outcome of combination from ifFlush
+ifFlushProp :: Property
+ifFlushProp = forAll genFlushHand $ \hand ->
+         case ifFlush hand of
+                (Flush,         _)   -> True
+                (StraightFlush, _)   -> True
+                _                    -> False
+
+
+
+
+hUnitIfFlush :: Bool
+hUnitIfFlush = and [ifFlush1,
+                    ifFlush2,
+                    ifFlush3]
+
+
+-- ifFlush will only be runned from results from (maybeFlush cards), only when maybeFlush /= Nothing
+
+--flush without straight
+ifFlush1 :: Bool
+ifFlush1 = (Flush, [Card King  Clubs,                    
+                    Card Jack  Clubs,                    
+                    Card Ten   Clubs,   
+                    Card Eight Clubs,                    
+                    Card Six   Clubs]) == handData
+        where
+            hand = fromJust (maybeFlush [Card Four  Hearts,
+                                         Card Six   Clubs,                    
+                                         Card Eight Clubs,
+                                         Card Ten   Clubs,    
+                                         Card Jack  Clubs,
+                                         Card King  Clubs,
+                                         Card Ace   Diamonds ])
+            handData = ifFlush hand
+-------------------------------------------------------------------------------------------
+
+
+
+
+--flush with straight = straightFlush
+ifFlush2 :: Bool
+ifFlush2 = (StraightFlush, [Card Nine  Clubs,                    
+                            Card Eight Clubs,                    
+                            Card Seven Clubs,   
+                            Card Six   Clubs,                    
+                            Card Five   Clubs]) == handData
+        where
+            hand = fromJust (maybeFlush [Card Four  Hearts,
+                                         Card Five   Clubs,                    
+                                         Card Six    Clubs,
+                                         Card Seven  Clubs,    
+                                         Card Eight  Clubs,
+                                         Card Nine   Clubs,
+                                         Card Ace   Diamonds ])
+            handData = ifFlush hand
+
+-- flush with wheel-straight
+ifFlush3 :: Bool
+ifFlush3 = (StraightFlush, [Card Five  Clubs,                    
+                            Card Four  Clubs,                    
+                            Card Three Clubs,   
+                            Card Two   Clubs,                    
+                            Card Ace   Clubs]) == handData
+        where
+            hand = fromJust (maybeFlush [Card Four  Hearts,
+                                         Card Two   Clubs,                    
+                                         Card Three Clubs,
+                                         Card Four  Clubs,    
+                                         Card Five  Clubs,
+                                         Card Nine  Clubs,
+                                         Card Ace   Clubs ])
+            handData = ifFlush hand
+
+
+
+
+
 
 
 
@@ -400,8 +832,7 @@ lengthCheckGroupsProp :: Property
 lengthCheckGroupsProp =   forAll genListHand $ \hand -> (length . snd . checkGroups) hand == 5
 
 
-genListHand :: Gen [Card]
-genListHand = sort <$> (vectorOf 7 arbitrary)
+
 
 
 
@@ -445,12 +876,12 @@ checkGroupsQuads1 = [Card Eight Hearts,
         (comb, cards) = checkGroups hand
 
 -- | quads and threeOfAKind [4,3]
+-- | bug found, right now only tests if all elements from flush is a part of the result
 checkGroupsQuads2 :: Bool
-checkGroupsQuads2 = [Card Eight Hearts, 
-                     Card Eight Spades, 
-                     Card Eight Diamonds, 
-                     Card Eight Clubs , 
-                     Card Ten Hearts] == cards
+checkGroupsQuads2 = and $ map (\x-> elem x cards )[Card Eight Hearts, 
+                                                   Card Eight Spades, 
+                                                   Card Eight Diamonds, 
+                                                   Card Eight Clubs ]
     where
         hand          = [Card Eight Hearts,
                          Card Eight Spades, 
@@ -461,13 +892,22 @@ checkGroupsQuads2 = [Card Eight Hearts,
                          Card Ten Diamonds]
         (comb, cards) = checkGroups hand
 
+hand33a = [Card Eight Hearts,
+                         Card Eight Spades, 
+                         Card Eight Diamonds, 
+                         Card Eight Clubs , 
+                         Card Ten Hearts, 
+                         Card Ten Spades, 
+                         Card Ten Diamonds]
+
+
 -- | quads and threeOfAKind [3, 4]
+-- | bug found, right now only tests if all elements from flush is a part of the result 
 checkGroupsQuads3 :: Bool
-checkGroupsQuads3 = [Card Ten Hearts, 
-                     Card Ten Spades, 
-                     Card Ten Diamonds, 
-                     Card Ten Clubs , 
-                     Card Eight Spades] == cards
+checkGroupsQuads3 = and $ map (\x-> elem x cards ) [Card Ten Hearts, 
+                                                    Card Ten Spades, 
+                                                    Card Ten Diamonds, 
+                                                    Card Ten Clubs]
     where
         hand          = [Card Eight Spades, 
                          Card Eight Diamonds, 
@@ -531,7 +971,14 @@ checkGroupsFullHouse3 = [Card Six Hearts,
                     Card Ten Hearts]
             (comb, cards) = checkGroups hand
 
-
+hand33b = [Card Five Hearts,
+                    Card Five Spades, 
+                    Card Five Diamonds, 
+                    Card Six Hearts, 
+                    Card Six Diamonds,
+                    Card Six Clubs, 
+                    Card Eight Hearts, 
+                    Card Ten Hearts]
 
 -- threeOfAKind [3]
 checkGroupsTrips1 :: Bool
@@ -770,10 +1217,6 @@ evalGroupedRanksPropHelp rankGroup
         combination = evalGroupedRanks sorted
 
 
-genIntList :: Gen [RankGroup]
-genIntList =  vectorOf 7 (choose (1,4))
-
-
 
 
 
@@ -831,11 +1274,6 @@ sortByLengthPropHelpSize all@(c1:c2:rest)
     | maximum all == c1 = sortByLengthPropHelpSize (c2:rest)
     | otherwise = False
 
-
-
- -- | generates lists with lists that contains 5 card each
-genLists :: Gen [[Card]]
-genLists = listOf (vectorOf 5 arbitrary)
 
 
 

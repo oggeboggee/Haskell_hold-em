@@ -62,7 +62,7 @@ value :: [Card] -> (Combination, [Card])
 value cards = maybe (ifNotFlush cards) ifFlush (maybeFlush cards)
 
 ifNotFlush :: [Card] -> (Combination, [Card])
-ifNotFlush cards = maybe (checkGroups cards) ((Straight,) . reverse ) (maybeStraight cards)
+ifNotFlush cards = maybe (checkGroups cards) (Straight,) (maybeStraight cards)
 
 
 ifFlush :: [Card] -> (Combination, [Card])
@@ -110,12 +110,30 @@ maybeWheel cards
 
 
 checkGroups :: [Card] -> (Combination, [Card])
+checkGroups hand = 
+    case groupedRankLengths of
+      (3:2:_) -> (hRank, take 5 $ concat groups)
+      (3:3:_) -> (hRank, take 5 $ concat groups)
+      _       -> (hRank, cards)
+    where
+              groups = sortByLength $ groupBy ((==) `on` rank) $ sort hand
+              concatGroups = concat groups
+              cards = (take 4 $ concatGroups) ++ take 1 (reverse $ sort $ drop 4 concatGroups)
+              groupedRankLengths = length <$> groups
+              hRank = evalGroupedRanks groupedRankLengths
+
+
+    {-
+    
+    checkGroups :: [Card] -> (Combination, [Card])
 checkGroups hand = (hRank, cards)
   where
     groups = sortByLength $ groupBy ((==) `on` rank) $ sort hand
     cards = take 5 $ concat groups
     groupedRankLengths = length <$> groups
     hRank = evalGroupedRanks groupedRankLengths
+
+    -}
 
 type RankGroup = Int
 
