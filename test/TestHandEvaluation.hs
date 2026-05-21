@@ -54,7 +54,9 @@ combinationsTests = localOption (QuickCheckTests 5000) $
   , testProperty "final hand only contain cards from original hand" elementOfOriginalHand
   , testProperty "value return 5 cards" sizeHandProp
   , testProperty "value functions always gives an ok combination" givesCombination
-  
+  , testCase "compare quads in handComparision" $ hUnitCardComparisionQuads @?= True
+  , testCase "compare straights in handComparision" $ hUnitCardComparisionStraight @?= True
+  , testProperty "always return index in handComparison" alwaysReturnIndex
   ]
 
 ------------------------------------------------
@@ -63,18 +65,11 @@ combinationsTests = localOption (QuickCheckTests 5000) $
 function winners
     - HUnit tests for the most complicated cases (?)
     - Try to get an error, fix it
-function handComparision
-    - try to compare same hand
-    - try to give wrong input, do we need to fix it if it crashes? why/why not?
-
-
-
-
-
 
 
    ------  CHECKed under this line ---------
-   
+
+function handComparision
 function value
 function ifNotFlush
 function ifFlush
@@ -128,9 +123,159 @@ genLists = listOf (vectorOf 5 arbitrary)
 
 
 -------------------------- winners -------------------------------
------------------------ handComparision --------------------------
---------------------------- value --------------------------------
 
+-- TODO
+-- property always return winner
+
+
+ -- corrext winner
+winners1 :: Bool
+winners1 = winners comCardsW1 handListW1 == [0]
+
+-- correct tie
+winners2 :: Bool
+winners2 = winners comCardsW1 handListW2 == [0,1]
+ -- ties
+ -- kicker regler
+
+
+handListW1 :: [[Card]]
+handListW1 = [handW1, handW2]
+
+handListW2 :: [[Card]]
+handListW2 = [handW1, handW1]
+
+handW1 = [Card Ace Hearts, Card Ace Clubs]
+handW2 = [Card King Clubs, Card King Hearts ]
+
+
+comCardsW1 = [Card Three Clubs, Card Six Hearts, Card Two Spades, Card Jack Hearts, Card Seven Hearts]
+
+
+----------------------- handComparision --------------------------
+
+-- handComparision :: [(Combination, [Card])] -> [Int] -> [Int]
+
+alwaysReturnIndex :: Property
+alwaysReturnIndex =
+  forAll ((,) <$> genListHand <*> genListHand) $
+    \(hand1, hand2) ->
+      case cardComparision [value hand1, value hand2] [0,1] of
+        [] -> False
+        _  -> True
+
+
+
+
+------------------------------------
+hUnitCardComparisionQuads :: Bool
+hUnitCardComparisionQuads = and [cardComparisionQuads1,
+                                      cardComparisionQuads2,
+                                       cardComparisionQuads3 ]
+
+
+cardComparisionQuads1 :: Bool --Quads vs Quads
+cardComparisionQuads1 = cardComparision  [quadsW, quadsL] [0,1] == [0]
+        where
+                quadsW  = value handc4
+                quadsL  = value handc5
+
+
+cardComparisionQuads2 :: Bool --Quads vs Quads (kicker Victory)
+cardComparisionQuads2 = cardComparision  [quadsW, quadsL] [0,1] == [0]
+        where
+                quadsW  = value handc6
+                quadsL  = value handc5
+        
+cardComparisionQuads3 :: Bool --Quads vs Quads (same hand)
+cardComparisionQuads3 = cardComparision  [quads, quads] [0,1] == [0,1]
+        where
+                quads  = value handc6
+
+
+
+handc4 :: Hand -- Quads
+handc4 = [Card King Hearts,
+          Card Ace Hearts,
+          Card Ace Spades,
+          Card Ace Diamonds,
+          Card Ace Clubs]
+
+handc5 :: Hand -- Quads
+handc5 = [Card Eight Spades,
+          Card King Hearts,
+          Card King Spades,
+          Card King Diamonds,
+          Card King Clubs]
+
+
+handc6 :: Hand -- Quads
+handc6 = [Card King Hearts,
+          Card King Spades,
+          Card King Diamonds,
+          Card King Clubs,
+          Card Ace Hearts]
+
+
+
+------------------------------------
+hUnitCardComparisionStraight :: Bool
+hUnitCardComparisionStraight = and [cardComparisionStraight1,
+                                    cardComparisionStraight2,
+                                    cardComparisionStraight3,
+                                    cardComparisionStraight4]
+
+
+cardComparisionStraight1 :: Bool --wheel vs regular, all hands in game
+cardComparisionStraight1 = cardComparision  [wheelStraight, straight] [0,1] == [1]
+        where
+                wheelStraight = value handc1
+                straight      = value handc2
+
+
+cardComparisionStraight2 :: Bool --wheel vs regular, just wheelStraight in game
+cardComparisionStraight2 = cardComparision  [wheelStraight, straight] [0] == [0]
+        where
+                wheelStraight = value handc1
+                straight      = value handc2
+
+cardComparisionStraight3 :: Bool --royal vs regular, all hands in game
+cardComparisionStraight3 = cardComparision  [royalStraight, straight] [0,1] == [0]
+        where
+                straight      = value handc2
+                royalStraight = value handc3
+
+cardComparisionStraight4 :: Bool --wheel vs royal, all hands in game
+cardComparisionStraight4 = cardComparision  [royalStraight, wheelStraight] [0,1] == [0]
+        where
+                wheelStraight = value handc1
+                royalStraight = value handc3
+
+
+handc1 :: Hand -- wheelStraight
+handc1 = [Card Two Hearts,
+          Card Three Clubs,        
+          Card Four Hearts,
+          Card Five Spades,
+          Card Ace Spades]
+
+handc2 :: Hand -- straight
+handc2 = [Card Five Hearts,
+          Card Six Clubs,        
+          Card Seven Hearts,
+          Card Eight Spades,
+          Card Nine Spades]
+
+handc3 :: Hand -- Royalstraight
+handc3 = [Card Ten Hearts,
+          Card Jack Clubs,        
+          Card Queen Hearts,
+          Card King Spades,
+          Card Ace Spades]
+
+
+
+--------------------------- value --------------------------------
 
 --value always give a combination
 givesCombination :: Property

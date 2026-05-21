@@ -41,12 +41,14 @@ winners com play
      where
          handDataList = map value $ map (sort) $ map (++ com) play                                   -- [[Card]] -> [ (Combination, [Card]) ]
          bestCombIndexes = findIndices (\x -> fst x == maximum (map fst handDataList)) handDataList                     
-         compareCards = handComparision handDataList bestCombIndexes         
+         compareCards = cardComparision handDataList bestCombIndexes         
 ------------------------------------------------------------
 
-
-handComparision :: [(Combination, [Card])] -> [Int] -> [Int]
-handComparision list index = bestIds
+-- | input:  [(Combination, [Card])]
+-- | input:  [int] who represent the indexes of the hands we want to compare (it must have the same combination)
+-- | output: [int] who represent the index or indexes of the best hands of the compared ones
+cardComparision :: [(Combination, [Card])] -> [Int] -> [Int]
+cardComparision list index = bestIds
      where
           remaining         = zip (index) $ map (\(_,h) -> h) (map (\i -> list!!i ) index)  
           bestHandReference = maximum $ map (\(_, h) -> map rank h) remaining
