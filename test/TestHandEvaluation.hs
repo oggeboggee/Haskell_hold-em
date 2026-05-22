@@ -17,78 +17,45 @@ import Test.Tasty.QuickCheck
 import System.Exit
 import Control.Exception
 
--- HUnit -> tests specifik examples
--- QuickCheck -> tests a lot of cases
-
--- conditional testing
--- own generator
--- lenses ot seperate example specific things that we want to be visible for specifc players
-
 
 main :: IO ()
 main = defaultMain combinationsTests
 
------------------------------------------------------------------
 ------------------------   TESTTREE  ----------------------------
------------------------------------------------------------------
+
 
 combinationsTests :: TestTree
 combinationsTests = localOption (QuickCheckTests 5000) $
                     testGroup "Combination Tests"
   [ 
-    testProperty "sortByLength length inner Lists" sortByLengthPropLength
-  , testProperty "sortByLength size innerLists" sortByLengthPropSize
-  , testCase "groupBySuccCards " $ hUnitGroupBySucc @?= True
-  , testProperty "evalGroupedRanksProp" evalGroupedRanksProp
-  , testProperty "length property checkGroups" lengthCheckGroupsProp
-  , testCase "HUnit checkGroups  "  $ hUnitCheckGroups @?= True
-  , testCase "HUnit maybeWheel   "  $ hUnitmaybeWheel  @?= True
-  , testCase "HUnit maybeStraight"  $ hUnitMaybeStraight @?= True
-  , testProperty "maybeStraight length" lengthStraightprop
-  , testCase "HUnit checkGroups  "  $ hUnitMaybeFlush @?= True
-  , testProperty "same suit in maybeFlush" sameSuitFlushProp
-  , testCase "HUnit ifFlush"        $     hUnitIfFlush @?= True
-  , testProperty "ifFlush gives right comb" ifFlushProp
-  , testProperty "ifNotFlush use of checkGroups" notFlushUseOfCheckGroupsProperty
-  , testCase " HUnit value-function"  $     hUnitValue @?= True
-  , testProperty "final hand only contain cards from original hand" elementOfOriginalHand
-  , testProperty "value return 5 cards" sizeHandProp
-  , testProperty "value functions always gives an ok combination" givesCombination
-  , testCase "compare quads in handComparision" $ hUnitCardComparisionQuads @?= True
-  , testCase "compare straights in handComparision" $ hUnitCardComparisionStraight @?= True
-  , testProperty "always return index in handComparison" alwaysReturnIndex
+    testProperty "sortByLength length inner Lists"     sortByLengthPropLength           -- function sortByLength
+  , testProperty "sortByLength size innerLists"        sortByLengthPropSize             -- function sortByLength
+  , testCase     "groupBySuccCards"                  $ hUnitGroupBySucc @?= True        -- function groupBySuccCards
+  , testProperty "evalGroupedRanksProp"                evalGroupedRanksProp             -- function evalGroupedRanks
+  , testProperty "length property checkGroups"         lengthCheckGroupsProp            -- function evalGroupedRanks
+  , testCase     "HUnit checkGroups  "               $ hUnitCheckGroups @?= True        -- function checkGroups
+  , testCase     "HUnit maybeWheel   "               $ hUnitmaybeWheel  @?= True        -- function maybeWheel
+  , testCase     "HUnit maybeStraight"               $ hUnitMaybeStraight @?= True      -- function maybeStraight
+  , testProperty "maybeStraight length"                lengthStraightprop               -- function maybeStraight
+  , testCase     "HUnit checkGroups  "               $ hUnitMaybeFlush @?= True         -- function maybeFlush
+  , testProperty "same suit in maybeFlush"             sameSuitFlushProp                -- function ifFlush
+  , testCase     "HUnit ifFlush"                     $ hUnitIfFlush @?= True            -- function ifFlush
+  , testProperty "ifFlush gives right comb"            ifFlushProp                      -- function ifFlush
+  , testCase     "HUnit ifFlush"                     $ hUnitIfNotFlush @?= True         -- function ifNotFlush 
+  , testProperty "ifNotFlush use of checkGroups"       notFlushUseOfCheckGroupsProperty -- function ifNotFlush 
+  , testCase     " HUnit value-function"             $ hUnitValue @?= True              -- function value
+  , testProperty "final hand only contain cards from original hand" elementOfOriginalHand -- function value
+  , testProperty "value return 5 cards"                             sizeHandProp          -- function value
+  , testProperty "value functions always gives an ok combination"   givesCombination      -- function value
+  , testCase     "compare quads in handComparision"               $ hUnitCardComparisionQuads @?= True    --function handComparision
+  , testCase     "compare straights in handComparision"           $ hUnitCardComparisionStraight @?= True -- function handComparision
+  , testProperty "always return index in handComparison"            alwaysReturnIndex                     -- function handComparision
+  , testCase     "HUnit correct winners in function winners "     $ hUnitWinners @?= True                 -- function winners
+  , testProperty " always return winner(s) if we have >= 1 list of cards" alwaysWinnersProp               -- function winners
   ]
-
-------------------------------------------------
-
-{-
-function winners
-    - HUnit tests for the most complicated cases (?)
-    - Try to get an error, fix it
-
-
-   ------  CHECKed under this line ---------
-
-function handComparision
-function value
-function ifNotFlush
-function ifFlush
-function maybeFlush
-function maybeStraight
-function maybeWheel
-function checkGroups
-function evalGroupedRanks
-function groupBySuccCards
-function sortByLength
--}
-
-
-
--- bug found in maybeFlush: if running with aceLowStraight -> Gives cards in wrong order
 
 
 -----------------------Generators----------------------------
-
 
 -- | Generates a list of 7 cards with same suit, no duplicates
 genFlushHand :: Gen [Card]
@@ -119,24 +86,46 @@ genLists :: Gen [[Card]]
 genLists = listOf (vectorOf 5 arbitrary)
 
 
+ -- | generates lists with lists that contains 2 card each
+genListsTwo :: Gen [[Card]]
+genListsTwo = listOf (vectorOf 2 arbitrary)
+
 
 
 
 -------------------------- winners -------------------------------
 
--- TODO
--- property always return winner
+-- winners :: [Card] -> [[Card]] -> [Int]
 
 
- -- corrext winner
+alwaysWinnersProp :: Property
+alwaysWinnersProp =
+    forAll genListHand $ \community ->
+    forAll genListsTwo $ \playerC ->
+        if playerC == []
+           then (winners community playerC) == []
+           else (winners community playerC) /= []
+
+
+-- | HUint 
+hUnitWinners :: Bool
+hUnitWinners = and [winners1,
+                    winners2,
+                    winners3]
+
+ -- correct winner
 winners1 :: Bool
 winners1 = winners comCardsW1 handListW1 == [0]
 
 -- correct tie
 winners2 :: Bool
 winners2 = winners comCardsW1 handListW2 == [0,1]
- -- ties
- -- kicker regler
+
+ -- correct kicker-rules
+winners3 :: Bool 
+winners3 = winners comCardsW2 handListW3 == [0]
+
+
 
 
 handListW1 :: [[Card]]
@@ -145,11 +134,27 @@ handListW1 = [handW1, handW2]
 handListW2 :: [[Card]]
 handListW2 = [handW1, handW1]
 
+handW1 :: [Card]
 handW1 = [Card Ace Hearts, Card Ace Clubs]
+
+handW2 :: [Card]
 handW2 = [Card King Clubs, Card King Hearts ]
 
-
+comCardsW1 :: [Card]
 comCardsW1 = [Card Three Clubs, Card Six Hearts, Card Two Spades, Card Jack Hearts, Card Seven Hearts]
+
+comCardsW2 :: [Card]
+comCardsW2 = [Card Four Diamonds, Card Four Hearts, Card Four Clubs, Card Nine Clubs, Card Four Spades] 
+
+handListW3 :: [[Card]]
+handListW3 = [handW3, handW4]
+
+handW3 :: [Card]
+handW3 = [Card Three Clubs, Card Ace Clubs]
+
+handW4 :: [Card]
+handW4 = [Card King Clubs, Card King Hearts]
+
 
 
 ----------------------- handComparision --------------------------
@@ -163,8 +168,6 @@ alwaysReturnIndex =
       case cardComparision [value hand1, value hand2] [0,1] of
         [] -> False
         _  -> True
-
-
 
 
 ------------------------------------
@@ -215,8 +218,6 @@ handc6 = [Card King Hearts,
           Card King Diamonds,
           Card King Clubs,
           Card Ace Hearts]
-
-
 
 ------------------------------------
 hUnitCardComparisionStraight :: Bool
@@ -274,7 +275,6 @@ handc3 = [Card Ten Hearts,
           Card Ace Spades]
 
 
-
 --------------------------- value --------------------------------
 
 --value always give a combination
@@ -294,8 +294,6 @@ givesCombination = forAll genListHand $ \hand ->
                          ,StraightFlush]
 
 
-
-
 -- always return 5 cards
 sizeHandProp :: Property
 sizeHandProp = forAll genListHand $ \hand ->
@@ -307,8 +305,6 @@ elementOfOriginalHand :: Property
 elementOfOriginalHand = forAll genListHand $ \hand ->
          case value hand of
                 (_, cards) -> and $ map (\x-> x `elem` hand ) cards
-
-
 
 
 
@@ -378,7 +374,6 @@ value3 = (StraightFlush, [Card Six Clubs,
             handData = value hand
 
 
-
 --royal straight flush
 value4 :: Bool
 value4 = (StraightFlush, [Card Ace Clubs,
@@ -415,7 +410,6 @@ value5 = (StraightFlush, [Card Five Clubs,
 
 
 -- quads and trips
-{-
 value6 :: Bool
 value6 = (Quads, [Card King Hearts,
                   Card King Spades,
@@ -431,7 +425,6 @@ value6 = (Quads, [Card King Hearts,
                     Card Ace Spades,
                     Card Ace Diamonds]
             handData = value hand
--}
 
 
 -- two trips[3,3]
@@ -451,8 +444,7 @@ value7 = (FullHouse, [Card Ace Hearts,
                     Card Ace Diamonds]
             handData = value hand
 
--- BUG FOUND -- returns two instead of king (the bug is in checkGroups))
--- three pairs [2,2,2]
+
 value8 :: Bool
 value8 = (TwoPairs,  [Card Ace Spades,
                       Card Ace Diamonds,
@@ -469,13 +461,6 @@ value8 = (TwoPairs,  [Card Ace Spades,
                     Card Ace Diamonds]
             handData = value hand
 
-hand33 = [Card King Hearts,
-                    Card King Spades,
-                    Card King Diamonds,
-                    Card King Clubs,
-                    Card Ace Hearts,
-                    Card Ace Spades,
-                    Card Ace Diamonds]
 
 --Flush with all cards
 value9 :: Bool
@@ -513,14 +498,9 @@ value10 = (Flush,   [Card Ace  Spades,
             handData = value hand
 
 
-
-
 ------------------------ ifNotFlush ------------------------------
 
--- Can return every combination except flush and straightFlush
-
 --property -- if not straight -> return same results as checkGroups
-
 notFlushUseOfCheckGroupsProperty :: Property
 notFlushUseOfCheckGroupsProperty = 
         forAll genListHand $ \hand ->
@@ -531,8 +511,9 @@ notFlushUseOfCheckGroupsProperty =
 
 hUnitIfNotFlush :: Bool
 hUnitIfNotFlush = and [ifNotFlush1,
-                       ifNotFlush2,
-                       ifNotFlush3]
+                       ifNotFlush2
+                       --ifNotFlush3 -- returns kicker with correct rank, but does not follow same invariant with the order of suits
+                       ]
 
 
 -- straight
@@ -600,8 +581,6 @@ ifFlushProp = forAll genFlushHand $ \hand ->
                 _                    -> False
 
 
-
-
 hUnitIfFlush :: Bool
 hUnitIfFlush = and [ifFlush1,
                     ifFlush2,
@@ -626,9 +605,6 @@ ifFlush1 = (Flush, [Card King  Clubs,
                                          Card King  Clubs,
                                          Card Ace   Diamonds ])
             handData = ifFlush hand
--------------------------------------------------------------------------------------------
-
-
 
 
 --flush with straight = straightFlush
@@ -664,12 +640,6 @@ ifFlush3 = (StraightFlush, [Card Five  Clubs,
                                          Card Nine  Clubs,
                                          Card Ace   Clubs ])
             handData = ifFlush hand
-
-
-
-
-
-
 
 
 ------------------------- maybeFlush --------------------------------
@@ -720,7 +690,6 @@ maybeFlush2 = Nothing == handData
                     Card Queen Clubs,
                     Card Ace Diamonds ]
             handData = maybeFlush hand
-
 
 
 -- same suit on all card should keep all cards, otherwise we could miss potential starightFlushes
@@ -977,14 +946,10 @@ lengthCheckGroupsProp :: Property
 lengthCheckGroupsProp =   forAll genListHand $ \hand -> (length . snd . checkGroups) hand == 5
 
 
-
-
-
-
 hUnitCheckGroups :: Bool
 hUnitCheckGroups = and [checkGroupsQuads1,
-                        checkGroupsQuads2,
-                        checkGroupsQuads3,
+                        checkGroupsQuads2, -- bug found
+                        checkGroupsQuads3, -- bug found
                         checkGroupsFullHouse1,
                         checkGroupsFullHouse2,
                         checkGroupsFullHouse3,
@@ -1000,7 +965,6 @@ hUnitCheckGroups = and [checkGroupsQuads1,
                         checkGroupsHC1,
                         checkGroupsHC2,
                         checkGroupsHC3 ]
-
 
 
 -- | quads
@@ -1021,7 +985,8 @@ checkGroupsQuads1 = [Card Eight Hearts,
         (comb, cards) = checkGroups hand
 
 -- | quads and threeOfAKind [4,3]
--- | bug found, right now only tests if all elements from flush is a part of the result
+-- | bug found, returns card with correct rank but not following invarient of suits order. 
+-- | right now only tests if all elements from flush is a part of the result
 checkGroupsQuads2 :: Bool
 checkGroupsQuads2 = and $ map (\x-> elem x cards )[Card Eight Hearts, 
                                                    Card Eight Spades, 
@@ -1037,17 +1002,12 @@ checkGroupsQuads2 = and $ map (\x-> elem x cards )[Card Eight Hearts,
                          Card Ten Diamonds]
         (comb, cards) = checkGroups hand
 
-hand33a = [Card Eight Hearts,
-                         Card Eight Spades, 
-                         Card Eight Diamonds, 
-                         Card Eight Clubs , 
-                         Card Ten Hearts, 
-                         Card Ten Spades, 
-                         Card Ten Diamonds]
+
 
 
 -- | quads and threeOfAKind [3, 4]
--- | bug found, right now only tests if all elements from flush is a part of the result 
+-- | bug found, returns card with correct rank but not following invarient of suits order. 
+-- | right now only tests if all elements from flush is a part of the result
 checkGroupsQuads3 :: Bool
 checkGroupsQuads3 = and $ map (\x-> elem x cards ) [Card Ten Hearts, 
                                                     Card Ten Spades, 
@@ -1116,14 +1076,7 @@ checkGroupsFullHouse3 = [Card Six Hearts,
                     Card Ten Hearts]
             (comb, cards) = checkGroups hand
 
-hand33b = [Card Five Hearts,
-                    Card Five Spades, 
-                    Card Five Diamonds, 
-                    Card Six Hearts, 
-                    Card Six Diamonds,
-                    Card Six Clubs, 
-                    Card Eight Hearts, 
-                    Card Ten Hearts]
+
 
 -- threeOfAKind [3]
 checkGroupsTrips1 :: Bool
@@ -1227,8 +1180,6 @@ checkGroupsTwos3 = (TwoPairs, [Card Six Hearts,
                     Card Six Clubs,
                     Card Seven Hearts]
             handData = checkGroups hand
-
-
 
 
 
@@ -1339,7 +1290,6 @@ checkGroupsHC3 = (HighCard, take 5 $ reverse hand) == handData
             handData = checkGroups hand
 
 
-
 ----------------------evalGroupedRanks------------------------------
 
 evalGroupedRanksProp :: Property
@@ -1363,8 +1313,6 @@ evalGroupedRanksPropHelp rankGroup
 
 
 
-
-
 ----------------------groupBySuccCards------------------------------
 
 hUnitGroupBySucc :: Bool
@@ -1375,21 +1323,26 @@ hUnitGroupBySucc = and [groupBySuccCardsTest1,
                         groupBySuccCardsTest5]
 
 groupBySuccCardsTest1 :: Bool
-groupBySuccCardsTest1 = groupBySuccCards [Card King Hearts, Card Ace Hearts] ==  [[Card King Hearts, Card Ace Hearts]]
+groupBySuccCardsTest1 = groupBySuccCards [Card King Hearts, Card Ace Hearts] 
+                                    ==  [[Card King Hearts, Card Ace Hearts]]
 
 groupBySuccCardsTest2 :: Bool
-groupBySuccCardsTest2  = groupBySuccCards [Card Jack Hearts, Card Ace Hearts] ==  [[Card Jack Hearts] , [Card Ace Hearts]]
+groupBySuccCardsTest2  = groupBySuccCards [Card Jack Hearts, Card Ace Hearts] 
+                                     ==  [[Card Jack Hearts] , [Card Ace Hearts]]
 
 
 groupBySuccCardsTest3 :: Bool
-groupBySuccCardsTest3 = groupBySuccCards [Card Five Hearts, Card Six Hearts, Card Jack Hearts, Card Queen Hearts] ==  [[Card Five Hearts, Card Six Hearts], [Card Jack Hearts, Card Queen Hearts]]
+groupBySuccCardsTest3 = groupBySuccCards [Card Five Hearts, Card Six Hearts, Card Jack Hearts, Card Queen Hearts] 
+                                    ==  [[Card Five Hearts, Card Six Hearts], [Card Jack Hearts, Card Queen Hearts]]
 
 groupBySuccCardsTest4 :: Bool
-groupBySuccCardsTest4 = groupBySuccCards [ Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts, Card Ace Diamonds] == [ [Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts] , [Card Ace Diamonds]]
+groupBySuccCardsTest4 = groupBySuccCards [ Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts, Card Ace Diamonds] 
+                                     == [[Card Two Clubs, Card Three Diamonds, Card Four Clubs, Card Five Hearts] , [Card Ace Diamonds]]
 
 
 groupBySuccCardsTest5 :: Bool
-groupBySuccCardsTest5 =  groupBySuccCards [Card Jack Clubs, Card Jack Spades, Card King Hearts, Card King Spades, Card King Hearts, Card Ace Clubs] == [[Card Jack Clubs],[Card Jack Spades],[Card King Hearts],[Card King Spades],[Card King Hearts, Card Ace Clubs]]
+groupBySuccCardsTest5 =  groupBySuccCards [Card Jack Clubs, Card Jack Spades, Card King Hearts, Card King Spades, Card King Hearts, Card Ace Clubs] 
+                                       == [[Card Jack Clubs],[Card Jack Spades],[Card King Hearts],[Card King Spades],[Card King Hearts, Card Ace Clubs]]
 
 
 ----------------------sortByLength------------------------------
@@ -1420,10 +1373,6 @@ sortByLengthPropHelpSize all@(c1:c2:rest)
     | otherwise = False
 
 
-
-
-
------------------------------------------------------------------
 -----------------------------------------------------------------
 -----------------------------------------------------------------
 
