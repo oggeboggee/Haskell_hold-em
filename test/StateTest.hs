@@ -352,7 +352,7 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
                     -> (r <= 0) || r > ((chips (players table1!!2)) - (lowestBet table1 (players table1!!2)))
                 
                 Right [PlayerRaised "Jonathan" r]
-                    -> r > 0 && r < ((chips (players table1!!2)) - (lowestBet table1 (players table1!!2)))
+                    -> r > 0 && r <= ((chips (players table1!!2)) - (lowestBet table1 (players table1!!2)))
 
 
     , -- Simulating a bettingphase where one player raise and set the highBet to a random amount 

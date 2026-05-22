@@ -6,6 +6,7 @@ import Test.Tasty
 
 import UtilitiesTest
 import StateTest
+import TestHandEvaluation
 
 
 
@@ -18,7 +19,8 @@ main = defaultMain $
   [ StateTest.unitTests,
     StateTest.propertyTests,
     UtilitiesTest.unitTests,
-    UtilitiesTest.propertyTests
+    UtilitiesTest.propertyTests,
+    TestHandEvaluation.combinationsTests
   ]
 
 

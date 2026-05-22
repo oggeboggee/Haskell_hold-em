@@ -114,6 +114,7 @@ instance Show Rank where
 
 instance Arbitrary Rank where
   arbitrary = elements [minBound .. maxBound]
+
 ---------------------------------------------------------------------
  -- | Card has an rank and a suit
 data Card = Card Rank Suit deriving 
@@ -130,13 +131,12 @@ instance Ord Card where
       if r1 == r2 then compare s1 s2 else compare r1 r2
 
 instance Arbitrary Card where
-    arbitrary = do
-        rank <- arbitrary
-        suit <- arbitrary
-        return (Card rank suit)
-    -- arbitrary = do 
-    --     rank <- arbitrary
-    --     Card rank <$> arbitrary
+
+  arbitrary = do
+    rank <- arbitrary
+    suit <- arbitrary
+    return (Card rank suit)
+
 
 ---------------------------------------------------------------------
 -- | Hand is the two cards a player have on hand
