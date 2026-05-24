@@ -3,13 +3,14 @@
 module Main where
 
 import Engine.Cards
-import Types.GameTypes
+import Engine.EngineTypes
 import Server.NetworkServer
 
 import qualified Network.WebSockets as WS
 
 --import Control.Monad.State
 import Control.Concurrent.STM
+import Server.ServerTypes
 --import Control.Concurrent.STM.TVar
 
 main :: IO ()

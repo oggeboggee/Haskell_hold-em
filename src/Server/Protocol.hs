@@ -10,7 +10,7 @@ module Server.Protocol
 
 import Data.Aeson
 
-import Types.GameTypes
+import Engine.EngineTypes
 
 ----------------------------------------------------------------------------------------
 -- This module defines all messages that travel between clients and the server.
@@ -72,20 +72,29 @@ instance ToJSON PlayerSnapshot where
 -- All messages the server can send to a client.
 -- Each constructor maps to a distinct "type" field in the JSON.
 data ServerMsg
-    = Welcome PlayerName            -- sent to a player when they first connect.
+    = Welcome String                -- sent to a player when they first connect.
     | ErrorMsg String               -- something that went wrong: invalid action, name already taken etc.
     | JoinedTable PlayerName        -- broadcast when any player joins
     | LeftTable PlayerName          -- broadcast when any player leaves
     | GameEventMsgs [GameEvent]     -- what just happened (players folded, raised, shwodown etc.)
     | LobbyJoined PlayerName Int    -- Player joins lobby, at position
     | LobbyUpdate [PlayerName]      -- current lobby queue
+    | PrivateHand [String]          -- Players hand, sent only to player.
+    | ShowdownHands [(PlayerName, [String])] -- List of all players hands at showdown, sent to everyone.
+    | YourTurn
+        { turnPlayer       :: PlayerName  -- add this
+        , availableActions :: [String]
+        , toCall           :: Chip
+        , yourChips        :: Chip
+        }                     
     | Snapshot                      -- full public table state, sent after every state change.
         { snapPlayers :: [PlayerSnapshot]
         , snapPot     :: Chip
         , snapPhase   :: String
         , snapBoard   :: [String]
         , snapHighBet :: Bet
-        , snapDealer  :: Int
+        , snapDealer  :: PlayerName
+        , snapPlayerTurn :: PlayerName -- whose turn it is to act
         }
     deriving (Show)
 
@@ -117,6 +126,23 @@ instance ToJSON ServerMsg where
                , "queue" .= ns
                ]
 
+    toJSON (PrivateHand cards) =
+        object ["type"   .= ("private_hand" :: String)
+               , "cards" .= cards]
+
+    
+    toJSON (YourTurn player actions call chip) =
+        object [ "type"              .= ("your_turn" :: String)
+               , "player"            .= player
+               , "available_actions" .= actions
+               , "to_call"           .= call
+               , "your_chips"        .= chip
+               ]
+
+    toJSON (ShowdownHands hands) =
+        object ["type" .= ("showdown_hands" :: String)
+               , "hands" .= map (\(n, cards) -> object ["player" .= n, "cards" .= cards]) hands]
+
     toJSON s@(Snapshot{}) =
         object
             [ "type"     .= ("snapshot" :: String)
@@ -126,6 +152,7 @@ instance ToJSON ServerMsg where
             , "board"    .= snapBoard s     -- ToJSON Card below
             , "high_bet" .= snapHighBet s
             , "dealer"   .= snapDealer s
+            , "player_turn" .= snapPlayerTurn s
             ]
 
 
@@ -193,6 +220,7 @@ instance ToJSON GameEventJSON where
     toJSON (GameEventJSON (PlayerAllIn n amt)) =
         object ["type" .= ("allin"   :: String), "player" .= n, "amount" .= amt]
 
+    -- | When blinds are placed at the start of a hand, we want to broadcast who posted what.
     toJSON (GameEventJSON (PlayerPlacedBlinds n bt amt)) =
         object ["type"       .= ("blind"   :: String)
                , "player"    .= n
@@ -200,7 +228,31 @@ instance ToJSON GameEventJSON where
                , "amount"    .= amt
                ]
 
+    -- | List of player names who are playing this hand
+    toJSON (GameEventJSON (HandStarted players')) =
+        object ["type" .= ("hand_started" :: String), "players" .= players']
+
+    -- | Which phase the game advanced into: PreFlop, Flop, Turn or River.
+    toJSON (GameEventJSON (PhaseChanged phase')) =
+        object ["type" .= ("phase_changed" :: String), "phase" .= GamePhaseJSON phase']
+
+    -- | ShowdownHappened contains a list of winners, because in case of a tie there can be multiple.
     toJSON (GameEventJSON (ShowdownHappened winners)) =
         object ["type"    .= ("showdown" :: String)
                , "winners" .= winners
                ]
+
+    -- | List of players eliminated when a hand ends. Can be empty if no one was eliminated.
+    toJSON (GameEventJSON (PlayerEliminated names)) =
+        object ["type" .= ("eliminated" :: String), "players" .= names]
+
+    -- | List of (name, amount) pairs for who won what in the showdown.
+    toJSON (GameEventJSON (ChipsAwarded pair)) =
+        object ["type" .= ("chips_awarded" :: String)
+               , "awards" .= map (\(n, amt) -> object ["player" .= n, "amount" .= amt]) pair
+               ]
+             
+           
+
+
+    

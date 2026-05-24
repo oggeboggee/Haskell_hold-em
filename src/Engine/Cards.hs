@@ -12,7 +12,7 @@ module Engine.Cards
     )
     where
 
-import Types.GameTypes
+import Engine.EngineTypes
 
 --import System.Random
 

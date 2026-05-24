@@ -1,7 +1,7 @@
 module Engine.Utilities where
 
 
-import Types.GameTypes
+import Engine.EngineTypes
 
 --------------------------------------------------------------------------------
 ----------------------- Strictly pure helper functions -------------------------
@@ -29,21 +29,39 @@ nextPlayerToAct i playersList =
        else nextPlayer 
 
 
--- | Who bets first varies depedning on if we are in PreFlop state or any other state. PreFlop it is
---   the player UTG (BB+1). In all postflop betting rounds action begins with the player in the SB position.
+-- | Returns the index of the next player who still needs to act this betting round.
+--   Starts from the position that acts first for the current phase, then walks forward
+--   until it finds a player who is not folded, has chips, and hasn't acted yet.
+--
+--   Heads-up special cases (2 players):
+--     PreFlop: dealer/SB acts first (posts blind, then acts before BB).
+--     Postflop: BB acts first (positional advantage switches postflop).
+--
+--   Multi-player:
+--     PreFlop: UTG (one left of BB) acts first.
+--     Postflop: first active player left of the dealer acts first.
 firstPlayerToBet :: Table -> PlayerIndex
-firstPlayerToBet table = 
+firstPlayerToBet table =
     let playersList = players table
-    in case length playersList of
-        2 ->
-            case phase table of
-                PreFlop -> dealerPosition table
-                _       -> bigBlindPosition table
+        n = length playersList
+
+        startIdx 
+            | n == 2 && phase table == PreFlop = dealerPosition table                                   -- In heads up preflop, dealer acts first
+            | n == 2                            = bigBlindPosition table                                -- In heads up postflop, BB acts first
+            | phase table == PreFlop           = nextPlayerToAct (bigBlindPosition table) playersList   -- In preflop woth 3+ players, action starts to the left of the BB
+            | otherwise                        = nextPlayerToAct (dealerPosition table) playersList     -- In postflop with 3+ players, action starts to the left of the dealer
         
-        _ ->
-            case phase table of
-                PreFlop -> nextPlayerToAct (bigBlindPosition table) (players table)
-                _       -> nextPlayerToAct (dealerPosition table) (players table)
+        indices = [(startIdx + k) `mod` n | k <- [0..n-1]]      -- generate player indices in circular order starting from the starting index.
+
+        canAct i = 
+            let p = playersList !! i                            -- get player at index i
+            in not (folded p) && chips p > 0 && not (acted p)   -- player must be not folded, have chips, and not already acted.
+
+        valid = filter canAct indices       -- Keep only the players who are allowed to act.
+
+    in case valid of
+        (i:_) -> i          -- return first valid player
+        []    -> startIdx   -- No valid player found, return the starting index.
 
 
 -- | We need a function to take a player at a specific index in a list, 
@@ -67,20 +85,21 @@ dealOutChips2 winners' share p
 
 ---------- Checkers to check different part of the state -----------------------
 
--- | Determines wether the current betting round is over or not. A round is over once eveery player has
--- | either folded, is all-in, or matched the current highBet and taken an action.
+-- | Returns True when the current betting round is finished.
+--   A round is over when every active player has either:
+--   No chips left (all-in) or has matched the current high bet and acted.
+--   The 'acted' flag is important because without it the BB would be considered
+--   done after placing the BB, since their commitedchips already equals the high bet.
 bettingRoundOver :: Table -> Bool
 bettingRoundOver table = 
     let active = activePlayers table
         hb     = highBet table
-
         allMatched =
             all (\p ->
                 chips p <= 0 ||
                 (commitedChips p == hb && acted p)
             ) active
 
-    
     in length active <= 1 || allMatched
 
 ----------------------------------------------------------------

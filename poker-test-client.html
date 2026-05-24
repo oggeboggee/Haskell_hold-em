@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Poker Test Client</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: monospace; background: #0e0e0e; color: #ddd; padding: 16px; font-size: 13px; }
+
+        h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #666; margin: 16px 0 6px; }
+
+        .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+        input[type=text], input[type=number] {
+            background: #1a1a1a; color: #ddd; border: 1px solid #333;
+            padding: 5px 8px; font-family: monospace; font-size: 13px; border-radius: 3px;
+        }
+        button {
+            background: #222; color: #ccc; border: 1px solid #444;
+            padding: 5px 10px; font-family: monospace; font-size: 13px;
+            border-radius: 3px; cursor: pointer;
+        }
+        button:hover { background: #2e2e2e; border-color: #666; }
+        button.action { border-color: #336; color: #99c; }
+        button.action:hover { background: #1a1a2e; }
+        button.danger { border-color: #622; color: #c88; }
+
+        #status { font-size: 12px; color: #555; }
+        #status.on { color: #4c4; }
+
+        /* ── LAYOUT ── */
+        #layout { display: grid; grid-template-columns: 1fr 340px; gap: 12px; margin-top: 12px; }
+
+        /* ── TABLE VIEW ── */
+        #table-view { background: #121212; border: 1px solid #222; border-radius: 4px; padding: 12px; }
+
+        #phase-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+        #phase-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #555; }
+        #phase-val { font-size: 13px; color: #aaa; font-weight: bold; }
+        #pot-val { margin-left: auto; font-size: 12px; color: #888; }
+        #pot-val span { color: #cc9; }
+
+        #board { display: flex; gap: 5px; margin-bottom: 12px; min-height: 44px; align-items: center; }
+        #board-label { font-size: 11px; color: #444; margin-right: 4px; text-transform: uppercase; }
+
+        .card {
+            width: 30px; height: 44px; border-radius: 3px; border: 1px solid #333;
+            background: #1e1e1e; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: bold; letter-spacing: -0.5px;
+        }
+        .card.H, .card.D { color: #e55; }
+        .card.S, .card.C { color: #aaa; }
+        .card.hidden { color: #333; background: #181818; }
+
+        #players-area { display: flex; flex-direction: column; gap: 6px; }
+
+        .player-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 10px; border-radius: 3px;
+            border: 1px solid #1e1e1e; background: #161616;
+        }
+        .player-row.active { border-color: #445; background: #141420; }
+        .player-row.folded { opacity: 0.4; }
+
+        .p-name { font-weight: bold; color: #bbb; min-width: 100px; }
+        .p-chips { color: #cc9; min-width: 70px; }
+        .p-committed { color: #888; min-width: 70px; font-size: 12px; }
+        .p-hand { display: flex; gap: 3px; }
+        .p-badges { margin-left: auto; display: flex; gap: 4px; }
+        .badge { font-size: 10px; padding: 1px 5px; border-radius: 2px; border: 1px solid; }
+        .badge.dealer { border-color: #664; color: #cc8; }
+        .badge.turn   { border-color: #446; color: #88c; }
+        .badge.sb     { border-color: #363; color: #8b8; }
+        .badge.bb     { border-color: #533; color: #b88; }
+
+        /* ── YOUR TURN BANNER ── */
+        #your-turn {
+            display: none; margin-bottom: 10px; padding: 8px 10px;
+            background: #0d0d1e; border: 1px solid #336; border-radius: 3px;
+            font-size: 12px; color: #99c;
+        }
+        #your-turn.visible { display: block; }
+
+        /* ── HAND ── */
+        #my-hand-area { margin-bottom: 10px; }
+        #my-hand { display: flex; gap: 5px; }
+
+        /* ── RIGHT PANEL ── */
+        #right { display: flex; flex-direction: column; gap: 12px; }
+
+        /* ── LOG ── */
+        #log {
+            background: #0a0a0a; border: 1px solid #1e1e1e; border-radius: 4px;
+            padding: 8px; height: 420px; overflow-y: auto; font-size: 11px;
+            display: flex; flex-direction: column; gap: 1px;
+        }
+        .log-entry { padding: 2px 0; border-bottom: 1px solid #141414; line-height: 1.5; }
+        .log-time { color: #444; margin-right: 6px; }
+        .log-type { font-size: 10px; padding: 0 4px; border-radius: 2px; margin-right: 5px; display: inline-block; }
+
+        .t-snapshot    { background:#1a2a1a; color:#6a6; }
+        .t-game_events { background:#1a1a2a; color:#66a; }
+        .t-your_turn   { background:#2a1a2a; color:#a6a; }
+        .t-private_hand{ background:#2a2a1a; color:#aa6; }
+        .t-lobby_joined{ background:#1a2a2a; color:#6aa; }
+        .t-lobby_update{ background:#1a1a1a; color:#666; }
+        .t-error       { background:#2a1a1a; color:#a66; }
+        .t-showdown_hands { background:#2a1a2a; color:#a6a; }
+        .t-send        { background:#222; color:#555; }
+        .t-sys         { background:#111; color:#444; }
+        .t-other       { background:#1a1a1a; color:#666; }
+
+        .log-detail { color: #666; word-break: break-all; }
+
+        /* ── EVENT FEED ── */
+        #events {
+            background: #0a0a0a; border: 1px solid #1e1e1e; border-radius: 4px;
+            padding: 8px; height: 160px; overflow-y: auto; font-size: 11px;
+        }
+        .ev { padding: 2px 0; color: #888; border-bottom: 1px solid #111; }
+        .ev .ev-player { color: #aaa; font-weight: bold; }
+        .ev .ev-action { color: #99c; }
+        .ev .ev-amount { color: #cc9; }
+
+        .showdown-box { background:#1a1020; border:1px solid #332; border-radius:3px; padding:6px 8px; margin-top:4px; font-size:11px; }
+        .showdown-box .winner { color:#cc9; font-weight:bold; }
+    </style>
+</head>
+<body>
+
+<div class="row">
+    <input type="text" id="wsUrl" value="ws://localhost:9160" style="width:180px">
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()" class="danger">Disconnect</button>
+    <span id="status">● disconnected</span>
+</div>
+
+<div class="row" style="margin-top:8px">
+    <input type="text" id="nameInput" placeholder="Your name" style="width:130px">
+    <button onclick="join()">Join</button>
+    <button onclick="leave()" class="danger">Leave</button>
+    &nbsp;
+    <button class="action" onclick="act('check')">Check</button>
+    <button class="action" onclick="act('call')">Call</button>
+    <button class="action" onclick="act('fold')">Fold</button>
+    <button class="action" onclick="act('allin')">All In</button>
+    <input type="number" id="raiseAmt" placeholder="amount" style="width:80px">
+    <button class="action" onclick="actRaise()">Raise</button>
+</div>
+
+<div id="layout">
+
+    <!-- LEFT: table view -->
+    <div id="table-view">
+
+        <div id="your-turn"></div>
+
+        <div id="phase-bar">
+            <span id="phase-label">phase</span>
+            <span id="phase-val">—</span>
+            <span id="pot-val">pot <span id="pot-num">0</span></span>
+        </div>
+
+        <div id="board">
+            <span id="board-label">board</span>
+        </div>
+
+        <h3>Your hand</h3>
+        <div id="my-hand-area">
+            <div id="my-hand"><span style="color:#333">—</span></div>
+        </div>
+
+        <h3>Players</h3>
+        <div id="players-area"><span style="color:#333">Waiting for players...</span></div>
+
+        <h3>Game events</h3>
+        <div id="events"></div>
+    </div>
+
+    <!-- RIGHT: message log -->
+    <div id="right">
+        <h3 style="margin-top:0">Message log</h3>
+        <div id="log"></div>
+    </div>
+
+</div>
+
+<script>
+let ws = null;
+let myName = '';
+let lastSnap = null;
+
+// ── CONNECT ──────────────────────────────────────────
+function connect() {
+    if (ws) ws.close();
+    const url = document.getElementById('wsUrl').value.trim();
+    ws = new WebSocket(url);
+    ws.onopen    = ()  => { sysLog('Connected to ' + url); setStatus(true); };
+    ws.onclose   = ()  => { sysLog('Disconnected'); setStatus(false); };
+    ws.onerror   = ()  => { sysLog('WebSocket error'); };
+    ws.onmessage = (e) => handleMessage(e.data);
+}
+function disconnect() { if (ws) ws.close(); ws = null; }
+
+function setStatus(on) {
+    const el = document.getElementById('status');
+    el.textContent = on ? '● connected' : '● disconnected';
+    el.className   = on ? 'on' : '';
+}
+
+// ── SEND ─────────────────────────────────────────────
+function send(obj) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) { sysLog('Not connected'); return; }
+    ws.send(JSON.stringify(obj));
+    addLog('send', '→ ' + obj.type, JSON.stringify(obj));
+}
+function join()     { myName = document.getElementById('nameInput').value.trim(); if (!myName) return; send({type:'join',name:myName}); }
+function leave()    { send({type:'leave'}); }
+function act(t)     { send({type:'action',action:{type:t}}); }
+function actRaise() { const a=parseInt(document.getElementById('raiseAmt').value); if(isNaN(a)) return; send({type:'action',action:{type:'raise',amount:a}}); }
+
+// ── RECEIVE ──────────────────────────────────────────
+function handleMessage(raw) {
+    let msg;
+    try { msg = JSON.parse(raw); } catch { addLog('other','parse error', raw); return; }
+
+    const t = msg.type || 'other';
+
+    switch(t) {
+        case 'snapshot':
+            lastSnap = msg;
+            renderSnapshot(msg);
+            addLog(t, 'snapshot', summariseSnap(msg));
+            break;
+        case 'game_events':
+            renderEvents(msg.events);
+            addLog(t, 'game events', describeEvents(msg.events));
+            break;
+        case 'your_turn':
+            renderYourTurn(msg);
+            addLog(t, 'your turn → ' + msg.player, 'actions: ' + msg.available_actions.join(', ') + '  to_call: ' + msg.to_call + '  chips: ' + msg.your_chips);
+            break;
+        case 'private_hand':
+            renderHand(msg.cards);
+            addLog(t, 'private hand', msg.cards.join(' '));
+            break;
+        case 'showdown_hands':
+            renderShowdown(msg.hands);
+            addLog(t, 'showdown hands', msg.hands.map(h=>h.player+': '+h.cards.join(' ')).join(' | '));
+            break;
+        case 'lobby_joined':
+            addLog(t, 'lobby joined', msg.name + ' at position ' + msg.position);
+            break;
+        case 'lobby_update':
+            addLog(t, 'lobby', 'queue: ' + (msg.queue.length ? msg.queue.join(', ') : '(empty)'));
+            break;
+        case 'error':
+            addLog('error', 'error', msg.message);
+            break;
+        default:
+            addLog('other', t, raw.length > 120 ? raw.slice(0,120)+'…' : raw);
+    }
+}
+
+// ── RENDER SNAPSHOT ───────────────────────────────────
+function renderSnapshot(s) {
+    document.getElementById('phase-val').textContent = s.phase;
+    document.getElementById('pot-num').textContent   = s.pot;
+
+    // Board
+    const boardEl = document.getElementById('board');
+    boardEl.innerHTML = '<span id="board-label">board</span>';
+    if (s.board && s.board.length) {
+        s.board.forEach(c => boardEl.appendChild(makeCard(c)));
+    } else {
+        const empty = document.createElement('span');
+        empty.style.color = '#333'; empty.textContent = '—';
+        boardEl.appendChild(empty);
+    }
+
+    // Players
+    const area = document.getElementById('players-area');
+    area.innerHTML = '';
+    if (!s.players || !s.players.length) {
+        area.innerHTML = '<span style="color:#333">Waiting for players...</span>';
+        return;
+    }
+    s.players.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'player-row' + (p.folded ? ' folded' : '') + (s.player_turn === p.name ? ' active' : '');
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'p-name';
+        nameEl.textContent = p.name + (p.name === myName ? ' (you)' : '');
+
+        const chipsEl = document.createElement('span');
+        chipsEl.className = 'p-chips';
+        chipsEl.textContent = '♠ ' + p.chips;
+
+        const commEl = document.createElement('span');
+        commEl.className = 'p-committed';
+        commEl.textContent = p.commited > 0 ? 'bet: ' + p.commited : '';
+
+        const badges = document.createElement('div');
+        badges.className = 'p-badges';
+        if (s.dealer === p.name)      badges.appendChild(mkBadge('D','dealer'));
+        if (s.player_turn === p.name) badges.appendChild(mkBadge('▶','turn'));
+
+        if (p.hand && p.hand.length) {
+            const handEl = document.createElement('div');
+            handEl.className = 'p-hand';
+            p.hand.forEach(c => handEl.appendChild(makeCard(c)));
+            row.append(nameEl, chipsEl, commEl, handEl, badges);
+        } else {
+            row.append(nameEl, chipsEl, commEl, badges);
+        }
+
+        area.appendChild(row);
+    });
+}
+
+function mkBadge(text, cls) {
+    const b = document.createElement('span');
+    b.className = 'badge ' + cls;
+    b.textContent = text;
+    return b;
+}
+
+function makeCard(str) {
+    const el = document.createElement('div');
+    const suit = str.slice(-1);
+    el.className = 'card ' + suit;
+    el.textContent = str;
+    return el;
+}
+
+// ── YOUR TURN BANNER ─────────────────────────────────
+function renderYourTurn(msg) {
+    const el = document.getElementById('your-turn');
+    if (msg.player === myName) {
+        el.textContent = '▶ Your turn — ' + msg.available_actions.join(' / ') +
+            (msg.to_call > 0 ? '   (to call: ' + msg.to_call + ')' : '') +
+            '   chips: ' + msg.your_chips;
+        el.className = 'visible';
+    } else {
+        el.textContent = 'Waiting for ' + msg.player + '...';
+        el.className = 'visible';
+    }
+}
+
+// ── HAND ─────────────────────────────────────────────
+function renderHand(cards) {
+    const el = document.getElementById('my-hand');
+    el.innerHTML = '';
+    cards.forEach(c => el.appendChild(makeCard(c)));
+}
+
+// ── EVENTS ───────────────────────────────────────────
+function renderEvents(events) {
+    const el = document.getElementById('events');
+    if (!events || !events.length) return;
+    events.forEach(ev => {
+        const d = document.createElement('div');
+        d.className = 'ev';
+        d.innerHTML = fmtEvent(ev);
+        el.appendChild(d);
+    });
+    el.scrollTop = el.scrollHeight;
+}
+
+function fmtEvent(ev) {
+    const p = n => `<span class="ev-player">${n}</span>`;
+    const a = s => `<span class="ev-action">${s}</span>`;
+    const c = n => `<span class="ev-amount">${n}</span>`;
+    switch(ev.type) {
+        case 'folded':        return `${p(ev.player)} ${a('folded')}`;
+        case 'checked':       return `${p(ev.player)} ${a('checked')}`;
+        case 'called':        return `${p(ev.player)} ${a('called')} ${c(ev.amount)}`;
+        case 'raised':        return `${p(ev.player)} ${a('raised')} ${c(ev.amount)}`;
+        case 'allin':         return `${p(ev.player)} ${a('all in')} ${c(ev.amount)}`;
+        case 'blind':         return `${p(ev.player)} posts ${a(ev.blind_type)} ${c(ev.amount)}`;
+        case 'hand_started':  return `${a('hand started')} — ${ev.players.join(', ')}`;
+        case 'phase_changed': return `${a('phase →')} ${ev.phase}`;
+        case 'showdown':      return `${a('showdown')} — winner(s): ${ev.winners.map(p).join(', ')}`;
+        case 'chips_awarded': return ev.awards.map(aw => `${p(aw.player)} wins ${c(aw.amount)}`).join('<br>');
+        case 'eliminated':    return ev.players.length ? `${a('eliminated')}: ${ev.players.join(', ')}` : '';
+        default:              return JSON.stringify(ev);
+    }
+}
+
+// ── SHOWDOWN HANDS ────────────────────────────────────
+function renderShowdown(hands) {
+    const ev = document.getElementById('events');
+    const box = document.createElement('div');
+    box.className = 'showdown-box';
+    box.innerHTML = '<span style="color:#777;font-size:10px;text-transform:uppercase;letter-spacing:.08em">Showdown hands</span><br>' +
+        hands.map(h => `<span class="ev-player">${h.player}</span>: ${h.cards.join(' ')}`).join('<br>');
+    ev.appendChild(box);
+    ev.scrollTop = ev.scrollHeight;
+}
+
+// ── LOG ───────────────────────────────────────────────
+function addLog(type, label, detail) {
+    const log = document.getElementById('log');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    const time = new Date().toISOString().slice(11,19);
+    entry.innerHTML =
+        `<span class="log-time">${time}</span>` +
+        `<span class="log-type t-${type}">${label}</span>` +
+        `<span class="log-detail">${escHtml(detail||'')}</span>`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+}
+
+function sysLog(msg) { addLog('sys','sys', msg); }
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function summariseSnap(s) {
+    return `phase:${s.phase} pot:${s.pot} board:[${(s.board||[]).join(',')}] turn:${s.player_turn||'—'}`;
+}
+
+function describeEvents(evs) {
+    if (!evs || !evs.length) return '(none)';
+    return evs.map(e => {
+        switch(e.type) {
+            case 'folded':  return e.player+' folds';
+            case 'checked': return e.player+' checks';
+            case 'called':  return e.player+' calls '+e.amount;
+            case 'raised':  return e.player+' raises '+e.amount;
+            case 'allin':   return e.player+' all-in '+e.amount;
+            case 'blind':   return e.player+' '+e.blind_type+' '+e.amount;
+            case 'showdown': return 'showdown: '+e.winners.join(',');
+            case 'chips_awarded': return e.awards.map(a=>a.player+' +'+a.amount).join(', ');
+            default: return e.type;
+        }
+    }).join(' | ');
+}
+</script>
+</body>
+</html>

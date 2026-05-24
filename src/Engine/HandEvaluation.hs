@@ -1,7 +1,7 @@
 module Engine.HandEvaluation where
 
 import Engine.Cards
-import Types.GameTypes
+import Engine.EngineTypes
 
 import Data.List
 import Data.Maybe

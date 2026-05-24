@@ -1,0 +1,102 @@
+
+
+
+
+
+The model:
+
+We have three layers.
+
+Layer 1: Clients (WS.connections)
+Just connections that can come and go.
+
+Layer 2: Lobby waiting room
+"Registered players", all are here by default
+
+Layer 3: Engine table seats
+Players "locked in" to the hand at the start of a hand.
+
+
+We want: 
+
+JoinMsg -> always add to the Lobby
+Then table seating happens ONLY in startNewHand.
+
+
+
+Or: 
+
+ClientMsg ActionMsg
+-> Resolve players
+-> check they are seated
+-> run applyEvent on activeGame.table
+-> update Active.game
+
+
+The table should decide what state it is in. Server reacts.
+
+We have a applyEvent which applies events in the engine.
+
+Server that receives ActionMsg
+
+
+We want to achieve: The server decide when the engine advances but the engine decided what advancing means.
+Server becomes the dictator and engine the executor.
+
+Server responsibility:
+Receive ClientMsg
+call applyEvent
+broadcast GameEvents
+ask enggine, what next?
+
+What doesn't work now:
+
+The old IO based loop. gameRound calls bettingRound calls gameLoop which calls getPlayerEvent that reads stdin.
+
+need websocket driven equivalent.
+
+in gameLoop right now it explicitly moves with (nextPlayerToAct playerindex playerlist).
+but the loop shouldnt drive turn order, it should be derived from the state.
+we have folded, acted, and chips in each player and bettingRoundOver and activePlayers. This
+should be enough to derive the state? 
+
+nextPlayerToAct -> PlayerIndex -> [Player] -> PlayerIndex
+
+server needs to decide who can act not the engine.
+
+
+
+
+
+
+
+---------------------------------------------------------------------------------------
+-- MOVED SOURCES HERE THAT EXIST IN OUR CODE.
+---------------------------------------------------------------------------------------
+-- | https://wiki.haskell.org/Real_World_Applications/Event_Driven_Applications
+
+-- | Attempt at making event data types.
+-- | Should we have events for players that are actions and then also have Events for things such as
+-- | dealing cards/hands, resetting rounds, etc? Does Blinds belong in this category. Thinking in terms
+-- | of future if we will need to send this in JSON? https://academy.fpblock.com/haskell/library/aeson/
+
+
+-- https://stackoverflow.com/questions/20576229/an-example-of-using-data-map-in-haskell
+
+
+
+-- https://jaspervdj.be/websockets/example/server.html?utm_source=chatgpt.com
+-- https://blog.gordo.life/2026/04/12/haskell-websockets.html
+
+
+
+-- | Source guide:
+-- | https://www.ahri.net/2019/07/practical-event-driven-and-sourced-programs-in-haskell/
+-- | Here we update the state, have betting rules (when can a player call, raise etc.). 
+-- | We handle errors if wanted action isn't allowed. We produce GameEvents.
+-- | This is instead of having applyPureAction.
+
+
+-- | https://stackoverflow.com/questions/27609062/what-is-the-difference-between-mapm-and-mapm-in-haskell
+-- | mapM_ : We can use this because we don't care about the result of eventMsg (We have Game () as return type.)
+-- | We still print what we need. So mapM_ when we only care about the side effects?

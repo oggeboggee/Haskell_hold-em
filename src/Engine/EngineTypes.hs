@@ -1,16 +1,10 @@
 --{-# LANGUAGE DeriveGeneric #-}
 
-module Types.GameTypes where
+module Engine.EngineTypes where
 
 import Control.Monad.State
 
 
--- | https://wiki.haskell.org/Real_World_Applications/Event_Driven_Applications
-
--- | Attempt at making event data types.
--- | Should we have events for players that are actions and then also have Events for things such as
--- | dealing cards/hands, resetting rounds, etc? Does Blinds belong in this category. Thinking in terms
--- | of future if we will need to send this in JSON? https://academy.fpblock.com/haskell/library/aeson/
 
 --------------------------------------------------------------------------------------------------------
 -- EVENTS (input to the engine)
@@ -24,11 +18,11 @@ data Event
     | EngineEvent EngineAction 
     deriving(Show)
 
--- | Internal actions initiated automatically by the game.
+-- | Internal actions initiated automatically by the game engine.
 data EngineAction 
-    = PlaceBlind PlayerIndex BlindType Bet 
-    -- | AdvancePhase
-    | RunShowdown  
+    = PlaceBlind PlayerIndex BlindType Bet      -- Place a blind. Parameters needed: which player, what blindtype and how much.
+    | RunShowdown                               -- Evaluate hands and dsitribute pot. No parameters needed.
+    | EliminatePlayers                          -- Remove players with zero chips after a showdown. 
     deriving (Show)
 
 
@@ -39,16 +33,31 @@ data EngineAction
 -- | Produced by the engine after processing an Event
 -- | Describes what actually happened. USed for broadcasting to clients.
 data GameEvent 
+    -- Player events
     = PlayerFolded PlayerName
     | PlayerChecked PlayerName
     | PlayerCalled PlayerName Bet
     | PlayerRaised PlayerName Bet
     | PlayerAllIn PlayerName Bet
-    | PlayerPlacedBlinds PlayerName BlindType Bet
-    | ShowdownHappened [PlayerName]
-    -- | WinnersDeclared [PlayerName] Bet
-    -- | PlayersEliminated [PlayerName]
+
+    -- Engine events
+    | PlayerPlacedBlinds PlayerName BlindType Bet  -- Result of PlaceBlind
+    | ShowdownHappened [PlayerName]                -- Result of RunShowdown
+    | HandStarted [PlayerName]                     -- Result of startHand setup
+    | PhaseChanged GamePhase                       -- Result of advancePhase
+    | PlayerEliminated [PlayerName]                -- Result of EliminatePlayers
+    | ChipsAwarded [(PlayerName, Chip)]            -- Result of RunShowdown
     deriving (Show)
+
+
+data GameStepResult
+    = AwaitingAction 
+    --Bettinground in progress, wait.
+    | PhaseAdvanced [GameEvent] Table 
+    -- Betting round finished. Engine delt community cards, reset etc.
+    | HandComplete [GameEvent] Table
+    -- Hand over, events have Showdownhappened and winning player(s)
+    -- Table has dsitributed chips, cleared pot.
 
 
 --------------------------------------------------------------------------------------------------------

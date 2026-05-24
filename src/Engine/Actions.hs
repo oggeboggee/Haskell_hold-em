@@ -1,29 +1,24 @@
+{-# LANGUAGE TupleSections #-}
+
 module Engine.Actions where
 
-{- Logic for the the different actions a player can make -}
-
-import Types.GameTypes
+import Engine.EngineTypes
 import Engine.Utilities
 import Engine.HandEvaluation
-import Engine.TerminalUI
 
 import Control.Monad.State
 
 
-
--- | Source guide:
--- | https://www.ahri.net/2019/07/practical-event-driven-and-sourced-programs-in-haskell/
 -- | Here we update the state, have betting rules (when can a player call, raise etc.). 
 -- | We handle errors if wanted action isn't allowed. We produce GameEvents.
 -- | This is instead of having applyPureAction.
 applyEvent :: Event -> State Table (Either String [GameEvent])
---applyEvent :: Event -> Table -> Either String (Table, [GameEvent])
 
 -- PLAYERACTIONS
 applyEvent (PlayerEvent playerIndex action) = do
-    table <- get
-    let player = players table !! playerIndex
-        hb     = highBet table
+    t <- get
+    let player = players t !! playerIndex
+        hb     = highBet t
         cChips = commitedChips player
         plName = name player
         toCall = hb - cChips
@@ -47,7 +42,7 @@ applyEvent (PlayerEvent playerIndex action) = do
             else do
 
                 let amount = hb - cChips
-                modify (\t -> placePureBet t playerIndex amount)
+                modify (\t' -> placePureBet t' playerIndex amount)
                 playerHaveActed playerIndex -- Change a players acted to True
                 pure (Right [PlayerCalled plName amount])
 
@@ -56,13 +51,13 @@ applyEvent (PlayerEvent playerIndex action) = do
 
 
         Raise x -> do
-            if x <= 0 || x > (chips player + lowestBet table player)
+            if x <= 0 || x > (chips player + lowestBet t player)
             then pure (Left "Raise amount must be larger than 0 and smaller then the amount of chips you have")
             else do
 
                 let callAmount = hb - cChips
                     totalAmount = callAmount + x
-                modify (\t -> placePureBet t playerIndex totalAmount)
+                modify (\t' -> placePureBet t' playerIndex totalAmount)
                 playerHaveActed playerIndex
 
                 pure (Right [PlayerRaised plName x])
@@ -70,28 +65,31 @@ applyEvent (PlayerEvent playerIndex action) = do
         AllIn -> do
             let amount = chips player
 
-            modify (\t -> placePureBet t playerIndex amount)
+            modify (\t' -> placePureBet t' playerIndex amount)
             playerHaveActed playerIndex -- Change a players acted to True
 
             pure (Right [PlayerAllIn plName amount])
 
 -- System Events
 applyEvent (EngineEvent engineAction) = do
-    table <- get
+    t <- get
     case engineAction of
         PlaceBlind playerIndex blindType bet -> do
-            let player = players table !! playerIndex
+            let player = players t !! playerIndex
                 plName = name player
-            modify (\t -> placePureBet t playerIndex bet)
+            modify (\t' -> placePureBet t' playerIndex bet)
             pure (Right [PlayerPlacedBlinds plName blindType bet])
-
-
-        -- Showdown_ -> do
-        --     resultOfShowdown <- state (runState runShowDown)
 
 
         RunShowdown -> do
             Right <$> runShowdown
+
+        EliminatePlayers -> do
+            let eliminated = filter (\p -> chips p == 0) (players t)
+                names      = map name eliminated
+            modify (\t' -> t' { players = filter (\p -> name p `notElem` names) (players t')})
+
+            pure(Right [PlayerEliminated names]) 
 
 runShowdown :: State Table [GameEvent]
 runShowdown = do
@@ -126,38 +124,17 @@ runShowdown = do
 
         updatedPlayers = map (dealOutChips2 winnerNames evenShare) playerList
 
-    modify (\t -> t { players = updatedPlayers, pot = 0 })
-    pure [ShowdownHappened (map name computedWinners)]
+        eliminatedNames = map name (filter (\p -> chips p == 0) updatedPlayers)
 
-
-
-
-
--- | https://stackoverflow.com/questions/27609062/what-is-the-difference-between-mapm-and-mapm-in-haskell
--- | mapM_ : We can use this because we don't care about the result of eventMsg (We have Game () as return type.)
--- | We still print what we need. So mapM_ when we only care about the side effects?
-
--- | Here we update the state and trigger the output of eventMSg. 
--- | If we get Right returned from applyEvent, then we get a new table and a list of events that happened.
-performEvent :: Event -> Game (Either String [GameEvent])
-performEvent event = do
-    table <- get
-
-    let (result, newTable) = runState (applyEvent event) table
-
-    put newTable
-
-    case result of
-        Left inv -> do
-            liftIO $ putStrLn inv
-            pure (Left inv)
-
-        Right events -> do
-            mapM_ eventMsg events
-            pure (Right events)
-
-
---sendEvent :: GameEvent -> Connection -> IO ()
+    modify (\t -> t 
+        { players = filter (\p -> name p `notElem` eliminatedNames) updatedPlayers
+        , pot = 0 
+        })
+    
+    pure [ ShowdownHappened winnerNames
+         , ChipsAwarded (map (, evenShare) winnerNames)
+         , PlayerEliminated eliminatedNames
+         ]
 
 
 
