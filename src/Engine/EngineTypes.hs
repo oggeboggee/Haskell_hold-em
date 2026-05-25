@@ -100,10 +100,10 @@ data Suit = Hearts | Spades | Diamonds | Clubs
 
 instance Show Suit where
     show s = case s of
-        Spades -> "S" --"\9824" --Spades -> "S"
-        Hearts -> "H"  --"\9829" --Hearts -> "H"
-        Diamonds -> "D" --"\9830" --Diamonds -> "D"
-        Clubs -> "C" --"\9827" --Clubs -> "C"
+        Spades -> "\9824" --Spades -> "S"
+        Hearts -> "\9829" --Hearts -> "H"
+        Diamonds -> "\9830" --Diamonds -> "D"
+        Clubs -> "\9827" --Clubs -> "C"
 
 data Rank 
     = Two | Three | Four | Five | Six | Seven | Eight

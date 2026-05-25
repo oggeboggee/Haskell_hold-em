@@ -11,7 +11,7 @@ import Server.Protocol
 import Engine.EngineTypes
 import Engine.Actions       (applyEvent)
 import Engine.TexasEngine   (removePlayer, startHand, stepGame)
-import Engine.Utilities     (firstPlayerToBet, bettingRoundOver)
+import Engine.Utilities     (firstPlayerToBet, bettingRoundOver, activePlayers)
 
 import qualified Data.Map.Strict as M
 import           Data.List       (find)
@@ -362,5 +362,6 @@ getTurnPlayer t
 --   Called once per hand after HAndComplete, after chips have been awarded.
 createShowdownHands :: ServerState -> BroadcastAction
 createShowdownHands st = 
-    let hands = map (\p -> (name p, map show (hand p))) (players (table st))
+    let playerNotFolded = activePlayers (table st)
+        hands = map (\p -> (name p, map show (hand p))) playerNotFolded
     in BroadcastToAll (ShowdownHands hands)
