@@ -156,7 +156,7 @@ returnPlayersToLobby st =
 --   seatLobbyPlayersAtTable calls it with the subset of lobby players to seat.
 seatLobbyPlayersAtTable :: ServerState -> ServerState
 seatLobbyPlayersAtTable st =
-    let playersToSeat = take maxSeats (lobby st)
+    let playersToSeat = take maxSeats (lobby st) -- maxSeat - playersAtTable
         remianingLobby = drop maxSeats (lobby st)
         updatedTable = seatThePlayers playersToSeat (table st)
     in st { lobby = remianingLobby, table = updatedTable }

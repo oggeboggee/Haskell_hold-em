@@ -174,7 +174,7 @@ handleGameStep st = do
             let newSt = st { table = newTable }
                 -- Remove eliminated players from the lobby so they can't rejoin.
                 eliminatedNames = map name (filter (\p -> chips p == 0) (players newTable))
-                cleanedSt = newSt { lobby = filter (`notElem` eliminatedNames) (lobby newSt) }
+                cleanedSt = newSt { lobby = filter (`notElem` eliminatedNames) (lobby newSt) } -- Add handOngoing change
                 actions =
                     [ BroadcastToAll (GameEventMsgs events)                 -- Showdown result and chip awards.
                     , BroadcastToAll (makeSnapshot (table cleanedSt))       -- Final table state after showdown
@@ -193,15 +193,24 @@ handleGameStep st = do
 -- Moves players to lobby first to get a clean count and then decides.
 ------------------------------------------------------------------------------------------
 
-checkLobbyAndStart :: ServerState -> IO (ServerState, [BroadcastAction])
+checkLobbyAndStart :: ServerState -> IO (ServerState, [BroadcastAction]) -- Add check state of handOngoning 
 checkLobbyAndStart st =
-    let st1 = returnPlayersToLobby st  
-    in if length (lobby st1) < 2
-        then pure (st1,
-            [ BroadcastToAll (makeSnapshot (table st1))
-            , BroadcastToAll (LobbyUpdate (lobby st1))
+    let numPlayers = length (lobby st) + length (players (table st))  -- Kolla kombinationen antal spelare vid bord och lobby
+    in if numPlayers < 2
+        then pure (st,
+            [ BroadcastToAll (makeSnapshot (table st))
+            , BroadcastToAll (LobbyUpdate (lobby st))
             ])
-        else tryToStartHand st1
+        else tryToStartHand st
+    
+    
+    -- let st1 = returnPlayersToLobby st  -- Kolla kombinationen antal spelare vid bord och lobby
+    -- in if length (lobby st1) < 2
+    --     then pure (st1,
+    --         [ BroadcastToAll (makeSnapshot (table st1))
+    --         , BroadcastToAll (LobbyUpdate (lobby st1))
+    --         ])
+    --     else tryToStartHand st1
 
 
 -- | Seat the players from the lobby and try to start a new hand
@@ -216,13 +225,18 @@ tryToStartHand :: ServerState -> IO (ServerState, [BroadcastAction])
 tryToStartHand st = do
     -- st already has empty table and players in lobby from checkLobbyAndStart
 
-    let st1    = returnPlayersToLobby st        -- Move all players again to ensure table is cleared.
-        st2    = seatLobbyPlayersAtTable st1    -- Seat players up to the max seat limit.
+    let 
+        st2    = seatLobbyPlayersAtTable st    -- Seat players up to the max seat limit.
+        
+        
+        -- st1    = returnPlayersToLobby st        -- Move all players again to ensure table is cleared.
+        -- st2    = seatLobbyPlayersAtTable st1    -- Seat players up to the max seat limit.
+
         seated = numSeatedPlayers st2
 
     -- Safety check - should always pass given checkLobbyAndStart, but just in case.
     if seated < 2
-        then pure (st1,
+        then pure (returnPlayersToLobby st, -- Used to st1
             [ BroadcastToAll (makeSnapshot (table st2))
             , BroadcastToAll (LobbyUpdate (lobby st2))
             ])

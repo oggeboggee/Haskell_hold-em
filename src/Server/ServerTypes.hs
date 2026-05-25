@@ -48,6 +48,7 @@ data ServerState = ServerState
     , clients      :: Clients       -- all connected websocket clients
     , nextClientId :: ClientId      -- counter to generate unique cIDs.
     , lobby        :: [PlayerName]  -- ordered queue of players waiting to join the game
+    , handOngoing  :: Bool
     }
 
 -- | A shared mutable state across all websocket threads.
@@ -66,6 +67,7 @@ initServerState t =
         , clients      = M.empty    -- Websocket connections (none so far)
         , nextClientId = 0          -- Client identifier (First client gets assigned an ID of 0)
         , lobby        = []         -- nobody waiting to join yet
+        , handOngoing  = False      -- No hand ongoing at initial state
         }
 
 ------------------------------------------------------------------------------------------------
