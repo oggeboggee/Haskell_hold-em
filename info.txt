@@ -64,6 +64,87 @@ nextPlayerToAct -> PlayerIndex -> [Player] -> PlayerIndex
 
 server needs to decide who can act not the engine.
 
+---------------------------------------------------------------------------------------
+
+The pipeline:
+
+1. Client opens websocket connection to ws://localhost:9160
+
+2. NetworkServer accepts the connection via WS.acceptRequest and then atomically allocated a unique ClientId and stores
+   ClientInfo { name ="", conn } in the clients map inside the shared TVar ServerState. They're just an unnamed entry
+   at this stage.
+
+3. Immediately send a snapshot of the current table (Server -> Client) so the client can render whatever game state already
+   exists.
+
+4. Client picks a name and sends {"type":"join","name":"Jonathan"}.
+
+5. NetworkServer decodes JSON into JoinMSg "Jonathan", reads the shared state from the TVar. Calls toTransition in order
+   to produce PlayerJoined clientId "Jonathan", and passes this to handleTransition.
+
+6. GameLoop checks clientExists and rejects if name is already taken, otherwise calls nameClient to write the name into
+   the clients map, then addPlayerToLobby to append them to the queue, then calls checkLobbyAndStart
+
+7. Calls returnPlayersToLobby to move any seated players back for a fresh start, counts the lobby, if less than two players
+   it returns and waits, if 2 or more players, then calls tryToStartHand
+
+8. Seats players from lobby via seatLobbyPlayersAtTable, generates newStdGen, passes it to startHand in TexasEngine which 
+   shuffles, deals hands, places blinds, and advances the phase to PreFlop. Returns the startup events and new table.
+
+9. Server broadcasts the GameEvents, the full snapshot (phase, players, pot, etc.) and a lobby update message. Then sends
+   the players hands to each seated player privately. Sends your_turn to all clients naming the first player to act.
+
+10. Client sends {"type:"action","action"::{"type":"call"}}
+
+11. NetworkServer decoded to ActionMsg Call, reads the shared state, calls toTransition -> PlayerActed clientId Call. 
+    Passes to handleTransition.
+
+12. GameLoop calls resolvePIdx to map ClientId -> PlayerIndex via the clients name. Calls firstPlayerToBet to get the
+    expected player to act. If the indexes dont match: reject with "Not your turn". If they match, builds a PlayerEvent and runs
+    applyEvent via runState against the current table.
+
+13. applyEvent validates the actions against the table rules (e.g can't check if behind the high bet). If the action is invalid
+    it returns Left errorMsg. If it is valid, updates the chips, pot, commitedChips, acted flah and returns Right [GameEvents]
+    with the new table state.
+
+14. GameLoop calls stepGame on the new table. If AwaitingAction: sends your_turn and stops. If PhaseAdvanced: broadcasts the
+    new snapshot then recurses (to see if all players for example are all in, then we want to continue advancing the phase).
+    If HandComplete: broadcast showdown result and calls checkLobbyAndStart for the next hand.
+
+15. Broadcasts to all clients the GameEvents (what the player did) and the updated snapshot of the table. Then either your_turn
+    for the next player or for the phase advancing, or shwodown events if the hand ended.
+
+16. bettingRoundOver returns true (all active players have acted=true and commitedChips == highBet, or chips == 0). Calls
+    advancePhase which runs moveToNextPhase -> dealCommunityCards -> resetBettingRounds. Returns PhaseAdvanced = [] newTable.
+
+17. GameLoop receives PhaseAdvanced. Broadcasts snapshot with the new board, then immediately recurses and calls stepGame
+    again on the new table. If everyone is all-in, bettingRoundOver is true so it advances again, through Turn -> River -> showdown
+    in one loop.
+
+18. On river or when one player remains: evaluate all active hands against the board using winners from HandEvaluation. Split
+    the pot among winners, award chips, and mark eliminated players with chips = 0 for elimination.
+
+19. Each phase sends its own snapshot so clients see the board appear one phase at a time. Finally broadcasts game_events with
+    showdown resul, chips_awarded, showdown_hands.
+
+20. GameLoop HandComplete: Takes the post-showdown table. Finds players with zero chips, these were eliminated in runShowdown.
+    Removes their names from the lobby so they can't be reseated and stores the cleaned state.
+
+21. Broadcasts final game_events (shwodown winners, chips awarded, eliminations). Broadcasts final snapshot showing each
+    players chip count after the pot was awarded. Broadcasts shwodown_hands revelaing every players hole cards.
+
+22. GameLoop checkLobbyAndStart calls reutrnPlayersToLobby, i.e all reminaing players go back to the front of the lobby queue
+    while waiting players stay at the back of the queue. Counts the queue, if 2+ players then immediately calls tryToStartHand
+    and the next hand begins.
+
+
+
+
+
+
+
+
+
 
 
 
