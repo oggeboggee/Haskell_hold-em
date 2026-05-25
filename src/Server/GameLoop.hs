@@ -54,10 +54,12 @@ handleTransition st (PlayerJoined cid n)
                 ]
         
         -- After every lobby change check if there are enough players to start a hand.
-        (finalSt, checkActions) <- checkLobbyAndStart st2
+        if handOngoing st then pure (st2, actions)
+        else do
+            (finalSt, checkActions) <- checkLobbyAndStart st2
 
-        pure (finalSt, actions ++ checkActions)
-
+            pure (finalSt, actions ++ checkActions)
+            
 ------------------
 -- PLAYER LEAVES
 --
@@ -171,7 +173,7 @@ handleGameStep st = do
         -- The hand is finished, the engine ran the showdown, awarded the chips, and eliminated
         -- eliminated players.
         HandComplete events newTable -> do
-            let newSt = st { table = newTable }
+            let newSt = st { table = newTable, handOngoing = False }
                 -- Remove eliminated players from the lobby so they can't rejoin.
                 eliminatedNames = map name (filter (\p -> chips p == 0) (players newTable))
                 cleanedSt = newSt { lobby = filter (`notElem` eliminatedNames) (lobby newSt) } -- Add handOngoing change
@@ -196,7 +198,8 @@ handleGameStep st = do
 checkLobbyAndStart :: ServerState -> IO (ServerState, [BroadcastAction]) -- Add check state of handOngoning 
 checkLobbyAndStart st =
     let numPlayers = length (lobby st) + length (players (table st))  -- Kolla kombinationen antal spelare vid bord och lobby
-    in if numPlayers < 2
+
+    in if (numPlayers < 2) -- || handOngoing st
         then pure (st,
             [ BroadcastToAll (makeSnapshot (table st))
             , BroadcastToAll (LobbyUpdate (lobby st))
@@ -245,7 +248,7 @@ tryToStartHand st = do
             -- it just uses the randomness we give it to start the hand.
             gen <- newStdGen
             let (startupEvents, newTable) = startHand gen (table st2)
-                st3 = st2 { table = newTable }
+                st3 = st2 { table = newTable, handOngoing = True }
                 actions =
                     [ BroadcastToAll (GameEventMsgs startupEvents)  -- Broadcast blinds being placed.
                     , BroadcastToAll (makeSnapshot (table st3))     -- The table state after setup.
