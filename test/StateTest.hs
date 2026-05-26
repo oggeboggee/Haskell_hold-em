@@ -297,7 +297,7 @@ unitRunShowdown = testGroup "Unit test runShowdown"
 unitUpdatePlayerAtIndex :: TestTree
 unitUpdatePlayerAtIndex = testGroup "Unit test updatePlayerAtIndex"
     [ -- 10 is a invalid index 
-    testCase "Negative index should give an error"
+    testCase "Index of out range give error"
         $   assertThrows 
             (evaluate 
                 (updatePlayerAtIndex 100 (\p -> p { acted = True }) table1)) 
@@ -362,9 +362,9 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
         $ QC.forAll (QC.choose(0, 900)) $ \ x -> -- The amount of chips Lewis have
           QC.forAll (QC.choose(100, 900)) $ \ y -> -- y is the highBet set by Jonathan
                 let pl = [Player "Bob" [] 950 50 False False,
-                               Player "Sam" [] 900 100 False False,
-                               Player "Jonathan" [] (1000-y) y False False,
-                               Player "Lewis" [] x 0 False False]
+                          Player "Sam" [] 900 100 False False,
+                          Player "Jonathan" [] (1000-y) y False False,
+                          Player "Lewis" [] x 0 False False]
                     
                     finalState = Table -- Generating a state where Lewis may or may not have enough chips to call 
                                 { players = pl,
@@ -425,7 +425,7 @@ propertyTestsRunShowdown = testGroup "Property tests runShowdown"
                 winnerPlayers = [activePlayers!!i | i <- winnerIndexes]
                 winnerNames   = map name winnerPlayers
 
-            in [ShowdownHappened winnerNames] == (evalState (runShowdown) table)
+            in winnerNames == (unPackWinners ((evalState (runShowdown) table)!!0))
 
     , -- Check so that the correct amount of money is dealt out to the correct players
     QC.testProperty "The winners chips increase after winning" $

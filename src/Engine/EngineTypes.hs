@@ -190,7 +190,7 @@ data Player = Player
 instance Show Player where
     show p = 
         "Name: " ++ show (name p) ++
-        --" | Hand: " ++ show (hand p) ++
+        " | Hand: " ++ show (hand p) ++
         " | Chips: " ++ show (chips p) ++
         " | Pot contribution: " ++ show (commitedChips p) ++
         " | Folded: " ++ show (folded p) ++

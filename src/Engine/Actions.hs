@@ -37,8 +37,8 @@ applyEvent (PlayerEvent playerIndex action) = do
                 pure (Left "You can't check when behind the highbet.")
 
         Call -> do
-            if toCall <= 0
-            then pure (Left "There isn't a bet to call.")
+            if toCall <= 0 || hb > chips player
+            then pure (Left "There isn't a bet to call or you don't have enough chips to call.")
             else do
 
                 let amount = hb - cChips
@@ -51,7 +51,7 @@ applyEvent (PlayerEvent playerIndex action) = do
 
 
         Raise x -> do
-            if x <= 0 || x > (chips player + lowestBet t player)
+            if x <= 0 || x > (chips player - lowestBet t player)
             then pure (Left "Raise amount must be larger than 0 and smaller then the amount of chips you have")
             else do
 
@@ -145,11 +145,14 @@ runShowdown = do
 --     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
 updatePlayerAtIndex playerIndex f table =
-    let playerList = players table
-        player = playerList !! playerIndex
-        updatedPlayer = f player
-        updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
-    in table { players = updatePlayerList }
+    if playerIndex < 0 || playerIndex > (length (players table) - 1)
+        then error "Invalid index in updatePlayerAtIndex"
+    else
+        let playerList = players table
+            player = playerList !! playerIndex
+            updatedPlayer = f player
+            updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
+        in table { players = updatePlayerList }
 
 
 -- placeBet that works with Gaem() 
