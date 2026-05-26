@@ -6,10 +6,10 @@ import Test.Tasty
 import Test.Tasty (defaultMain)
 
 
-import TexasEngine
-import Cards
-import Types
-import Utilities
+import Engine.TexasEngine
+import Engine.Cards
+import Engine.EngineTypes
+import Engine.Utilities
 
 import TestHelpers
 

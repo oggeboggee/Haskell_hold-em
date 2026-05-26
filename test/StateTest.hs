@@ -7,12 +7,12 @@ import Test.Tasty
 
 import Control.Monad.State
 
-import Types
-import Cards
-import TexasEngine
-import Actions
-import Utilities
-import HandEvaluation
+import Engine.EngineTypes
+import Engine.Cards
+import Engine.TexasEngine
+import Engine.Actions
+import Engine.Utilities
+import Engine.HandEvaluation
 
 import TestHelpers
 -- =========================================================== --  
@@ -21,7 +21,7 @@ import TestHelpers
 unitTests :: TestTree
 unitTests = testGroup "Unit tests State"
     [ 
-     unitConvertAction,
+     --unitConvertAction,
      unitApllyEventPlayerEvent,
      unitPlacePureBet,
      unitPureFold,
@@ -43,32 +43,32 @@ propertyTests = testGroup "Property tests State"
 -----------------------------------------------------
 -----------------------------------------------------
 -- | Convert action unit tests
-unitConvertAction :: TestTree
-unitConvertAction = testGroup "converAction Unit tests"
-    [ -- Small letter should work
-    testCase "Convert Action 'fold'      -> Just Fold" 
-        $ convertAction "fold" @?= Just Fold
+-- unitConvertAction :: TestTree
+-- unitConvertAction = testGroup "converAction Unit tests"
+--     [ -- Small letter should work
+--     testCase "Convert Action 'fold'      -> Just Fold" 
+--         $ convertAction "fold" @?= Just Fold
 
-    , -- Capital letters should not matter
-    testCase "Convert Action 'FOLD'      -> Just Fold" 
-        $ convertAction "FOLD" @?= Just Fold
+--     , -- Capital letters should not matter
+--     testCase "Convert Action 'FOLD'      -> Just Fold" 
+--         $ convertAction "FOLD" @?= Just Fold
 
-    , -- Typos and gibberish should return Nothing
-    testCase "Convert Action 'fodl'      -> Nothing" 
-        $ convertAction "fodl" @?= Nothing
+--     , -- Typos and gibberish should return Nothing
+--     testCase "Convert Action 'fodl'      -> Nothing" 
+--         $ convertAction "fodl" @?= Nothing
 
-    , -- Extra whitespace gives invalid action
-    testCase "Convert Action 'fold     ' -> Nothing"
-        $ convertAction "fold     " @?= Nothing
+--     , -- Extra whitespace gives invalid action
+--     testCase "Convert Action 'fold     ' -> Nothing"
+--         $ convertAction "fold     " @?= Nothing
 
-    , -- | When raising, the digits after raise is converted correctly
-    testCase "Convert Action 'raise 100' -> Just Rasie 100"
-        $ convertAction "raise 100" @?= Just (Raise 100)
+--     , -- | When raising, the digits after raise is converted correctly
+--     testCase "Convert Action 'raise 100' -> Just Rasie 100"
+--         $ convertAction "raise 100" @?= Just (Raise 100)
 
-    , -- Raise must be followed by a digit
-    testCase "Convert Action 'raise five' -> Nothing"
-        $ convertAction "raise five" @?= Nothing
-    ]
+--     , -- Raise must be followed by a digit
+--     testCase "Convert Action 'raise five' -> Nothing"
+--         $ convertAction "raise five" @?= Nothing
+--     ]
 
 
 

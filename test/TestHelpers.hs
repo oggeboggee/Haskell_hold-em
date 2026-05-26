@@ -7,12 +7,12 @@ import Test.Tasty
 
 import Control.Monad.State
 
-import Types
-import Cards
-import TexasEngine
-import Actions
-import Utilities
-import HandEvaluation
+import Engine.EngineTypes
+import Engine.Cards
+import Engine.TexasEngine
+import Engine.Actions
+import Engine.Utilities
+import Engine.HandEvaluation
 
 
 

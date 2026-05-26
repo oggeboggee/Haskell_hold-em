@@ -4,9 +4,9 @@ import Data.Maybe
 import Data.List
 import Data.Function (on)
 
-import Types
-import Cards
-import HandEvaluation
+import Engine.EngineTypes
+import Engine.Cards
+import Engine.HandEvaluation
 
 import Test.Tasty
 import Test.Tasty.HUnit

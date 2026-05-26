@@ -47,7 +47,7 @@ data GameEvent
     | PhaseChanged GamePhase                       -- Result of advancePhase
     | PlayerEliminated [PlayerName]                -- Result of EliminatePlayers
     | ChipsAwarded [(PlayerName, Chip)]            -- Result of RunShowdown
-    deriving (Show)
+    deriving (Show, Eq)
 
 
 data GameStepResult
