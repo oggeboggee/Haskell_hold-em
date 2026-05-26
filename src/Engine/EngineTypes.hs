@@ -3,7 +3,7 @@
 module Engine.EngineTypes where
 
 import Control.Monad.State
-
+import Test.QuickCheck
 
 
 --------------------------------------------------------------------------------------------------------
@@ -84,19 +84,8 @@ instance Show Action where
 -- CARDS
 --------------------------------------------------------------------------------------------------------
 
-data Card = Card Rank Suit 
-    deriving (Eq)
-
-instance Show Card where
-  show (Card r s) = show r ++ show s
-
--- | To compere two cards
-instance Ord Card where
-  compare (Card r1 s1) (Card r2 s2) =
-      if r1 == r2 then compare s1 s2 else compare r1 r2
-
 data Suit = Hearts | Spades | Diamonds | Clubs
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Enum, Bounded)
 
 instance Show Suit where
     show s = case s of
@@ -105,10 +94,14 @@ instance Show Suit where
         Diamonds -> "\9830" --Diamonds -> "D"
         Clubs -> "\9827" --Clubs -> "C"
 
+instance Arbitrary Suit where
+  arbitrary = elements [minBound .. maxBound]
+
+
 data Rank 
     = Two | Three | Four | Five | Six | Seven | Eight
     | Nine | Ten | Jack | Queen | King | Ace
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Enum, Bounded)
 
 instance Show Rank where
   show r = case r of
@@ -126,6 +119,25 @@ instance Show Rank where
     King  -> "K"
     Ace   -> "A"
 
+instance Arbitrary Rank where
+  arbitrary = elements [minBound .. maxBound]
+
+
+data Card = Card Rank Suit 
+    deriving (Eq)
+
+instance Show Card where
+  show (Card r s) = show r ++ show s
+
+-- | To compere two cards
+instance Ord Card where
+  compare (Card r1 s1) (Card r2 s2) =
+      if r1 == r2 then compare s1 s2 else compare r1 r2
+
+instance Arbitrary Card where
+    arbitrary = do 
+        rank <- arbitrary
+        Card rank <$> arbitrary
 
 --------------------------------------------------------------------------------------------------------
 -- TYPE ALIASES

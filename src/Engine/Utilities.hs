@@ -1,7 +1,14 @@
 module Engine.Utilities where
 
-
 import Engine.EngineTypes
+
+
+-- import Cards
+-- --import Actions
+-- import Control.Monad.State
+-- import Data.Char (toLower)
+-- import System.Random
+-- import HandEvaluation
 
 --------------------------------------------------------------------------------
 ----------------------- Strictly pure helper functions -------------------------
@@ -139,7 +146,8 @@ decChips player bet = player {chips         = chips player - bet,
 
 -- | increase the amount of chips a player have by a certain amount
 incChips :: Player -> Pot -> Player
-incChips player pot' = player {chips = chips player + pot'}
+incChips player currentPot = player {chips = chips player + currentPot}
+
 
 -- | Reset the commited chips a player have made to zero
 resetCommited :: Player -> Player
@@ -147,12 +155,10 @@ resetCommited player = player {commitedChips = 0}
 
 -- | Increase the Pot by a certain amount
 incPot :: Pot -> Bet -> Pot
-incPot pot' bet = pot' + bet
+incPot currentPot bet = currentPot + bet
+
 
 -- | Helper function to calculate lowest bet a player can make
 lowestBet :: Table -> Player -> Bet
 lowestBet table player = highBet table - commitedChips player
 
-
-
-                            

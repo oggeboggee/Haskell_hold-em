@@ -1,3 +1,4 @@
+
 module Engine.Cards 
     ( rank
     , suit
@@ -13,10 +14,13 @@ module Engine.Cards
     where
 
 import Engine.EngineTypes
+import Engine.EngineTypes
 
 --import System.Random
 
 {- Card related data-types -}
+
+
 -----------------------
 -- Functions --
 
@@ -99,17 +103,17 @@ removeCard x (y:ys)
 
 -- | Use a double between 0-1 to find a index, Help function for shuffle
 pick :: Double -> Deck -> Card
-pick x d = d !! round ((fromIntegral (length d - 1)) * x)
+pick x dk = dk!!round ((fromIntegral (length dk - 1)) * x)
 
 -- | Pick a random card using a double(for index) and put it in a new deck
 --   Note that the list of doubles need to be same or bigger length as deck
 shuffle :: [Double] -> Deck -> Deck
 shuffle _ [] = []
 shuffle [] _ = []
-shuffle (x:xs) d = card : shuffle xs d'
-    where
-        card  = pick x d
-        d' = removeCard card d
+shuffle (x:xs) dk = card : shuffle xs deck'
+  where
+    card  = pick x dk
+    deck' = removeCard card dk
 
 
 --------------------------------------------------------------

@@ -1,0 +1,68 @@
+
+
+
+------------------------------ TODO --------------------------------
+ TestSuite
+-- convertAction            [x]
+-- applyEvent               [x] -- Could be done tested more
+-- placePureBet             [x]
+-- pureFold                 [x]
+-- pureCheck                [x]
+-- updatePlayerAtIndex      [x] -- Is kind of tested by testing pureFold/check/placeBet
+-- runShodown               [x]
+        -- noNegativeChips
+        -- correct winners
+        -- Even pot distribution
+        -- Chips increase correctly
+
+-- NoNegativeChips          [x]
+--------------------------------
+Eninge
+-- Waiting room             []
+-- Player with 0 chips      []
+-- Side pot                 []
+-- Buy in                   []
+-- No comCards when -        
+    one players left        []
+-- Adding/ removing player  []
+-- Separate IO completly    []
+-- When one player left 
+     skip phases            []
+     
+
+
+
+
+-----
+-- if one player goes allin and one call(with enough chips) 
+        it's only the tow left it should move to showdown
+        -- right now the game is stuck unless the player who called raise 
+-- when one person is on zero chips and it's their turn to blind 
+    -- the get negative chips
+-- At the moment you can call when you have the exakt same amount of chips 
+    -- as the highbet. Should that be a call or an allin?   
+
+-----------------------------------
+Documentation
+-- Checklist                []
+-- Future roadmap           []
+-- Hadock                   []
+
+
+
+
+-- ================================================================= --
+   ------------------------- Documentation -------------------------
+
+
+   ----------- Buggs found while testing --------
+--- One bug found so far
+    -- Player could get negative chips when raising an amount close to their max chips
+    -- Inbetween the amount of chips and lowest bet...
+
+-- Another bug.. If someone can not match highBet, they can still call..
+    -- And end up with negative chips
+    -- Also need to change so that call don't show as an avalible action 
+
+-- If one player can call another players allin and no other player are active
+    we go in to a possibly infinet betting round, only ends when the playre who called raise
