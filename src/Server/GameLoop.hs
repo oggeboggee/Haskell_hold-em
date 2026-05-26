@@ -14,7 +14,6 @@ import Engine.TexasEngine   (removePlayer, startHand, stepGame)
 import Engine.Utilities     (firstPlayerToBet, bettingRoundOver, activePlayers)
 
 import qualified Data.Map.Strict as M
-import           Data.List       (find)
 
 import Control.Monad.State       (runState)
 import System.Random             (newStdGen)
@@ -53,10 +52,10 @@ handleTransition st (PlayerJoined cid n)
                 , BroadcastToAll (LobbyUpdate (lobby st2))              -- Tell all clients the lobby queue changed.
                 ]
         
-        -- After every lobby change check if there are enough players to start a hand.
-        if handOngoing st then pure (st2, actions)
+        -- After every lobby change check if there is a hand currently playing and if there are enough players to start a hand.
+        if handOngoing st then pure (st2, actions)              -- If a hand is playing we only add a player to the lobby
         else do
-            (finalSt, checkActions) <- checkLobbyAndStart st2
+            (finalSt, checkActions) <- checkLobbyAndStart st2   -- Else we seat players in the lobby at the table
 
             pure (finalSt, actions ++ checkActions)
             
@@ -199,21 +198,12 @@ checkLobbyAndStart :: ServerState -> IO (ServerState, [BroadcastAction]) -- Add 
 checkLobbyAndStart st =
     let numPlayers = length (lobby st) + length (players (table st))  -- Kolla kombinationen antal spelare vid bord och lobby
 
-    in if (numPlayers < 2) -- || handOngoing st
+    in if numPlayers < 2
         then pure (st,
             [ BroadcastToAll (makeSnapshot (table st))
             , BroadcastToAll (LobbyUpdate (lobby st))
             ])
         else tryToStartHand st
-    
-    
-    -- let st1 = returnPlayersToLobby st  -- Kolla kombinationen antal spelare vid bord och lobby
-    -- in if length (lobby st1) < 2
-    --     then pure (st1,
-    --         [ BroadcastToAll (makeSnapshot (table st1))
-    --         , BroadcastToAll (LobbyUpdate (lobby st1))
-    --         ])
-    --     else tryToStartHand st1
 
 
 -- | Seat the players from the lobby and try to start a new hand
