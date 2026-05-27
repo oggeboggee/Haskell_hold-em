@@ -18,7 +18,6 @@ main = defaultMain $
   testGroup "All test"
   [ StateTest.unitTests,
     StateTest.propertyTests,
-    UtilitiesTest.unitTests,
     UtilitiesTest.propertyTests,
     TestHandEvaluation.combinationsTests
   ]

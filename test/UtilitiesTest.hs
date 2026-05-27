@@ -16,14 +16,6 @@ import TestHelpers
 ------------- Testing pure utilites function ------------
 
 
-unitTests :: TestTree
-unitTests = testGroup "Unit tests Utility"
-    [ 
-
-    ]
-
-
-
 propertyTests :: TestTree
 propertyTests = testGroup "Property tests utility"
   [ QC.testProperty "Fulldeck --> 52 cards" propSizeFullDeck,

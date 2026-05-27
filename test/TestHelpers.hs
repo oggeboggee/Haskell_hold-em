@@ -3,16 +3,16 @@ module TestHelpers where
 import Control.Exception
 import Test.Tasty.QuickCheck as QC
 import Test.Tasty.HUnit as HU
-import Test.Tasty
+import Test.Tasty()
 
-import Control.Monad.State
+import Control.Monad.State()
 
 import Engine.EngineTypes
 import Engine.Cards
-import Engine.TexasEngine
-import Engine.Actions
-import Engine.Utilities
-import Engine.HandEvaluation
+import Engine.TexasEngine()
+import Engine.Actions()
+import Engine.Utilities()
+import Engine.HandEvaluation()
 
 
 

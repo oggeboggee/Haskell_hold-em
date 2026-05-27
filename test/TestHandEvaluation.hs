@@ -14,8 +14,8 @@ import Test.Tasty.QuickCheck
 
 
 
-import System.Exit
-import Control.Exception
+import System.Exit ()
+import Control.Exception ()
 
 {-
 main :: IO ()
@@ -329,14 +329,14 @@ value1 = (Straight, [ Card Nine  Clubs,
                       Card Six   Hearts ,                    
                       Card Five  Hearts]) == handData
         where
-            hand = [Card Three Hearts,
+            hand' = [Card Three Hearts,
                     Card Five Hearts,
                     Card Six Hearts,
                     Card Seven Clubs,
                     Card Eight Clubs,
                     Card Nine Clubs,
                     Card Ace Spades]
-            handData = value hand
+            handData = value hand'
 
 -- wheel- straight
 value2 :: Bool
@@ -1039,7 +1039,7 @@ checkGroupsFullHouse1 = [Card Five Hearts,
                     Card Six Diamonds, 
                     Card Eight Hearts, 
                     Card Ten Hearts]
-            (comb, cards) = checkGroups hand
+            (_, cards) = checkGroups hand
 
 -- | fullHouse [2,3]
 checkGroupsFullHouse2 :: Bool
