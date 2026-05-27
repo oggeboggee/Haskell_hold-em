@@ -17,7 +17,6 @@ import           Server.Protocol    (ServerMsg(..))
 -- Both of these live together in ServerState and is shared across all client threads.
 ------------------------------------------------------------------------------------------------
 
-
 -- | Unique ID assigned to each client connection when it connects.
 --   Lets us track clients independently of whether they've chosen a name
 --   or not. Gets assigned atomically so no clients risk sharing an ID.
@@ -48,6 +47,7 @@ data ServerState = ServerState
     , clients      :: Clients       -- all connected websocket clients
     , nextClientId :: ClientId      -- counter to generate unique cIDs.
     , lobby        :: [PlayerName]  -- ordered queue of players waiting to join the game
+    , handOngoing  :: Bool          -- Is hand ongoing or not.
     }
 
 -- | A shared mutable state across all websocket threads.
@@ -66,6 +66,7 @@ initServerState t =
         , clients      = M.empty    -- Websocket connections (none so far)
         , nextClientId = 0          -- Client identifier (First client gets assigned an ID of 0)
         , lobby        = []         -- nobody waiting to join yet
+        , handOngoing  = False      -- No hand ongoing at initial state
         }
 
 ------------------------------------------------------------------------------------------------

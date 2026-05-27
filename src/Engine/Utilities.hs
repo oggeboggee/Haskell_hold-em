@@ -170,7 +170,8 @@ decChips player bet = player {chips         = chips player - bet,
 
 -- | Awards chips to a player.
 incChips :: Player -> Pot -> Player
-incChips player pot' = player {chips = chips player + pot'}
+incChips player currentPot = player {chips = chips player + currentPot}
+
 
 -- | Resets a players commited chips to zero.
 resetCommited :: Player -> Player
@@ -178,7 +179,8 @@ resetCommited player = player {commitedChips = 0}
 
 -- | Increase the Pot by a bet amount.
 incPot :: Pot -> Bet -> Pot
-incPot pot' bet = pot' + bet
+incPot currentPot bet = currentPot + bet
+
 
 -- | The minimum amount a player must put in to match the current high bet.
 lowestBet :: Table -> Player -> Bet

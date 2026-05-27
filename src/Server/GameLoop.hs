@@ -11,14 +11,12 @@ import Server.Protocol
 import Engine.EngineTypes
 import Engine.Actions       (applyEvent)
 import Engine.TexasEngine   (startHand, stepGame)
-import Engine.Utilities     (firstPlayerToBet, bettingRoundOver, removePlayer)
+import Engine.Utilities     (firstPlayerToBet, bettingRoundOver, removePlayer, activePlayers)
 
 import qualified Data.Map.Strict as M
 
-import Control.Monad.State       (runState)
-import System.Random             (newStdGen)
-
-
+import Control.Monad.State  (runState)
+import System.Random        (newStdGen)
 
 ------------------------------------------------------------------------------------------
 -- STATE TRANSITION HANDLER
@@ -53,11 +51,13 @@ handleTransition st (PlayerJoined cid n)
                 , SendToClient cid (Welcome n)                           -- Welcome the new player with a private message.
                 ]
         
-        -- After every lobby change check if there are enough players to start a hand.
-        (finalSt, checkActions) <- checkLobbyAndStart st2
+        -- After every lobby change check if there is a hand currently playing and if there are enough players to start a hand.
+        if handOngoing st then pure (st2, actions)              -- If a hand is playing we only add a player to the lobby
+        else do
+            (finalSt, checkActions) <- checkLobbyAndStart st2   -- Else we seat players in the lobby at the table
 
-        pure (finalSt, actions ++ checkActions)
-
+            pure (finalSt, actions ++ checkActions)
+            
 ------------------
 -- PLAYER LEAVES
 --
@@ -171,19 +171,21 @@ handleGameStep st = do
         -- The hand is finished, the engine ran the showdown, awarded the chips, and eliminated
         -- eliminated players.
         HandComplete events newTable -> do
-            let newSt = st { table = newTable }
+            let newSt = st { table = newTable, handOngoing = False }
                 -- Remove eliminated players from the lobby so they can't rejoin.
                 eliminatedNames = map name (filter (\p -> chips p == 0) (players newTable))
-                cleanedSt = newSt { lobby = filter (`notElem` eliminatedNames) (lobby newSt) }
-                actions =
-                    [ BroadcastToAll (GameEventMsgs events)                 -- Showdown result and chip awards.
-                    , BroadcastToAll (makeSnapshot (table cleanedSt))       -- Final table state after showdown
-                    , createShowdownHands newSt                             -- Reveal everyone's hands at shwodown.
-                    ]
+                cleanedSt = newSt { lobby = filter (`notElem` eliminatedNames) (lobby newSt) } -- Add handOngoing change
+                actions = [ BroadcastToAll (GameEventMsgs events)                       -- Showdown result and chip awards.
+                                , BroadcastToAll (makeSnapshot (table cleanedSt))       -- Final table state after showdown
+                                , createShowdownHands newSt                             -- Reveal everyone's hands at shwodown.
+                                ]
 
             -- After a hand ends, see if conditions are met to start a new one.
             (finalSt, checkActions) <- checkLobbyAndStart cleanedSt
-            pure (finalSt, actions ++ checkActions)
+            if length (activePlayers (table st)) > 1 then
+                pure (finalSt, actions ++ checkActions)
+            else 
+                pure (finalSt, checkActions)
 
 ------------------------------------------------------------------------------------------
 -- LOBBY AND HAND START
@@ -193,15 +195,16 @@ handleGameStep st = do
 -- Moves players to lobby first to get a clean count and then decides.
 ------------------------------------------------------------------------------------------
 
-checkLobbyAndStart :: ServerState -> IO (ServerState, [BroadcastAction])
+checkLobbyAndStart :: ServerState -> IO (ServerState, [BroadcastAction]) -- Add check state of handOngoning 
 checkLobbyAndStart st =
-    let st1 = returnPlayersToLobby st  
-    in if length (lobby st1) < 2
-        then pure (st1,
-            [ BroadcastToAll (makeSnapshot (table st1))
-            , BroadcastToAll (LobbyUpdate (lobby st1))
+    let numPlayers = length (lobby st) + length (players (table st))  -- Kolla kombinationen antal spelare vid bord och lobby
+
+    in if numPlayers < 2
+        then pure (st,
+            [ BroadcastToAll (makeSnapshot (table st))
+            , BroadcastToAll (LobbyUpdate (lobby st))
             ])
-        else tryToStartHand st1
+        else tryToStartHand st
 
 
 -- | Seat the players from the lobby and try to start a new hand
@@ -216,29 +219,29 @@ tryToStartHand :: ServerState -> IO (ServerState, [BroadcastAction])
 tryToStartHand st = do
     -- st already has empty table and players in lobby from checkLobbyAndStart
 
-    let st1    = returnPlayersToLobby st        -- Move all players again to ensure table is cleared.
-        st2    = seatLobbyPlayersAtTable st1    -- Seat players up to the max seat limit.
-        seated = numSeatedPlayers st2
+    let 
+        st1    = seatLobbyPlayersAtTable st    -- Seat players up to the max seat limit.
+        seated = numSeatedPlayers st1
 
     -- Safety check - should always pass given checkLobbyAndStart, but just in case.
     if seated < 2
-        then pure (st1,
-            [ BroadcastToAll (makeSnapshot (table st2))
-            , BroadcastToAll (LobbyUpdate (lobby st2))
+        then pure (returnPlayersToLobby st, -- Used to st1
+            [ BroadcastToAll (makeSnapshot (table st1))
+            , BroadcastToAll (LobbyUpdate (lobby st1))
             ])
         else do
             -- Generate randomness here in IO, pass into the engine. Engine doesn't touch IO,
             -- it just uses the randomness we give it to start the hand.
             gen <- newStdGen
-            let (startupEvents, newTable) = startHand gen (table st2)
-                st3 = st2 { table = newTable }
+            let (startupEvents, newTable) = startHand gen (table st1)
+                st2 = st1 { table = newTable, handOngoing = True }
                 actions =
                     [ BroadcastToAll (GameEventMsgs startupEvents)  -- Broadcast blinds being placed.
-                    , BroadcastToAll (makeSnapshot (table st3))     -- The table state after setup.
-                    , BroadcastToAll (LobbyUpdate (lobby st3))      -- The updated lobby with seated players removed.
-                    ] ++ createPrivateHandActions st3               -- Each player gets sent their hand privately.
-                      ++ yourTurnMessage st3                        -- Tell the first player to act it's their turn.
-            pure (st3, actions)
+                    , BroadcastToAll (makeSnapshot (table st2))     -- The table state after setup.
+                    , BroadcastToAll (LobbyUpdate (lobby st2))      -- The updated lobby with seated players removed.
+                    ] ++ createPrivateHandActions st2               -- Each player gets sent their hand privately.
+                      ++ yourTurnMessage st2                        -- Tell the first player to act it's their turn.
+            pure (st2, actions)
 
 
 ------------------------------------------------------------------------------------------------
@@ -345,5 +348,6 @@ getTurnPlayer t
 --   Called once per hand after HAndComplete, after chips have been awarded.
 createShowdownHands :: ServerState -> BroadcastAction
 createShowdownHands st = 
-    let hands = map (\p -> (name p, map show (hand p))) (players (table st))
+    let playerNotFolded = activePlayers (table st)
+        hands = map (\p -> (name p, map show (hand p))) playerNotFolded
     in BroadcastToAll (ShowdownHands hands)

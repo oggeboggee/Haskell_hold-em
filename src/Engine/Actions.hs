@@ -43,8 +43,8 @@ applyEvent (PlayerEvent playerIndex action) = do
 
         -- Call: only valid when there is a bet to match (toCall > 0).
         Call -> do
-            if toCall <= 0
-            then pure (Left "There isn't a bet to call.")
+            if toCall <= 0 || hb > chips player
+            then pure (Left "There isn't a bet to call or you don't have enough chips to call.")
             else do
 
                 let amount = hb - cChips
@@ -55,7 +55,7 @@ applyEvent (PlayerEvent playerIndex action) = do
         -- Raise: the raise amount is the amount of chips the player wants to add on top of calling the current high bet.
         -- Rejected if x is zero, negative, or larger than the amount of chips the player has available.
         Raise x -> do
-            if x <= 0 || x > (chips player + lowestBet t player)
+            if x <= 0 || x > (chips player - lowestBet t player)
             then pure (Left "Raise amount must be larger than 0 and smaller then the amount of chips you have")
             else do
 
@@ -151,11 +151,14 @@ runShowdown = do
 --   the updated table. Used for actions like fold, check, call and raise.
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
 updatePlayerAtIndex playerIndex f table =
-    let playerList = players table
-        player = playerList !! playerIndex
-        updatedPlayer = f player
-        updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
-    in table { players = updatePlayerList }
+    if playerIndex < 0 || playerIndex > (length (players table) - 1)
+        then error "Invalid index in updatePlayerAtIndex"
+    else
+        let playerList = players table
+            player = playerList !! playerIndex
+            updatedPlayer = f player
+            updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
+        in table { players = updatePlayerList }
 
 -- | Decrements a players chips, adds it to the pot, and updates the high bet if the players
 --   total commited chips exceeds the current high bet. Used for call and raise actions.

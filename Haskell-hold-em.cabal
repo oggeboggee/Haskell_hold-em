@@ -63,18 +63,6 @@ executable Haskell-hold-em
 
     -- Modules included in this executable, other than Main.
     other-modules:
-            Engine.EngineTypes
-            Engine.Cards
-            Engine.TexasEngine
-            Engine.Actions
-            Engine.HandEvaluation
-            Engine.Utilities
-
-            Server.ServerTypes
-            Server.NetworkServer
-            Server.Protocol
-            Server.GameLoop
-            Server.ServerHelpers
             
 
     -- LANGUAGE extensions used by modules in this package.
@@ -83,9 +71,41 @@ executable Haskell-hold-em
     -- Other library packages from which modules are imported.
 
     build-depends:    base >=4.18.3.0 && <5,
+                      mtl ^>=2.3,
+                      stm,
+                      websockets,
+                      Haskell-hold-em
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+    -- Base language which the package is written in.
+    default-language: Haskell2010
+
+
+
+library
+    import:           warnings
+    
+    exposed-modules:  Engine.EngineTypes
+                      Engine.Cards
+                      Engine.TexasEngine
+                      Engine.Actions
+                      Engine.HandEvaluation
+                      Engine.Utilities
+
+                      Server.ServerTypes
+                      Server.NetworkServer
+                      Server.Protocol
+                      Server.GameLoop
+                      Server.ServerHelpers
+
+    build-depends:    base ^>= 4.18.0.0,
+                      ansi-terminal ^>= 1.1.1,
                       random ^>=1.2,
                       mtl ^>=2.3,
-                      --quickcheck ^>= 2.18.0.0
+                      QuickCheck ^>= 2.18.0.0,
+
                       aeson,
                       aeson-pretty,
                       bytestring,
@@ -93,11 +113,23 @@ executable Haskell-hold-em
                       text,
                       stm,
                       containers
-
-    -- Directories containing source files.
-    hs-source-dirs:   app,
-                      src
-
-    -- Base language which the package is written in.
+                      
+    hs-source-dirs:   src
     default-language: Haskell2010
 
+
+
+test-suite test
+    import:           warnings
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+
+    main-is:          Main.hs
+    build-depends:    base >=4.18.3.0 && <5,
+                      tasty ^>=1.5.3, 
+                      tasty-hunit^>=0.10.2, 
+                      tasty-quickcheck^>=0.11.1,
+                      mtl,
+                      Haskell-hold-em
+
+    default-language: Haskell2010

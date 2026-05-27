@@ -1,7 +1,7 @@
 module Engine.EngineTypes where
 
 import Control.Monad.State
-
+import Test.QuickCheck
 
 --------------------------------------------------------------------------------------------------------
 -- EVENTS (input to the engine)
@@ -45,7 +45,7 @@ data GameEvent
     | PhaseChanged GamePhase                       -- Result of advancePhase
     | PlayerEliminated [PlayerName]                -- Result of EliminatePlayers
     | ChipsAwarded [(PlayerName, Chip)]            -- Result of RunShowdown
-    deriving (Show)
+    deriving (Show, Eq)
 
 -- | Returned by 'stepGame' after every player action to tell the server what happened and
 --   wether it needs to do anything before waiting for the next action.
@@ -100,23 +100,32 @@ instance Ord Card where
   compare (Card r1 s1) (Card r2 s2) =
       if r1 == r2 then compare s1 s2 else compare r1 r2
 
+instance Arbitrary Card where
+    arbitrary = do 
+        rank <- arbitrary
+        Card rank <$> arbitrary
+
 -- | The suits a playing card can have
 data Suit = Hearts | Spades | Diamonds | Clubs
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Enum, Bounded)
 
 -- | Display cards in a nice way.
 instance Show Suit where
     show s = case s of
-        Spades   -> "\9824" --Spades -> "S"
-        Hearts   -> "\9829" --Hearts -> "H"
+        Spades -> "\9824" --Spades -> "S"
+        Hearts -> "\9829" --Hearts -> "H"
         Diamonds -> "\9830" --Diamonds -> "D"
-        Clubs    -> "\9827" --Clubs -> "C"
+        Clubs -> "\9827" --Clubs -> "C"
+
+instance Arbitrary Suit where
+  arbitrary = elements [minBound .. maxBound]
+
 
 -- | The ranks a playing card can have
 data Rank 
     = Two | Three | Four | Five | Six | Seven | Eight
     | Nine | Ten | Jack | Queen | King | Ace
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Enum, Bounded)
 
 instance Show Rank where
   show r = case r of
@@ -134,19 +143,22 @@ instance Show Rank where
     King  -> "K"
     Ace   -> "A"
 
+instance Arbitrary Rank where
+  arbitrary = elements [minBound .. maxBound]
+
 
 --------------------------------------------------------------------------------------------------------
 -- TYPE ALIASES
 --------------------------------------------------------------------------------------------------------
 
-type PlayerName = String        -- A players chosen display name
-type PlayerIndex = Int          -- An internal reference to a player, their position in the table's players list.
-type Chip = Int                 -- Chips
-type Bet = Chip                 -- A bet of chips
-type Pot = Int                  -- The pot of the table
-type Hand = [Card]              -- The two cards a player has in their hand
-type CommunityCard = [Card]     -- The common cards on the table (board)
-type Deck = [Card]              -- The full ordered deck of cards.
+type PlayerName    = String       -- A players chosen display name
+type PlayerIndex   = Int          -- An internal reference to a player, their position in the table's players list.
+type Chip          = Int          -- Chips
+type Bet           = Chip         -- A bet of chips
+type Pot           = Int          -- The pot of the table
+type Hand          = [Card]       -- The two cards a player has in their hand
+type CommunityCard = [Card]       -- The common cards on the table (board)
+type Deck          = [Card]       -- The full ordered deck of cards.
 
 
 --------------------------------------------------------------------------------------------------------
@@ -189,6 +201,7 @@ data Player = Player
 instance Show Player where
     show p = 
         "Name: "                ++ show (name p) ++
+        " | Hand: "             ++ show (hand p) ++
         " | Chips: "            ++ show (chips p) ++
         " | Pot contribution: " ++ show (commitedChips p) ++
         " | Folded: "           ++ show (folded p) ++
