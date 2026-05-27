@@ -32,8 +32,8 @@ import Data.Either
 --   4. dealHands       — deal two hole cards to each seated player.
 --   5. initiateBlinds  — post small and big blinds, returning those as GameEvents.
 --   6. moveToNextPhase — advance from DealHands to PreFlop, ready for betting.
-startHand :: StdGen -> Table -> ([GameEvent], Table)
-startHand gen = runState setupHand
+startHand :: StdGen -> Table -> ([GameEvent], Table) -- startHand :: StdGen -> State Table [GameEvent]
+startHand gen = runState setupHand                   -- startHand gen = setupHand
     where
         setupHand :: State Table [GameEvent]
         setupHand = do
@@ -44,6 +44,7 @@ startHand gen = runState setupHand
             placeBlinds <- initiateBlinds
             moveToNextPhase
             pure placeBlinds
+
 
 
 -- | Called by the server after every successful player action to determine what happens next.

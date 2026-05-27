@@ -63,19 +63,6 @@ executable Haskell-hold-em
 
     -- Modules included in this executable, other than Main.
     other-modules:
-            -- Engine.EngineTypes
-            -- Engine.Cards
-            -- Engine.TexasEngine
-            -- Engine.Actions
-            -- Engine.HandEvaluation
-            -- Engine.Utilities
-            -- Engine.TerminalUI
-
-            -- Server.ServerTypes
-            -- Server.NetworkServer
-            -- Server.Protocol
-            -- Server.GameLoop
-            -- Server.ServerHelpers
             
 
     -- LANGUAGE extensions used by modules in this package.
@@ -88,14 +75,6 @@ executable Haskell-hold-em
                       stm,
                       websockets,
                       Haskell-hold-em
-
-                      --quickcheck ^>= 2.18.0.0
-                    --   aeson,
-                    --   aeson-pretty,
-                    --   bytestring,
-                    --   text,
-                    --   random ^>=1.2,
-                    --   containers
 
     -- Directories containing source files.
     hs-source-dirs:   app,
@@ -111,6 +90,7 @@ executable Haskell-hold-em
 
 library
     import:           warnings
+    
     exposed-modules:  Engine.EngineTypes
                       Engine.Cards
                       Engine.TexasEngine
@@ -156,10 +136,5 @@ test-suite test
                       tasty-quickcheck^>=0.11.1,
                       mtl,
                       Haskell-hold-em
-                      --Cards,
-                      --Types,
-                      --TexasEngine,
-                      --Actions,
-                      --HandEvaluation,
-                      --Utilities
+
     default-language: Haskell2010

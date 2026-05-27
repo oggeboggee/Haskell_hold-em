@@ -176,15 +176,17 @@ handleGameStep st = do
                 -- Remove eliminated players from the lobby so they can't rejoin.
                 eliminatedNames = map name (filter (\p -> chips p == 0) (players newTable))
                 cleanedSt = newSt { lobby = filter (`notElem` eliminatedNames) (lobby newSt) } -- Add handOngoing change
-                actions =
-                    [ BroadcastToAll (GameEventMsgs events)                 -- Showdown result and chip awards.
-                    , BroadcastToAll (makeSnapshot (table cleanedSt))       -- Final table state after showdown
-                    , createShowdownHands newSt                             -- Reveal everyone's hands at shwodown.
-                    ]
+                actions = [ BroadcastToAll (GameEventMsgs events)                       -- Showdown result and chip awards.
+                                , BroadcastToAll (makeSnapshot (table cleanedSt))       -- Final table state after showdown
+                                , createShowdownHands newSt                             -- Reveal everyone's hands at shwodown.
+                                ]
 
             -- After a hand ends, see if conditions are met to start a new one.
             (finalSt, checkActions) <- checkLobbyAndStart newSt
-            pure (finalSt, actions ++ checkActions)
+            if length (activePlayers (table st)) > 1 then
+                pure (finalSt, actions ++ checkActions)
+            else 
+                pure (finalSt, checkActions)
 
 ------------------------------------------------------------------------------------------
 -- LOBBY AND HAND START

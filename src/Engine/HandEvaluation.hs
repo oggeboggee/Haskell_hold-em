@@ -6,7 +6,6 @@ module Engine.HandEvaluation where
 import Engine.Cards
 import Engine.EngineTypes
 import Data.List
-import Data.Maybe
 import Data.Function (on)
 import Data.Ord (comparing)
 

@@ -143,14 +143,14 @@ instance Arbitrary Card where
 -- TYPE ALIASES
 --------------------------------------------------------------------------------------------------------
 
-type PlayerName = String        -- A players name
-type PlayerIndex = Int          -- An internal reference to a player
-type Chip = Int                 -- Chips
-type Bet = Chip                 -- A bet of chips
-type Pot = Int                  -- The pot of the table
-type Hand = [Card]              -- The two cards a player has in their hand
+type PlayerName    = String     -- A players name
+type PlayerIndex   = Int        -- An internal reference to a player
+type Chip          = Int        -- Chips
+type Bet           = Chip       -- A bet of chips
+type Pot           = Int        -- The pot of the table
+type Hand          = [Card]     -- The two cards a player has in their hand
 type CommunityCard = [Card]     -- The common cards on the table (board)
-type Deck = [Card]              -- The full deck of cards.
+type Deck          = [Card]     -- The full deck of cards.
 
 
 --------------------------------------------------------------------------------------------------------

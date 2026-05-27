@@ -54,7 +54,7 @@ firstPlayerToBet table =
 
         startIdx 
             | n == 2 && phase table == PreFlop = dealerPosition table                                   -- In heads up preflop, dealer acts first
-            | n == 2                            = bigBlindPosition table                                -- In heads up postflop, BB acts first
+            | n == 2                           = bigBlindPosition table                                 -- In heads up postflop, BB acts first
             | phase table == PreFlop           = nextPlayerToAct (bigBlindPosition table) playersList   -- In preflop woth 3+ players, action starts to the left of the BB
             | otherwise                        = nextPlayerToAct (dealerPosition table) playersList     -- In postflop with 3+ players, action starts to the left of the dealer
         
