@@ -2,7 +2,7 @@
 
 module Server.NetworkServer where
 
-import Engine.Utilities (removePlayer, addPlayer)
+import Engine.Utilities (removePlayer)
 import Server.Protocol
 import Server.ServerTypes
 import Server.ServerHelpers
