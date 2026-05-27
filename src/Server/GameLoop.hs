@@ -10,11 +10,10 @@ import Server.Protocol
 
 import Engine.EngineTypes
 import Engine.Actions       (applyEvent)
-import Engine.TexasEngine   (removePlayer, startHand, stepGame)
-import Engine.Utilities     (firstPlayerToBet, bettingRoundOver)
+import Engine.TexasEngine   (startHand, stepGame)
+import Engine.Utilities     (firstPlayerToBet, bettingRoundOver, removePlayer)
 
 import qualified Data.Map.Strict as M
-import           Data.List       (find)
 
 import Control.Monad.State       (runState)
 import System.Random             (newStdGen)
@@ -51,6 +50,7 @@ handleTransition st (PlayerJoined cid n)
             actions = 
                 [ SendToClient cid (LobbyJoined n (length (lobby st2))) -- Tell joining client their lobby position.
                 , BroadcastToAll (LobbyUpdate (lobby st2))              -- Tell all clients the lobby queue changed.
+                , SendToClient cid (Welcome n)                           -- Welcome the new player with a private message.
                 ]
         
         -- After every lobby change check if there are enough players to start a hand.
@@ -182,7 +182,7 @@ handleGameStep st = do
                     ]
 
             -- After a hand ends, see if conditions are met to start a new one.
-            (finalSt, checkActions) <- checkLobbyAndStart newSt
+            (finalSt, checkActions) <- checkLobbyAndStart cleanedSt
             pure (finalSt, actions ++ checkActions)
 
 ------------------------------------------------------------------------------------------

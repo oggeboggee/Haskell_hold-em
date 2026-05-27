@@ -145,7 +145,45 @@ The pipeline:
 
 
 
+Why did we introduce the Transition type?
 
+Before we had handleClientMsg :: ServerState -> ClientId -> WS.Connection -> ClientMsg -> IO ServerState
+
+ClientMsg is a type for the protocol, its what the client sends and carries JoinMsg, LeaveMsg, ActionMsg.
+
+This is a type for the server and to avoid GameLoop sharing this type and and having to care what the client sends
+we can have Transition instead which is a type that explains what happened (PlayerJoined etc.)
+
+So NetworkServer uses ClientMsg, translate to Transiition, and hands it to GameLoop. GameLoop never ServerState
+ClientMsg. So if we changed the protocol in the future then we wouldn't need to change GameLoop, we wold only 
+need to change the translation layer. This keeps GameLoop decoupled from the formating and only handles the
+actual state transitions.
+
+So: Clint -> ClientMsg -> toTransition -> Transition -> handleTransition
+
+
+Why BroadcastAction?
+
+GameLoop doesn't have direct access to websocket conncetions. WS.Connection lives inside ClientInfo inside clients inside ServerState.
+So now: GameLoop decides what to send -> returns [BroadcastAction]
+        NetworkServer receives the list -> executes the actual websocket sends.
+
+This means GameLoop says "send this" and NetworkServer figures out how to send it over websockets. This isn't a complete success
+in separation however since GameLoop indireclty accesses WS.Connection through ServerState (since ServerState contains WS.connection)
+
+
+Why GameStepResult?
+
+Before we implemented GameStepResult, when we first moved some logic from TexasEngine into GameLoop,
+the server was checking game conditions by using functions like 'bettingRoundOver'. This however wasn't 
+the implementation we wanted as this was engine logic living in the server. We didn't want the server deciding
+when to advance phases or run the showdown as thats the engine job. What we gain from GameStepResult is that it
+inverts this so now we call stepGame and get back:
+
+AwaitingAction | PhaseAdvanced [GameEvent] Table | HandComplete [GameEvent] Table
+
+The server reacts to these instead. So now the game flow and decision making lives in the engine and the server
+executes what the engine tells it to.
 
 
 

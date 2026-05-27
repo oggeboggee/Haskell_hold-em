@@ -18,11 +18,12 @@ module Server.ServerHelpers
     , seatLobbyPlayersAtTable
     ) where
 
+import Data.List (findIndex, find)
+import Engine.Utilities (addPlayer)
 import Server.ServerTypes
 import Engine.EngineTypes
+
 import qualified Data.Map.Strict as M
-import Data.List (findIndex, find)
-import Engine.TexasEngine (addPlayer)
 
 -- | Maximum number of players allowed at the table at once.
 --   Players that try to join beyond thix limit will be put in the lobby queue.

@@ -1,28 +1,22 @@
 module Engine.TexasEngine 
-    ( --performEvent
-    --, gameRound
-    --, runPhase
-     runShowdown
-    , removePlayer
-    , addPlayer
+    ( runShowdown
     , startHand
     , stepGame
     ) where
 
--- Other files
 import Engine.EngineTypes
 import Engine.Cards
 import Engine.Actions
---import Engine.HandEvaluation  
 import Engine.Utilities
 
 -- Packages
 import Control.Monad.State
---import Data.Char (toLower)
 import System.Random
 import Data.Either
 
-
+--------------------------------------------------------------------------------------------------------
+-- HAND SETUP
+--------------------------------------------------------------------------------------------------------
 -- | Initialises a new hand. Called by the server with externally generated randomness.
 --
 -- Sequence:
@@ -45,7 +39,9 @@ startHand gen = runState setupHand
             moveToNextPhase
             pure placeBlinds
 
-
+--------------------------------------------------------------------------------------------------------
+-- GAME PROGRESSION
+--------------------------------------------------------------------------------------------------------
 -- | Called by the server after every successful player action to determine what happens next.
 --   Returns one of three outcomes:
 --
@@ -73,8 +69,10 @@ stepGame t
                 let (_, t') = runState advancePhase t
                 in PhaseAdvanced [] t'
     
-    -- Betting round is still active; a player still needs to act.
+    -- Betting round is still active, a player still needs to act.
     | otherwise = AwaitingAction
+
+
 
 -- | Helper function used by stepGame when a betting round is finished.
 --   Advances the phase, deals communitycards and resets the betting state.
@@ -86,7 +84,9 @@ advancePhase = do
     resetBettingRound   -- Clear 'acted' flags and commitedChips.
                 
 
-
+--------------------------------------------------------------------------------------------------------
+-- TABLE RESETTING
+--------------------------------------------------------------------------------------------------------
 -- | Reset the required fields in the table and the players in the table.
 --   Called at the start of each hand before cards are delt.
 resetTable :: State Table () 
@@ -96,22 +96,22 @@ resetTable =
         in t
             { players = map resetPlayer (players t)
             , highBet = 0
-            , pot = 0
-            , bets = []
-            , board = []
-            , phase = DealHands
+            , pot     = 0
+            , bets    = []
+            , board   = []
+            , phase   = DealHands
             }
     )
 
 
 -- | Reset after each betting round by clearing flags for players. Also resets relevant fields in the table.
+--   Called at the end of every betting round before next phase.
 --   Special case: during PreFlop the highBet is preserved (100, the big blind amount)
 --   so that players still need to call or raise relative to the BB, not zero.
 --   On all other phases the highBet resets to zero so postflop betting starts fresh.
 resetBettingRound :: State Table () 
 resetBettingRound = do
     table <- get
-
     let hb = case phase table of
                 PreFlop -> highBet table    -- Keep BB as the high bet for preflop.
                 _       -> 0
@@ -119,6 +119,9 @@ resetBettingRound = do
     modify (\t -> t { players = map (\p -> p { acted = False, commitedChips = 0 }) (players t), highBet = hb})
 
 
+--------------------------------------------------------------------------------------------------------
+-- BLIND INITIATION
+--------------------------------------------------------------------------------------------------------
 -- | Place the small and big blinds at the start of a hand.
 --   Uses applyEvent internally so that the blinds also go through the same chip deduction
 --   and pot incrementing logic as normal player actions.
@@ -127,57 +130,55 @@ resetBettingRound = do
 initiateBlinds :: State Table [GameEvent]
 initiateBlinds = do
 
-    sbPlayer <- gets smallBlindPosition
-    bbPlayer <- gets bigBlindPosition
+    sbPlayerIdx <- gets smallBlindPosition
+    bbPlayerIdx <- gets bigBlindPosition
 
-    sbResult <- applyEvent (EngineEvent (PlaceBlind sbPlayer SmallBlind 50))
-    bbResult <- applyEvent (EngineEvent (PlaceBlind bbPlayer BigBlind 100))
+    sbResult <- applyEvent (EngineEvent (PlaceBlind sbPlayerIdx SmallBlind 50))
+    bbResult <- applyEvent (EngineEvent (PlaceBlind bbPlayerIdx BigBlind 100))
 
     pure (concat (rights [sbResult, bbResult]))
 
 
--- | Move where the dealer,SB, and BB are on the table. Mod helps us wrap around.
--- | Rotates the delaer button around the table and updates SB and BB positions based on where the dealer
--- | button ends up.
+--------------------------------------------------------------------------------------------------------
+-- ROTATE DEALER
+--------------------------------------------------------------------------------------------------------
+-- | Move where the dealer, SB, and BB are on the table. Mod helps us wrap around. the players list.
+--   Rotates the dealer button around the table and updates SB and BB positions based on where the dealer
+--   button ends up. 
+--   For 2 players: dealer = SB and the other player = BB.
+--   For 3+ players: SB is left of dealer and BB is two left of dealer.
 moveDealer :: State Table ()
 moveDealer = do
     table <- get
     let numPlayers = length (players table)
+        newDealerPosition = (dealerPosition table + 1) `mod` numPlayers
 
     if numPlayers == 2
-        then do
-            let newDealerPos = (dealerPosition table + 1) `mod` numPlayers
-                newSBPos     = newDealerPos
-                newBBPos     = (newDealerPos + 1) `mod` numPlayers
+        then modify (\t -> t
+            { dealerPosition     = newDealerPosition
+            , smallBlindPosition = newDealerPosition
+            , bigBlindPosition   = (newDealerPosition + 1) `mod` numPlayers
+            })
+        else modify (\t -> t
+            { dealerPosition     = newDealerPosition
+            , smallBlindPosition = (newDealerPosition + 1) `mod` numPlayers
+            , bigBlindPosition   = (newDealerPosition + 2) `mod` numPlayers
+            })
+  
 
-            modify (\t -> t
-                { dealerPosition     = newDealerPos
-                , smallBlindPosition = newSBPos
-                , bigBlindPosition   = newBBPos
-                })
-        else do
-            let newDealerPos = (dealerPosition table + 1) `mod` numPlayers
-                newSBPos     = (newDealerPos + 1) `mod` numPlayers
-                newBBPos     = (newDealerPos + 2) `mod` numPlayers
+--------------------------------------------------------------------------------------------------------
+-- SHUFFLING
+--------------------------------------------------------------------------------------------------------
 
-            modify (\t -> t
-                { dealerPosition     = newDealerPos
-                , smallBlindPosition = newSBPos
-                , bigBlindPosition   = newBBPos
-                })
-    
-
---------------------------------------------------------------
---------------------------------------------------------------
-
--- | Return a shuffled deck with 52 cards
+-- | Return a shuffled deck with 52 cards using the provided random generator and store it on the table.
 runShuffle :: StdGen -> State Table ()
 runShuffle gen = do
     let (doubles, _) = randomDoubles' 52 gen
     let shuffledDeck = shuffle doubles fullDeck
     modify (\t -> t { deck = shuffledDeck })
 
--- | Helperfunction to runShuffle, generate a list of random doubles
+-- | Generates a list of n random Doubles [0,1] from the StdGen
+--   USed by 'shuffle' in Cards.hs
 randomDoubles' :: Int -> StdGen -> ([Double], StdGen)
 randomDoubles' 0 gen = ([], gen)
 randomDoubles' n gen = (x:xs, gen2)
@@ -186,13 +187,12 @@ randomDoubles' n gen = (x:xs, gen2)
     (xs, gen2) = randomDoubles' (n-1) gen1
 
 
+--------------------------------------------------------------------------------------------------------
+-- Dealing
+--------------------------------------------------------------------------------------------------------
 
---------------------------------------------------------------
----------- Dealing of cards, hands, communitycards -----------
-
--- | Deal cards, update the deck after removing the cards
---   and return the cards that have been delt.
-dealCards :: Int -> State Table [Card] --Game [Card] 
+-- | Deal cards, update the deck after removing the cards and return the cards that have been delt.
+dealCards :: Int -> State Table [Card] 
 dealCards n = do
     table <- get
     let (deltCards, newDeck) = splitAt n (deck table)
@@ -203,22 +203,19 @@ dealCards n = do
 --   and for each player in the list, use 'dealCards' to take two cards from the deck. Put
 --   the cards as the players hand, then put the list of players now with updated hands back
 --   into the table.
-dealHands :: State Table () --Game ()
+dealHands :: State Table ()
 dealHands = do
-
     playerList <- gets players
-
     playerList' <- mapM (\player -> do
         deltHand <- dealCards 2
         return player { hand = deltHand}
         ) playerList
-
-    modify (\table -> table { players = playerList' })
-
+    modify (\t -> t { players = playerList' })
 
 
--- | Deal community cards to the board.
-dealCommunityCards :: State Table ()--Game () -- State Table ()
+-- | Deal community cards to the board based on the current phase.
+--   Flop: 3 cards, Turn: 1 card, River: 1 card.
+dealCommunityCards :: State Table ()
 dealCommunityCards = do
     currentPhase <- gets phase
     cards <- case currentPhase of
@@ -226,34 +223,12 @@ dealCommunityCards = do
         Turn  -> dealCards 1
         River -> dealCards 1
         _     -> return []
-
     modify (\t -> t { board = board t ++ cards })
 
+--------------------------------------------------------------------------------------------------------
+-- PHASE
+--------------------------------------------------------------------------------------------------------
 
---------------------------------------------------------------
------------------- Utility functions -------------------------
-
-
-
--- | Advance from the tables current phase to the next one.
+-- | Advances the tables phase to the nxt one in the sequence.
 moveToNextPhase :: State Table ()
 moveToNextPhase = modify (\t -> t { phase = nextPhase (phase t) })
-
-
-removePlayer :: PlayerName -> Table -> Table
-removePlayer n table =
-    table { players = filter (\p -> name p /= n) (players table)}
-
-
-addPlayer :: PlayerName -> Table -> Table
-addPlayer n table =
-    table { players = players table ++ [newPlayer] }
-    where
-        newPlayer = Player 
-            { name = n
-            , hand = []
-            , chips = 1000
-            , commitedChips = 0
-            , folded = False
-            , acted = False
-            }

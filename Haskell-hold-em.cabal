@@ -69,7 +69,6 @@ executable Haskell-hold-em
             Engine.Actions
             Engine.HandEvaluation
             Engine.Utilities
-            Engine.TerminalUI
 
             Server.ServerTypes
             Server.NetworkServer

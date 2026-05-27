@@ -9,25 +9,30 @@ import Engine.HandEvaluation
 import Control.Monad.State
 
 
--- | Here we update the state, have betting rules (when can a player call, raise etc.). 
--- | We handle errors if wanted action isn't allowed. We produce GameEvents.
--- | This is instead of having applyPureAction.
+-- | Entry point for state chaning events. Takes an Event (PlayerEvent or EngineEvent) and applies it to the current table state.
+-- | Player actions are validated before being applied. Engineactions are applied directly if they cant fail (i.e PlaceBlind).
+-- | Returns either an error message (Left) or a list of GameEvents (Right) describing what happened as a result of the action.
 applyEvent :: Event -> State Table (Either String [GameEvent])
 
--- PLAYERACTIONS
+-- PLAYERACTIONS: Validates that the chosen action is legal given the current tables state then
+-- applies it and returns the resulting GameEvent to be broadcast to clients.
 applyEvent (PlayerEvent playerIndex action) = do
     t <- get
     let player = players t !! playerIndex
         hb     = highBet t
         cChips = commitedChips player
         plName = name player
-        toCall = hb - cChips
+        toCall = hb - cChips        -- What the player needs to put in to call the current high bet.
 
     case action of
+        -- Fold: a player gives up their hand and is out of the current hand. Player is marked as
+        -- folded and excluded from future betting rounds and the showdown until the next hand starts.
         Fold -> do
             modify (`pureFold` playerIndex)
             pure (Right [PlayerFolded plName])
 
+        -- Check: only valid when there is no bet to match (toCall == 0).
+        -- If there is a bet to match, the player must either call, raise, or go all in.
         Check -> do
             if toCall == 0
             then do
@@ -36,6 +41,7 @@ applyEvent (PlayerEvent playerIndex action) = do
             else
                 pure (Left "You can't check when behind the highbet.")
 
+        -- Call: only valid when there is a bet to match (toCall > 0).
         Call -> do
             if toCall <= 0
             then pure (Left "There isn't a bet to call.")
@@ -46,10 +52,8 @@ applyEvent (PlayerEvent playerIndex action) = do
                 playerHaveActed playerIndex -- Change a players acted to True
                 pure (Right [PlayerCalled plName amount])
 
-                -- modify (\t -> placePureBet t playerIndex toCall)
-                -- pure (Right [PlayerCalled plName toCall])
-
-
+        -- Raise: the raise amount is the amount of chips the player wants to add on top of calling the current high bet.
+        -- Rejected if x is zero, negative, or larger than the amount of chips the player has available.
         Raise x -> do
             if x <= 0 || x > (chips player + lowestBet t player)
             then pure (Left "Raise amount must be larger than 0 and smaller then the amount of chips you have")
@@ -62,6 +66,7 @@ applyEvent (PlayerEvent playerIndex action) = do
 
                 pure (Right [PlayerRaised plName x])
 
+        -- AllIn: player commits all their remaining chips to the pot.
         AllIn -> do
             let amount = chips player
 
@@ -91,6 +96,10 @@ applyEvent (EngineEvent engineAction) = do
 
             pure(Right [PlayerEliminated names]) 
 
+
+-- | Evaluates all active hands against the board and awards the pot to the winner(s).
+--   Eliminates any players who have been put to zero chips. In case of a tie the pot is split evenly among the winners.
+--   Returns ShowdownHappened, ChipsAwarded and PlayersEliminated events for broadcasting.
 runShowdown :: State Table [GameEvent]
 runShowdown = do
     table <- get
@@ -122,7 +131,7 @@ runShowdown = do
 
         winnerNames = map name computedWinners
 
-        updatedPlayers = map (dealOutChips2 winnerNames evenShare) playerList
+        updatedPlayers = map (dealOutChips winnerNames evenShare) playerList
 
         eliminatedNames = map name (filter (\p -> chips p == 0) updatedPlayers)
 
@@ -137,12 +146,9 @@ runShowdown = do
          ]
 
 
-
--- | We need a function to take a player at a specific index in a list, 
---   and then replace with the updated player
--- replacePlayer :: PlayerIndex -> Player -> [Player] -> [Player]
--- replacePlayer playerIndex updatedPlayer playerList = 
---     take playerIndex playerList ++ [updatedPlayer] ++ drop (playerIndex + 1) playerList
+------------------------------------------------------------------------------------
+-- | Helper that applies a transformation function to a player at a given index and returning
+--   the updated table. Used for actions like fold, check, call and raise.
 updatePlayerAtIndex :: PlayerIndex -> (Player -> Player) -> Table -> Table
 updatePlayerAtIndex playerIndex f table =
     let playerList = players table
@@ -151,9 +157,8 @@ updatePlayerAtIndex playerIndex f table =
         updatePlayerList = replacePlayer playerIndex updatedPlayer playerList
     in table { players = updatePlayerList }
 
-
--- placeBet that works with Gaem() 
---placeBet :: Int -> Bet -> State Table ()
+-- | Decrements a players chips, adds it to the pot, and updates the high bet if the players
+--   total commited chips exceeds the current high bet. Used for call and raise actions.
 placePureBet :: Table -> PlayerIndex -> Bet -> Table
 placePureBet table playerIndex bet =
     let tableUpdated = updatePlayerAtIndex playerIndex
@@ -166,25 +171,23 @@ placePureBet table playerIndex bet =
               highBet = max (highBet tableUpdated) (commitedChips player)
             }
 
+-- | Marks a player as folded by setting their folded flag to True. 
+--   They will be excluded from future betting rounds and the showdown until the next hand starts.
 pureFold :: Table -> PlayerIndex -> Table
 pureFold table playerIndex =
     updatePlayerAtIndex playerIndex (\p -> p { folded = True }) table
 
-
+-- | Marks a player as checked by setting their acted flag to True.
+--   This is used to indicate that the player has taken their action for the current betting round.
 pureCheck :: Table -> PlayerIndex -> Table
 pureCheck table playerIndex =
     updatePlayerAtIndex playerIndex (\p -> p { acted = True }) table
 
-
--- Change a players acted status to True
+-- | Marks a player as having acted this betting round.
+--   Called after placePureBet for Call, Raise, and AllIn so that during the betting round
+--   we can check if a player has already acted or not.
 playerHaveActed :: Int -> State Table ()
 playerHaveActed playerPos = do
     modify (updatePlayerAtIndex playerPos (\p -> p {acted = True}))
 
 
-
---addPlayer :: PlayerName -> Table -> Table
---addPlayer name t = t { players = players t ++ [Player name [] 1000 0 False False]}
-
---------------------------------------------------------------
---------------------------------------------------------------

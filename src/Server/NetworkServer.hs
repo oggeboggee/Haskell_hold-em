@@ -2,8 +2,7 @@
 
 module Server.NetworkServer where
 
-
-import Engine.TexasEngine (removePlayer, addPlayer, startHand, stepGame)
+import Engine.Utilities (removePlayer, addPlayer)
 import Server.Protocol
 import Server.ServerTypes
 import Server.ServerHelpers
@@ -12,7 +11,6 @@ import Server.GameLoop
 import qualified Network.WebSockets  as WS
 import qualified Data.Aeson          as Aeson
 import qualified Data.Map.Strict     as M
-
 
 import Control.Concurrent.STM        (atomically, readTVar, readTVarIO, writeTVar)
 import Control.Exception             (catch, SomeException)
@@ -62,17 +60,17 @@ server stateVar pending = do
     serverLoop stateVar cid conn
 
 
-
 ------------------------------------------------------------------------------------------
 -- MAIN SERVER LOOP
 --
 --
 -- Each client runs an instance of this in their thread.
 -- It waits for a message, handles it, updates the shared state (TVar) and repeats.
--- Also handles if the connection drops, receiveData throws an exception which is 
+-- If the connection drops, WS.receiveData throws an exception which is 
 -- caught by 'onDisconnect'
 ------------------------------------------------------------------------------------------
 
+-- Main receive loop for a connected client.
 serverLoop :: SharedServerState -> ClientId -> WS.Connection -> IO ()
 serverLoop stateVar cid conn = loop `catch` onDisconnect
     where
@@ -88,7 +86,6 @@ serverLoop stateVar cid conn = loop `catch` onDisconnect
                 -- Received a valid message. Read the state, handle it and write the new state back, loop for next message.
                 Just clientMsg -> do
 
-                    -- read current shared state
                     st <- readState stateVar
 
                     -- convert client message to transition and handle it
@@ -103,8 +100,8 @@ serverLoop stateVar cid conn = loop `catch` onDisconnect
 
                     loop
 
-        -- | Called when connection drops (the exception from redeiveData)
-        --   IT will then remove the client from the shared state and then the player from the table.
+        -- | Called when a WS connection drops (the exception from redeiveData)
+        --   Remove the client from the shared state, lobby, and table.
         --   Then notifies the other clients that the player has left.
         onDisconnect :: SomeException -> IO ()
         onDisconnect e = do
@@ -113,8 +110,9 @@ serverLoop stateVar cid conn = loop `catch` onDisconnect
             st <- readTVarIO stateVar
 
             case lookupPlayer cid st of
-                -- Client connected but didn't join, remove them.
+                -- Client connected but didn't send a JoinMsg, remove them.
                 Nothing -> pure ()
+
                 -- Client joined the game as a player, then remove both from the client map and the players list in the Table.
                 Just pName -> do
                     let st1 = removeClient cid st
@@ -133,24 +131,24 @@ serverLoop stateVar cid conn = loop `catch` onDisconnect
 
 
 
--- | Translate a ClientMsg into a transition for the orchestrator.
---   This is the only place that knows about ClientMsg and Transition
+------------------------------------------------------------------------------------------
+-- MESSAGE TRANSLATION
+------------------------------------------------------------------------------------------
+
+-- | Translates a ClientMsg into a Transition for GameLoop
+--   This is hte only place that knows about both types to keep NetworkServer.hs
+--   and GameLoop.hs decoupled from each other.
 toTransition :: ClientId -> ClientMsg -> Transition
-toTransition cid (JoinMsg n) = 
-    PlayerJoined cid n
-
-toTransition cid LeaveMsg = 
-    PlayerLeft cid
-
-toTransition cid (ActionMsg act) = 
-    PlayerActed cid act
+toTransition cid (JoinMsg n)     = PlayerJoined cid n
+toTransition cid LeaveMsg        = PlayerLeft cid
+toTransition cid (ActionMsg act) = PlayerActed cid act
 
 
 ------------------------------------------------------------------------------------------------
 -- EXECUTE BROADCAST ACTIONS
 --
--- Takes the broadcast actions produced by GameLoop and executes them by sending messages
--- over WebSocket connections. This is the networking layer that GameLoop doesn't know about.
+-- GameLoop returns a list of BroadcastActions that describe what should be sent and to who.
+-- The functions bewlos executes those actions by sending over the actual WS connections.
 ------------------------------------------------------------------------------------------------
 
 -- | Execute a list of broadcast actions. Send messages to appropriate clients.
@@ -160,24 +158,18 @@ executeActions st actions = mapM_ (executeAction st) actions
 -- | Execute a single broadcast action.
 executeAction :: ServerState -> BroadcastAction -> IO ()
 executeAction st action = case action of
-    BroadcastToAll msg ->
-        broadcastToAllClients st msg
+    BroadcastToAll msg              -> broadcastToAllClients st msg
+    SendToClient cid msg            -> sendToClientById cid st msg
+    BroadcastToAllExcept exclID msg -> broadcastToAllClientsExcept exclID st msg
 
-    SendToClient cid msg ->
-        sendToClientById cid st msg
-
-    BroadcastToAllExcept excludedId msg ->
-        broadcastToAllClientsExcept excludedId st msg
-
--- | Encode ServerMsg as JSON and send over ws connection.
+-- | Encode ServerMsg as JSON and send over a WS connection.
 broadcastMsg :: WS.Connection -> ServerMsg -> IO ()
-broadcastMsg conn msg =
-    WS.sendTextData conn (Aeson.encode msg)
+broadcastMsg conn msg = WS.sendTextData conn (Aeson.encode msg)
 
 -- | Send a message to all connected clients.
 broadcastToAllClients :: ServerState -> ServerMsg -> IO ()
 broadcastToAllClients st msg = do
-    putStrLn ("Broadcasting to " ++ show (M.size (clients st)) ++ " clients")
+    putStrLn ("Broadcasting to " ++ show (M.size (clients st)) ++ " clients")   -- Terminal output.
     mapM_ (\info -> broadcastMsg (connection info) msg) (M.elems (clients st))
 
 -- | Send a message to a single client by their ClientId.
@@ -187,7 +179,7 @@ sendToClientById cid st msg =
         Nothing -> pure ()
         Just info -> broadcastMsg (connection info) msg
 
--- | Send a message to all clients except one.
+-- | Send a message to all clients except one with the given ClietnId.
 broadcastToAllClientsExcept :: ClientId -> ServerState -> ServerMsg -> IO ()
 broadcastToAllClientsExcept excludedId st msg =
     mapM_ 
@@ -202,7 +194,7 @@ broadcastToAllClientsExcept excludedId st msg =
 -- STATE HELPERS
 ------------------------------------------------------------------------------------------
 
--- Read shared server state
+-- Reads the current server state form the shared TVar.
 readState :: SharedServerState -> IO ServerState
 readState = readTVarIO
 
