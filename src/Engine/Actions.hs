@@ -133,7 +133,8 @@ runShowdown = do
 
         updatedPlayers = map (dealOutChips winnerNames evenShare) playerList
 
-        eliminatedNames = map name (filter (\p -> chips p == 0) updatedPlayers)
+        -- Bug fix name p `notElem` winnerNames so we never filter out the winner of a hand
+        eliminatedNames = map name (filter (\p -> (chips p == 0) && (name p `notElem` winnerNames)) updatedPlayers)
 
     modify (\t -> t 
         { players = filter (\p -> name p `notElem` eliminatedNames) updatedPlayers

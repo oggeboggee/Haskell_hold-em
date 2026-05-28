@@ -127,11 +127,12 @@ addPlayer n table =
 --   all other players call the BB. 
 bettingRoundOver :: Table -> Bool
 bettingRoundOver table = 
-    let active = activePlayers table
-        hb     = highBet table
-        allMatched =
-            all (\p -> chips p <= 0 || (commitedChips p == hb && acted p)) active
-    in length active <= 1 || allMatched
+    let active        = activePlayers table
+        hb            = highBet table
+        allMatched    = all (\p -> chips p <= 0 || (commitedChips p == hb && acted p)) active
+        nonActed      = length (filter (not . acted) active) == length active
+        onlyOneCanAct = length (filter (\p -> chips p > 0) active) == 1
+    in length active <= 1 || allMatched || (nonActed && onlyOneCanAct)
 
 -- | Check if hand is over. This is true when only one or zero players remain active (everyone else folded).
 --   Does not consider the special case of everybody being all-in.

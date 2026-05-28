@@ -174,18 +174,21 @@ handleGameStep st = do
             let newSt = st { table = newTable, handOngoing = False }
                 -- Remove eliminated players from the lobby so they can't rejoin.
                 eliminatedNames = map name (filter (\p -> chips p == 0) (players newTable))
-                cleanedSt = newSt { lobby = filter (`notElem` eliminatedNames) (lobby newSt) } -- Add handOngoing change
+                cleanedSt = newSt { lobby = filter (`notElem` eliminatedNames) (lobby newSt) } 
                 actions = [ BroadcastToAll (GameEventMsgs events)                       -- Showdown result and chip awards.
                                 , BroadcastToAll (makeSnapshot (table cleanedSt))       -- Final table state after showdown
-                                , createShowdownHands newSt                             -- Reveal everyone's hands at shwodown.
+                                , createShowdownHands st --newSt                             -- Reveal everyone's hands at shwodown.
                                 ]
 
+
             -- After a hand ends, see if conditions are met to start a new one.
+            
             (finalSt, checkActions) <- checkLobbyAndStart cleanedSt
-            if length (activePlayers (table st)) > 1 then
-                pure (finalSt, actions ++ checkActions)
-            else 
-                pure (finalSt, checkActions)
+            pure (finalSt, actions ++ checkActions)
+            -- if length (activePlayers (table st)) > 1 then
+            --     pure (finalSt, actions ++ checkActions)
+            -- else 
+            --     pure (finalSt, checkActions ++ [BroadcastToAll (GameEventMsgs events)])
 
 ------------------------------------------------------------------------------------------
 -- LOBBY AND HAND START
@@ -350,4 +353,6 @@ createShowdownHands :: ServerState -> BroadcastAction
 createShowdownHands st = 
     let playerNotFolded = activePlayers (table st)
         hands = map (\p -> (name p, map show (hand p))) playerNotFolded
-    in BroadcastToAll (ShowdownHands hands)
+    in --BroadcastToAll (ShowdownHands hands)
+        if length playerNotFolded <= 1 then BroadcastToAll (ShowdownHands [])
+        else BroadcastToAll (ShowdownHands hands)
