@@ -15,37 +15,55 @@ import Data.Ord (comparing)
 
 ------------------------------------------------------------
 
-{- flowchart 
+{- 
+flowchart
 
-value (checks if Flush)
-    if Flush: 
+value
+    check Flush
+
+    if Flush:
         check Straight
-              if Straight -> return straightFlush
-              else        -> return Flush
-    
+
+        if Straight:
+            return StraightFlush
+        else:
+            return Flush
+
     else:
         check Straight
-              if Straight -> return Straight
-        check groups (quads, fullHouse, trips, TwoPairs, Pair, HighCard)
-              return best combinaion from group-combinations
 
+        if Straight:
+            return Straight
+
+        check groups
+            (Quads, FullHouse, Trips, TwoPairs, Pair, HighCard)
+
+        return best combination from groups
 -}
 
 ------------------------------------------------------------
+
+-- | takes a list of cards (Community cards)
+--
+--  takes a list of lists with cards (the players hands)
+--
+--  return the index of the player or players that have the best combination according to Texas Hold Em rules
 winners :: [Card] -> [[Card]] -> [Int]
 winners com play
-     | length bestCombIndexes == 1 = bestCombIndexes   -- <-- the case when we have an uniqe winner
-     | otherwise                   = compareCards      -- <-- comparision between every card in the hands who shares 'best combination'
-                                                       --     [ most valuable <--  --> least valuable ] compares from left to right
+     | length bestCombIndexes == 1 = bestCombIndexes   --   the case when we have an uniqe winner
+     | otherwise                   = compareCards      --   comparision between every card in the hands who shares 'best combination'
+                                                       --   [ most valuable <--  --> least valuable ] compares from left to right
      where
          handDataList = map value $ map (sort) $ map (++ com) play                                   -- [[Card]] -> [ (Combination, [Card]) ]
          bestCombIndexes = findIndices (\x -> fst x == maximum (map fst handDataList)) handDataList                     
          compareCards = cardComparision handDataList bestCombIndexes         
 ------------------------------------------------------------
 
--- | input:  [(Combination, [Card])]
--- | input:  [int] who represent the indexes of the hands we want to compare (it must have the same combination)
--- | output: [int] who represent the index or indexes of the best hands of the compared ones
+-- |input [(Combination, [Card])] represent the combination of a players cards, with the cards
+--
+--  input [int] represent the indexes of the hands we want to compare (the combination of the indexes in this list must have the same combination)
+--
+--  output: [int] who represent the index or indexes of the best hands of the compared ones
 cardComparision :: [(Combination, [Card])] -> [Int] -> [Int]
 cardComparision list index = bestIds
      where
@@ -58,14 +76,22 @@ cardComparision list index = bestIds
 ------------------------------------------------------------
 
 
-
+-- | takes a list with 7 cards
+-- 
+--   returns a tuple with best possible combination and the cards corresponding that hand
 value :: [Card] -> (Combination, [Card])
 value cards = maybe (ifNotFlush cards) ifFlush (maybeFlush cards)
 
+
+-- | takes a list of 7 cards who not contains the combination Flush
+-- 
+--   returns a tuple with best possible combination and the cards corresponding that hand
 ifNotFlush :: [Card] -> (Combination, [Card])
 ifNotFlush cards = maybe (checkGroups cards) (Straight,) (maybeStraight cards)
 
-
+-- | takes a list of 7 cards who  contains the combination Flush
+-- 
+--   returns a tuple with best possible combination and the cards corresponding that hand
 ifFlush :: [Card] -> (Combination, [Card])
 ifFlush cards =
   maybe (Flush, take 5 cards) (StraightFlush,) (maybeStraight cards)
@@ -73,12 +99,11 @@ ifFlush cards =
 ------------------------------------------------------------
 
 
-{-
-lastNelems :: Int -> [a] -> [a]
-lastNelems n xs = foldl' (const . drop 1) xs (drop n xs)
--}
-
--- vi vill kolla specialfallet [A♦,5♦,4♦,3♦,2♦] och isåfall retunera [5♦,4♦,3♦,2♦,A♦]
+-- | takes a list of 7 cards
+-- 
+--   if the list contains a flush: the cards with the suit of the flush is returned
+--
+--   else: the function returns Nothing
 maybeFlush :: [Card] -> Maybe [Card]
 maybeFlush cs
   | map rank cs' == [Ace, Five, Four, Three, Two] = Just ((\(x:xs) -> xs ++ [x])cs')
@@ -89,7 +114,11 @@ maybeFlush cs
     groupBySuit = groupBy ((==) `on` suit)
     cs'@(x:xs) = head $ sortByLength $ groupBySuit $ sortBySuit cs
 
-
+-- | takes a list with >= 5 cards
+-- 
+--   if the list contains a Straight: the cards of highest possible straight will be returned
+--
+--   else: the function returns Nothing
 maybeStraight :: [Card] -> Maybe [Card]
 maybeStraight cards
   | length cs'' >= 5 = Just (take 5 $ reverse cs'')
@@ -99,9 +128,11 @@ maybeStraight cards
     cs'' = head $ sortByLength $ groupBySuccCards $ sort cardsUniqRanks --sorts by rank
 
 
--- | Checks if Wheel (lowest possible straight ([A,2,3,4,5]))
--- | if Wheel: returns [5,4,3,2,A]
--- | Else:     returns Nothing 
+-- | takes a list with >= 5 cards
+-- 
+--   if the list contains a Wheel ([A,2,3,4,5)]: the cards of the wheel will be returned
+--
+--   else: the function returns Nothing
 maybeWheel :: [Card] -> Maybe [Card]
 maybeWheel cards
   | length filteredCards == 5 = Just ((\(x:xs) -> xs ++ [x]) $ reverse filteredCards)
@@ -109,7 +140,11 @@ maybeWheel cards
   where
     filteredCards = (flip elem [Ace, Two, Three, Four, Five] . rank) `filter` cards
 
-
+-- | takes a list with 7 cards
+-- 
+--   the function returns a tuple with the best possible groupCombination and the corresponding cards
+--
+--   groupCombinations: Quads, FullHouse, ThreeOfAKind, TwoPairs, Pair and HighCard
 checkGroups :: [Card] -> (Combination, [Card])
 checkGroups hand = 
     case groupedRankLengths of
@@ -123,21 +158,12 @@ checkGroups hand =
               groupedRankLengths = length <$> groups
               hRank = evalGroupedRanks groupedRankLengths
 
-
-    {-
-    
-    checkGroups :: [Card] -> (Combination, [Card])
-checkGroups hand = (hRank, cards)
-  where
-    groups = sortByLength $ groupBy ((==) `on` rank) $ sort hand
-    cards = take 5 $ concat groups
-    groupedRankLengths = length <$> groups
-    hRank = evalGroupedRanks groupedRankLengths
-
-    -}
-
+-- | representing the number of the same rank
 type RankGroup = Int
 
+-- | takes a list of RankGroups, sorted in decending order
+--
+--   returns best possible combination due to the RankGroups
 evalGroupedRanks :: [RankGroup] -> Combination
 evalGroupedRanks groups =
      case groups of 
@@ -149,7 +175,9 @@ evalGroupedRanks groups =
           (2 : _)     -> Pair
           _           -> HighCard
 
-
+-- | takes a list of sorted cards
+--
+--   Groups cards whose ranks are sequential into the same sublist.
 groupBySuccCards :: [Card] -> [[Card]]
 groupBySuccCards = foldr f []
   where
@@ -159,6 +187,6 @@ groupBySuccCards = foldr f []
       | succ (rank a) == rank (head x) = (a : x) : xs'
       | otherwise = [a] : xs
 
-
+-- | sorts lists by descending length, breaking ties by lexicographic order.
 sortByLength :: Ord a => [[a]] -> [[a]]
 sortByLength = sortBy (flip (comparing length) <> flip compare)
