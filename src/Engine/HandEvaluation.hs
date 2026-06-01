@@ -1,3 +1,18 @@
+{-|
+Module      : Poker.HandEvaluator
+Description : Evaluation and comparison of poker hands.
+
+This module provides functions for evaluating poker hands,
+detecting combinations with corresponding cards and comparing 
+hands to determinethe winner according to standard poker rules.
+
+The evaluation process consists of:
+
+  * extract the best 'Combination' of a hand with correct kickers. 
+  * Comparing hands against eachother
+  * return the winner or winners of a game.
+-}
+
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
