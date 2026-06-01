@@ -1,5 +1,5 @@
 {-|
-Module      : Poker.HandEvaluator
+Module      : Engine.HandEvaluation
 Description : Evaluation and comparison of poker hands.
 
 This module provides functions for evaluating poker hands,
