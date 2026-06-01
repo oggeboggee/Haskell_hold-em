@@ -23,10 +23,23 @@ name:               Haskell-hold-em
 version:            0.1.0.0
 
 -- A short (one-line) description of the package.
--- synopsis:
+synopsis:
+    Texas Hold Em developed in Haskell
 
 -- A longer description of the package.
--- description:
+description:
+    Haskell Hold'em is an implementation of the popular poker game Texas Hold'em.
+
+    Players connected to the server are dealt two private cards and compete
+    against each other by forming the best five-card hand using a combination
+    of their hole cards and shared community cards.
+
+    The game is played through a web-based interface served locally on the
+    user's machine.
+
+    This project was developed as part of a university course and is provided
+    primarily as a learning project.
+
 
 -- The license under which the package is released.
 license:            BSD-3-Clause
@@ -100,7 +113,7 @@ library
                       Server.GameLoop
                       Server.ServerHelpers
 
-    build-depends:    base ^>= 4.18.0.0,
+    build-depends:    base >= 4.18.0.0 && <5,
                       ansi-terminal ^>= 1.1.1,
                       random ^>=1.2,
                       mtl ^>=2.3,
