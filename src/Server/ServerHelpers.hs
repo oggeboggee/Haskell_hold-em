@@ -1,12 +1,48 @@
+{-|
+Module      : Server.ServerHelpers
+Description : Helper functions to lookup and modify the server state.
+
+This module contains pure helper functions used by 'Server.GameLoop' and
+'Server.NetworkServer' to query and modify 'ServerState'.
+
+The functions in this module handle:
+
+* Translating between client IDs, player names, and engine indices
+* Managing lobby queue ordering and seating rules
+* Querying server and table state without performing IO
+* Applying deterministic state transformations to 'ServerState'
+
+All functions here are pure and do not perform any networking or engine logic
+directly. They are intended to be composed by higher-level modules such as
+'Server.GameLoop'.
+
+-}
+
 module Server.ServerHelpers
-    ( maxSeats
+    ( -- * Constants
+      maxSeats
+
+      -- * Client lookup helpers
+      -- | Pure functions to lookup Serverstate without modifying it.
+      -- Bridge between WS ClientIDs and poker player identity (name and index at the table)
+      -- Engine uses PlayerIndex (position in the players list)
+      -- Server uses ClientID (WS connection identifier assigned on connection)
+      -- With these functions we can translate between both.
     , clientExists
     , lookupClient
     , lookupPlayer
     , findPlayerIndex
     , resolvePIdx
+      -- * Client state modifiers
+      -- | Functions to modify the ServerState and return a new ServerState. With the modifications applied.
+      -- Callers are responsible for writing the new state back into the TVar with STM.
     , nameClient
     , removeClient
+      -- * Lobby helpers
+      -- | The lobby is the queue of players waiting to be seated at the table. Players join the lobby
+      -- first regardless of whether there is space at the table or not. Seats are only filled at
+      -- the start of a hand. All seated players return to the front of the lobby at the end of a hand
+      -- so they get priority over the new joiners and waiting players.
     , isInLobby
     , isSeated
     , numSeatedPlayers
@@ -25,20 +61,15 @@ import Engine.EngineTypes
 
 import qualified Data.Map.Strict as M
 
+-- * Constants
+
 -- | Maximum number of players allowed at the table at once.
---   Players that try to join beyond thix limit will be put in the lobby queue.
+--   Players that try to join beyond this limit will be put in the lobby queue.
 maxSeats :: Int
 maxSeats = 6
 
-----------------------------------------------------------------------------------------
--- CLIENT LOOKUP HELPERS
---
--- Pure functions to lookup Serverstate without modifying it.
--- Bridge between WS ClientIDs and poker player identity (name and index at the table)
--- Engine uses PlayerIndex (position in the players list)
--- Server uses ClientID (WS connection identifier assigned on connection)
--- With these functions we can translate between both.
-----------------------------------------------------------------------------------------
+
+-- * Client lookup helpers
 
 -- | Check if a client with the given name already exists in the server state.
 clientExists :: PlayerName -> ServerState -> Bool
@@ -72,12 +103,8 @@ resolvePIdx st cid = do
     n <- lookupPlayer cid st
     findPlayerIndex n (table st)
 
-----------------------------------------------------------------------------------------
--- CLIENT STATE MODIFIERS
---
--- Functions to modify the ServerState and return a new ServerState. With the modifications applied.
--- Callers are responsible for writing the new state back into the TVar with STM.
-----------------------------------------------------------------------------------------
+
+-- * Client state modifiers
 
 -- | Assign a player name to an already connected client. This is called when a client
 --   sends a JoinMsg with their chosen name. The client already exists as it was created
@@ -96,14 +123,8 @@ nameClient cid playerName st =
 removeClient :: ClientId -> ServerState -> ServerState
 removeClient cid st = st { clients = M.delete cid (clients st) }
 
-----------------------------------------------------------------------------------------
--- LOBBY HELPERS
---
--- The lobby is the queue of players waiting to be seated at the table. Players join the lobby
--- first regardless of whether there is space at the table or not. Seats are only filled at
--- the start of a hand. All seated players return to the front of the lobby at the end of a hand
--- so they get priority over the new joiners and waiting players.
-----------------------------------------------------------------------------------------
+
+-- * Lobby helpers
 
 -- | Checks if a player is currently in the lobby queue.
 isInLobby :: PlayerName -> ServerState -> Bool

@@ -1,8 +1,25 @@
-module Server.GameLoop 
-    ( handleTransition
-    , makeSnapshot
-    , makePublicSnapshot
-    ) where
+{-# OPTIONS_HADDOCK show-all, prune #-}
+{-|
+Module      : Server.GameLoop
+Description : The server-side game loop. State transitions and game progression logic.
+
+This module is the heart of the servers runtime logic. It handles all state transitions
+driven by player actions and game events, coordinates with the engine to progress the game,
+and produces the broadcast actions that 'Server.NetworkServer' then executes over WebSocket connections.
+
+The main responsibilities of GameLoop are:
+
+  * Using the 'Transition' type via 'handleTransition' to handle player actions resulting in a state change.
+  * Advancing game phase via 'handleGameStep' and recursing until the engine signals 'AwaitingAction' or 'HandComplete'.
+  * Managing the lobby queue, seating players, and starting hands when conditions are met.
+  * Building 'BroadcastAction' lists to describe what messages should be sent to clients in response to state changes.
+  * Building 'Snapshot' messages to keep clients in sync with the current game state after every change.
+
+State logic is kept here, all IO and WebSocket detailes are handled by 'Server.NetworkServer'. 'GameLoop' builds
+the 'BroadcastAction' list which is executed by 'Server.NetworkServer' to send messages to clients.
+-}
+
+module Server.GameLoop where
 
 import Server.ServerTypes
 import Server.ServerHelpers
@@ -20,20 +37,34 @@ import System.Random        (newStdGen)
 
 ------------------------------------------------------------------------------------------
 -- STATE TRANSITION HANDLER
---
--- handleTransition is the single entry point for all state changes.
--- Returns a new ServerState and a list of BroadcastActions to be executed by NetworkServer.
--- GameLoop handles state logic only; NetworkServer executes the IO actions.
 ------------------------------------------------------------------------------------------
 
+-- | The entry point for all server-side state changes.
+--
+-- Takes the current 'ServerState' and a 'Transition.' Each 'Transition' corresponds to an external
+-- event, e.g a player connecting, disconnecting, or submitting an in game action. Returns an
+-- updated 'ServerState' and a list of 'BroadcastAction's to be executed by 'NetworkServer'.
+--
+-- [@PlayerJoined@] - Rejects duplicate names with an 'ErrorMsg' if the name is already being used. Otherwise, registers
+--   the new player and adds them to the lobby queue. Broadcasts a 'LobbyJoined' to the new player, along
+--   with a 'LobbyUpdate' to the other players. If no hand is currently in progress, 
+--   calls 'checkLobbyAndStart' to see if enough players are present to start a hand.
+--
+-- [@PlayerLeft@] - Looks up the clients name, if they are connected but never sent a 'JoinMsg', then they aren't in
+--   the table and the transition is ignored. Otherwise, the player is removed from the clients map, the lobby and the 
+--   player list in the engine. Broadcasts a 'LeftTable' message to all clients, along with an updated snapshot and lobby update.
+--   Disconnects aren't handled here, they are handled in 'Server.NetworkServer'.
+--
+-- [@PlayerActed@] - Resolves the 'ClientId' to an engine player index, then enforces turn order by checking
+--   against 'firstPlayerToBet'. If it fails then an 'ErrorMsg' is returned to the client with an unchanged state.
+--   For a valid action, runs 'applyEvent' from the engine against the current table state. If the
+--   engine rejects the action the error is sent back to the client. If the engine accepts it, 
+--   the resulting 'GameEvent's and an updated 'Snapshot' are sent to broadcast to all client. 
+--   Then 'handleGameStep' is called to advance the game. 
 handleTransition :: ServerState -> Transition -> IO (ServerState, [BroadcastAction])
 
 ----------------
 -- PLAYER JOINS
--- 
--- A player wants to join the table. Reject duplicate names, then update client record and add them
--- to the engines player list ('addPlayer'). The client/player who joins receives a full (private) snapshot
--- and the other clients get a JoinedTable message and a public snapshot update.
 ----------------
 handleTransition st (PlayerJoined cid n) 
 
@@ -60,10 +91,6 @@ handleTransition st (PlayerJoined cid n)
             
 ------------------
 -- PLAYER LEAVES
---
--- A player leaves the table. Removes them from both the client map and the engines player list.
--- Broadcasts to the other clients that the client left. This is only for clients who
--- explicitly leave, not disconnects.
 ------------------
 handleTransition st (PlayerLeft cid) =
     case lookupPlayer cid st of
@@ -87,11 +114,6 @@ handleTransition st (PlayerLeft cid) =
 
 ------------------
 -- Player Action
---
--- A player takes an action in the game. 
--- First we resolve their ClientId to a playerindex in the table that the engine understands.
--- Then run the action through the engines 'applyEvent' function, and after broadcast the results to all clients.
---
 ------------------
 handleTransition st (PlayerActed cid action) =
     case resolvePIdx st cid of
@@ -137,12 +159,18 @@ handleTransition st (PlayerActed cid action) =
 
 ------------------------------------------------------------------------------------------
 -- GAME PROGRESSION
--- 
--- | Called after every successful player action.
---   Asks the engine what state the game is in and responds accordingly.
---   Recurses until the engine signals AwaitingAction (waiting for a player)
---   or HandComplete (hand is over and the showdown has run).
 ------------------------------------------------------------------------------------------
+
+-- | Advances the game after a succesful player action.
+--
+-- Calls 'Engine.TexasEngine.stepGame' from the engine to ask what state the game is in and responds to each outcome.
+--
+-- * 'AwaitingAction' : the betting round is still ongoing, send a 'YourTurn' message to the next player.
+-- * 'PhaseAdvanced' : the engine moved to the next phase (e.g. from 'Flop' to 'Turn'). Broadcasts the
+--   results of the phase change (cards delt, phase change etc.) and a 'Snapshot'. Recurses to check
+--   if the next phase also needs to advance (e.g. if all players are all in).
+-- * 'HandComplete' : the engine ran the showdown and awarded chips. Broadcasts the results, reveals
+--   the hands via 'createShowdownHands', removes eliminated players, and calls 'checkLobbyAndStart' for the next hand.
 handleGameStep :: ServerState -> IO (ServerState, [BroadcastAction])
 handleGameStep st = do
     case stepGame (table st) of
@@ -185,19 +213,16 @@ handleGameStep st = do
             
             (finalSt, checkActions) <- checkLobbyAndStart cleanedSt
             pure (finalSt, actions ++ checkActions)
-            -- if length (activePlayers (table st)) > 1 then
-            --     pure (finalSt, actions ++ checkActions)
-            -- else 
-            --     pure (finalSt, checkActions ++ [BroadcastToAll (GameEventMsgs events)])
+
 
 ------------------------------------------------------------------------------------------
 -- LOBBY AND HAND START
---
--- checkLobbyAndStart is called whenever the lobby changes and decided if conditions
--- are met to start a hand. 
--- Moves players to lobby first to get a clean count and then decides.
 ------------------------------------------------------------------------------------------
 
+-- | Decided if conditions are met to start a new hand.
+--
+-- Counts both seated players and players in the lobby. If the total is below 2, broadcasts the current
+-- state and returns unchanged, otherwise calls 'tryToStartHand'.
 checkLobbyAndStart :: ServerState -> IO (ServerState, [BroadcastAction]) -- Add check state of handOngoning 
 checkLobbyAndStart st =
     let numPlayers = length (lobby st) + length (players (table st))  -- Kolla kombinationen antal spelare vid bord och lobby
@@ -211,13 +236,15 @@ checkLobbyAndStart st =
 
 
 -- | Seat the players from the lobby and try to start a new hand
---   Called once checkLobbyAndStart has confirmed there are enough players.
+-- 
+-- Called once 'checkLobbyAndStart' has confirmed there are enough players.
 --
--- 1. 'returnPlayersToLobby': Move all seated players back to the front of the lobby
--- 2. 'seatLobbyPlayersAtTable': Fill the seats from the front of the lobby queue.
--- 3. Run the engines 'startHand' with a 'newStdGen'
--- 4. Return startup events, updated snapshot, private hands, and the first Yourturn message.
-
+-- Moves lobby players into seats, generates a fresh 'System.Random.StdGen' for the hand and passes it
+-- to the engine's 'startHand'. On success, broadcasts the startup game events, the initial
+-- Snapshot, each players private hand and a 'YourTurn' message.
+--
+-- If there are fewer than 2 players after seating, the players are returned to the
+-- lobby and a snapshot and lobby update is broadcast.
 tryToStartHand :: ServerState -> IO (ServerState, [BroadcastAction])
 tryToStartHand st = do
     -- st already has empty table and players in lobby from checkLobbyAndStart
@@ -228,7 +255,7 @@ tryToStartHand st = do
 
     -- Safety check - should always pass given checkLobbyAndStart, but just in case.
     if seated < 2
-        then pure (returnPlayersToLobby st, -- Used to st1
+        then pure (returnPlayersToLobby st, 
             [ BroadcastToAll (makeSnapshot (table st1))
             , BroadcastToAll (LobbyUpdate (lobby st1))
             ])
@@ -249,12 +276,14 @@ tryToStartHand st = do
 
 ------------------------------------------------------------------------------------------------
 -- PRIVATE HANDS
--- 
--- Builds a SendToClient action for each seated player which contains their private hands.
--- Any players in the lobby, unnamed clients, or disconnecting clients are skipped here.
--- Called once at the start of each hand so each playeronly sees their own cards.
 ------------------------------------------------------------------------------------------------
 
+-- | Builds a 'SendToClient' action for each seated player containing their private hand.
+--
+-- Iterates over all connected clients and looks up each name in the engines players list.
+-- If a client doesn't have a name or isn't seated, they are skipped.
+--
+-- Called once at the start of each hand so that each player only sees their own hand.
 createPrivateHandActions :: ServerState -> [BroadcastAction]
 createPrivateHandActions st =
     concatMap sendPrivateHand (M.toList (clients st))
@@ -269,10 +298,14 @@ createPrivateHandActions st =
 
 ------------------------------------------------------------------------------------------------
 -- YOUR TURN MESSAGE
--- 
--- Builds a YourTurn broadcast telling all clients whose turn it is and what actions they can take.
--- Returns empty list if no action is needed.
 ------------------------------------------------------------------------------------------------
+-- | Builds a 'YourTurn' message for the next player to act.
+--
+-- Includes a players name, the actions they can take, the amout needed to call, and their
+-- current chip count. Returns an empty list if there are no players or the betting round is over.
+--
+-- The available actions depend on if there is a bet to call or not. If there
+-- is no bet, 'toCall' is zero and the player can check. Otherwise they must call, fold, or raise.
 yourTurnMessage :: ServerState -> [BroadcastAction]
 yourTurnMessage st =
     let t = table st
@@ -308,8 +341,10 @@ yourTurnMessage st =
 makePublicSnapshot :: Table -> ServerMsg
 makePublicSnapshot = makeSnapshot
 
--- | Builds a snapshot of the current game state (Table).
---   Hands are hidden for now. We can add later to provide private hand dealing.
+-- | Builds a snapshot of the current game state (Table) for broadcast.
+-- 
+-- Converts each 'Player' to a 'PlayerSnapshot'. All 'PlayerSnapshot's have 'snapHand' set to Nothing. 
+-- This is handled separately via 'createPrivateHandActions' at the start of each hand. 
 makeSnapshot :: Table -> ServerMsg
 makeSnapshot t = Snapshot
     { snapPlayers = map toPlayerSnap (players t)
@@ -321,18 +356,16 @@ makeSnapshot t = Snapshot
     , snapPlayerTurn = getTurnPlayer t
     }
     where
-        -- | Convert a player in the engine to a PlayerSnapshot that is safe to broadcast.
-        --   snapHand hidden, should not be broadcasted publicly.
         toPlayerSnap p = PlayerSnapshot
             { snapName = name p
             , snapChips = chips p
             , snapCommited = commitedChips p
             , snapFolded   = folded p
-            , snapHand     = Nothing    -- Never revelaed in the public snapshot.
+            , snapHand     = Nothing 
             }
 
 -- | Returns the name of the player currently holding the dealer button.
---  If no players at the table, returns an empty string.
+-- Returns an empty string if no players are seated.
 getNameOfDealer :: Table -> PlayerName
 getNameOfDealer t =
     if null (players t)
@@ -340,6 +373,7 @@ getNameOfDealer t =
         else name (players t !! dealerPosition t)
 
 -- | Returns the name of the player whose turn it is to act.
+-- Returns an empty string if no players are seated or the betting round is over.
 getTurnPlayer :: Table -> PlayerName
 getTurnPlayer t
     | null (players t) = ""
@@ -347,8 +381,10 @@ getTurnPlayer t
     | otherwise = name (players t !! firstPlayerToBet t)
 
 
--- | Reveals all players hands to all clients at showdown.
---   Called once per hand after HAndComplete, after chips have been awarded.
+-- | Builds a 'ShowdownHands' braodcast revelaing all non-folded players hands at showdown.
+-- 
+-- Sent once per hand, after 'HandComplete' is signaled by the engine. If only one player is left,
+-- an empty list is broadcast so the winners hand stays hidden.
 createShowdownHands :: ServerState -> BroadcastAction
 createShowdownHands st = 
     let playerNotFolded = activePlayers (table st)

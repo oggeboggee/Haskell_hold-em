@@ -1,6 +1,53 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-|
+Module      : Server.NetworkServer
+Description : WebSocket server and client connection management.
 
-module Server.NetworkServer where
+This module is responsible for accepting WebSocket connections, maintaining the shared server state,
+and handling incoming messages from clients. It translates client messages into game transitions and executes
+broadcast actions returned by the game loop.
+
+Responsibilities summarised:
+
+* Accepting incoming WebSocket connections and registering clients in 'ServerState'
+* Running a per-client receive loop that decoded incomsing JSON messages.
+* Translating 'ClientMsg' values into 'Transition' values for 'Server.GameLoop'
+* Handling 'Client' disconnects.
+* Executing 'BroadcastAction's returned by 'Server.GameLoop' to send appropriate messages to clients.
+
+The module is kept free from game logic. All game related state transitions are delegated to 'Server.GameLoop' via 'handleTransition'.
+
+-}
+module Server.NetworkServer 
+    ( -- * WebSocket server entry
+      -- | WS.ServerApp is a type synonym for WS.PendingConnection -> IO ().
+      -- The WS library calls 'server' once per client connection each on its
+      -- own thread and runs concurrently per client.
+      server
+
+      -- * Client receive loop and disconnect handling
+      -- | Each client runs an instance of this in their thread.
+      -- It waits for a message, handles it, updates the shared state (TVar) and repeats.
+      -- If the connection drops, WS.receiveData throws an exception which is 
+      -- caught by 'onDisconnect'
+    , serverLoop
+
+      -- * Message translation
+    , toTransition
+
+      -- * Broadcast actions execution
+      -- | GameLoop returns a list of BroadcastActions that describe what should be sent and to who.
+      -- The functions bewlos executes those actions by sending over the actual WS connections.
+    , executeActions
+    , executeAction
+    , broadcastMsg
+    , broadcastToAllClients
+    , sendToClientById
+    , broadcastToAllClientsExcept
+    
+      -- * State helpers
+    , readState
+    ) where
 
 import Engine.Utilities (removePlayer)
 import Server.Protocol
@@ -15,16 +62,18 @@ import qualified Data.Map.Strict     as M
 import Control.Concurrent.STM        (atomically, readTVar, readTVarIO, writeTVar)
 import Control.Exception             (catch, SomeException)
 
-------------------------------------------------------------------------------------------
--- WEBSOCKET SERVER ENTRY
---
--- WS.ServerApp is a type synonym for WS.PendingConnection -> IO ().
--- The WS library calls 'server' once per client connection each on its
--- own thread and runs concurrently per client.
-------------------------------------------------------------------------------------------
 
--- | Accepts a new client connection, registers it in the server state, sends an initial snapshot
---   of the table, then goes to the main loop.
+
+-- * WebSocket server entry
+
+-- | The WS.ServerApp handler. Called once per incoing connection on its own thread.
+--
+-- On each new connection:
+--
+-- * Accepts the pending connection and starts a ping thread to keep it alive.
+-- * Atomically allocates a unique 'ClientId' and registers a placeholder 'ClientInfo' with an empty name in the shared 'ServerState'.
+-- * Sends the new client a 'Snapshot' of the current 'Table' state so they can render the existing game immediately.
+-- * Hands off to 'serverLoop' to begin receiving messages.
 server :: SharedServerState -> WS.ServerApp
 server stateVar pending = do
     putStrLn "Client trying to connect..."
@@ -60,17 +109,18 @@ server stateVar pending = do
     serverLoop stateVar cid conn
 
 
-------------------------------------------------------------------------------------------
--- MAIN SERVER LOOP
---
---
--- Each client runs an instance of this in their thread.
--- It waits for a message, handles it, updates the shared state (TVar) and repeats.
--- If the connection drops, WS.receiveData throws an exception which is 
--- caught by 'onDisconnect'
-------------------------------------------------------------------------------------------
+-- * Client receive loop and disconnect handling
 
--- Main receive loop for a connected client.
+-- | Main receive loop for a connected client.
+--
+-- On each iteration::
+--
+-- * Waits for a message from the client via 'WS.receiveData'
+-- * Attempts to decode the message into 'ClientMsg'. Sends 'ErrorMsg' and continues if decoding failed.
+-- * Reads the current 'ServerState' , translate the 'ClientMsg' into a 'Transition' via 'toTransition' and delegates to 'handleTransition'.
+-- * Atomically writes the new state back to the 'TVar' and executes any returned 'BroadcastAction's.
+--
+-- If the connection drop,s 'WS.receiveData' throws and exception which is caught by 'onDisconnect'.
 serverLoop :: SharedServerState -> ClientId -> WS.Connection -> IO ()
 serverLoop stateVar cid conn = loop `catch` onDisconnect
     where
@@ -130,26 +180,19 @@ serverLoop stateVar cid conn = loop `catch` onDisconnect
                     executeActions st3 actions
 
 
+-- * Message translation
 
-------------------------------------------------------------------------------------------
--- MESSAGE TRANSLATION
-------------------------------------------------------------------------------------------
-
--- | Translates a ClientMsg into a Transition for GameLoop
---   This is hte only place that knows about both types to keep NetworkServer.hs
---   and GameLoop.hs decoupled from each other.
+-- | Translates a 'ClientMsg' into a 'Transition' for 'Server.GameLoop'
+--   This is hte only place that knows about both types to keep 'Server.NetworkServer'
+--   and 'Server.GameLoop' decoupled from each other.
 toTransition :: ClientId -> ClientMsg -> Transition
 toTransition cid (JoinMsg n)     = PlayerJoined cid n
 toTransition cid LeaveMsg        = PlayerLeft cid
 toTransition cid (ActionMsg act) = PlayerActed cid act
 
 
-------------------------------------------------------------------------------------------------
--- EXECUTE BROADCAST ACTIONS
---
--- GameLoop returns a list of BroadcastActions that describe what should be sent and to who.
--- The functions bewlos executes those actions by sending over the actual WS connections.
-------------------------------------------------------------------------------------------------
+
+-- * Broadcast actions execution
 
 -- | Execute a list of broadcast actions. Send messages to appropriate clients.
 executeActions :: ServerState -> [BroadcastAction] -> IO ()
@@ -190,9 +233,7 @@ broadcastToAllClientsExcept excludedId st msg =
         (M.toList (clients st))
 
 
-------------------------------------------------------------------------------------------
--- STATE HELPERS
-------------------------------------------------------------------------------------------
+-- * State helpers
 
 -- Reads the current server state form the shared TVar.
 readState :: SharedServerState -> IO ServerState

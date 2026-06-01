@@ -1,3 +1,18 @@
+{-|
+Module      : Server.ServerTypes
+Description : Core server-side types and shared definitions.
+
+Data definitions and modeling shared between 'Server.NetworkServer' and 'Server.GameLoop'.
+Server keeps track of two things at the same time:
+
+[@Table@] - The poker game state.
+
+[@Clients@] - The connected websocket clients
+
+Both of these live together in ServerState and is shared across all client threads.
+
+-}
+
 module Server.ServerTypes where
 
 import Engine.EngineTypes
@@ -7,41 +22,36 @@ import           Data.Map           (Map)
 import           Control.Concurrent.STM.TVar (TVar)
 import           Server.Protocol    (ServerMsg(..))
 
-------------------------------------------------------------------------------------------------
--- CORE SERVER STATE TYPES
---
--- Data definitions and modeling shared between NetworkServer and GameLoop.
--- Server keeps track of two things at the same time:
---   * The poker game state (Table)
---   * The connected websocket clients
--- Both of these live together in ServerState and is shared across all client threads.
-------------------------------------------------------------------------------------------------
-
 -- | Unique ID assigned to each client connection when it connects.
 --   Lets us track clients independently of whether they've chosen a name
 --   or not. Gets assigned atomically so no clients risk sharing an ID.
 type ClientId = Int
 
--- | Contains everything we need to know about a connected client.
---   Name is empty from start and then filled when a player sends a JoinMsg.
---   Until then a client is connected but not yet a player.
+-- | Information associated with a connected client.
+--   A client may be connected before joining the game,
+--   in that case 'clientName' is empty until a 'JoinMsg' is received.
 data ClientInfo = ClientInfo
     { clientName :: PlayerName          -- Chosen name of the player
-    , connection :: WS.Connection       -- a live websocket connection to their client.
+    , connection :: WS.Connection       -- A live websocket connection to their client.
     }
 
 -- | Map of: ClientID -> ClientInfo. Lookup structure for conected clients.
---   E.g: 0 -> ("Sam", conn1)
---        1 -> ("Bob", conn2)
---        2 -> (""   , conn3) <- connected but not yet joined.
+--   E.g:
+--
+-- @
+-- 0 -> ("Sam", conn1)
+-- 1 -> ("Bob", conn2)
+-- 2 -> (""   , conn3) <- connected but not yet joined.
+-- @
 --
 --   We need this to reach specific clients and find out what name belongs to what client.
 --   This helps us to send messages to specific clients or broadcast to everyone.
 type Clients = Map ClientId ClientInfo
 
-
--- | Full server state. Shared across all WS threads via a TVar.
---   Changes to the state produce a new ServerState which is written back to the TVar.
+-- | The complete server state.
+--
+--   Contains the current game state ('Table'), the connected 'Clients', a counter to generate
+--   unique 'ClientId's, the lobby of waiting players and whether a hand is ongoing or not.
 data ServerState = ServerState 
     { table        :: Table         -- poker game state (engine)
     , clients      :: Clients       -- all connected websocket clients
@@ -69,27 +79,24 @@ initServerState t =
         , handOngoing  = False      -- No hand ongoing at initial state
         }
 
-------------------------------------------------------------------------------------------------
--- Transition TYPE
+
+-- | A state chaning event expressed as a Transition.
 --
 -- A transition described what just happened from the network layers perspective.
--- NetworkServer creates transitions from ClientMsgs and passes them to GameLoop.
--- GameLoop then pattern matches on Transition variants to decide what to do next.
+-- 'Server.NetworkServer' creates transitions from 'ClientMsg's and passes them to 'Server.GameLoop'.
+-- 'Server.GameLoop' then pattern matches on Transition variants to decide what to do next.
 --
--- This decouples the network layer which uses ClientMsg from the game layer which uses Transition.
--- NetworkServer only needs to know how to translate, GameLoop only needs to know how to transition.
-------------------------------------------------------------------------------------------------
-
--- | Every state-changing event expressed as a Transition.
+-- This decouples the network layer which uses 'ClientMsg' from the game layer which uses Transition.
+-- 'Server.NetworkServer' only needs to know how to translate, 'Server.GameLoop' only needs to know how to transition.
 data Transition
-    -- A client sent E.g {"type":"join","name":"Alice"}.
+    -- | A client sent E.g {"type":"join","name":"Alice"}.
     = PlayerJoined ClientId PlayerName
 
-    -- A client explicitly sent {"type":"leave"}
+    -- | A client explicitly sent {"type":"leave"}
     -- ClientId is enough as GameLoop looks up their name internally.
     | PlayerLeft ClientId
     
-    -- A seated player sent an action message like {"type":"action","action":"fold"}
+    -- | A seated player sent an action message like {"type":"action","action":"fold"}
     -- ClientId will be resolve to a PlayerIndex before the engine sees it.
     | PlayerActed ClientId Action
     deriving (Show)
@@ -107,21 +114,18 @@ data Transition
 ------------------------------------------------------------------------------------------------
 
 -- | Describes a message to be sent, and who should receive it.
---   Returned by GameLoop functions, executed by NetworkServer.
+--   Returned by 'Servre.GameLoop' functions, executed by 'Server.NetworkServer'.
 data BroadcastAction
-    -- Send the message to all connected clients.
-    -- USed for public state changes such as snapshots, game events, lobby updates etc.
+    -- | Send the message to all connected clients.
+    -- Used for public state changes such as snapshots, game events, lobby updates etc.
     = BroadcastToAll ServerMsg 
 
-    -- Send the message to one specific client only.
+    -- | Send the message to one specific client only.
     -- USed for private messages: errors, lobby position, hands, YourTurn etc.
     | SendToClient ClientId ServerMsg
 
-    -- Send this message to all clients except one.
+    -- | Send this message to all clients except one.
     -- USed when the excluded client already received the same information in a private message,
     -- e.g when a player acts.
     | BroadcastToAllExcept ClientId ServerMsg 
     deriving (Show)
-
-
-

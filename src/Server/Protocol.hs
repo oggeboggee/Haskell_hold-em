@@ -1,11 +1,28 @@
 --{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Server.Protocol 
-    ( ClientMsg(..)
-    , ServerMsg(..)
-    , PlayerSnapshot(..)
-    ) where
+{-|
+Module      : Server.Protocol
+Description : JSON definitions for messages sent between clients and server.
+
+This module defines the network protocol used by the poker server. It contains the
+data types for all messages sent between clients and the server, as well as the JSON
+serialisation instances required to encode and decode them.
+
+* 'ClientMsg' - messages sent from client to server.
+* 'ServerMsg' - messages sent from server to client.
+
+The module also provides JSON wrapper types for engine data types such as 'Action', 'GameEvent',
+'Card, and 'GamePhase'. These wrappers allow for engine types to be serialised without introducing
+dependency on Aeson inside the enigne itself and keeps the concerns separated. Without them the 
+instances would become orphan instances.
+
+Keeping the protocol definitions separate preserves the boundary between the game logic and the
+network communication. So the engine becomes free from knowledge of JSON and the server can
+serialise engine types when communicating with clients.
+-}
+
+module Server.Protocol where
 
 
 import Data.Aeson
@@ -19,11 +36,21 @@ import Engine.EngineTypes
 -- We have it here because the engine has no dependency on Aeson. JSON is not an engine concern.
 ----------------------------------------------------------------------------------------
 
--- Every message the client can send. Server decodes from JSON.
+-- * Messages sent from the client
+
+-- | Every message the client can send. Server decodes from JSON.
+--
+-- Incoming JSON messages are decoded into this type before being translated to 
+-- server side state transitions. Each constructor corresponds to a distinct "type" field in the JSON.
 data ClientMsg
-    = JoinMsg PlayerName    -- player wants to sit down: {"type":"join","name":"Alice"}
-    | LeaveMsg              -- player leaves:            {"type":"leave"}
-    | ActionMsg Action      -- player takes an action:   {"type":"action","action":{...}}
+    -- | Request to join the game: {"type":"join","name":"Alice"}
+    = JoinMsg PlayerName
+
+    -- | Request to leave the game: {"type":"leave"}
+    | LeaveMsg
+
+    -- | Submit action: {"type":"action","action":{...}}            
+    | ActionMsg Action      
     deriving (Show)
 
 -- Encode ClientMSg to JSON (never gets sent, mostly for debugging purposes)
@@ -45,12 +72,11 @@ instance FromJSON ClientMsg where
             _        -> fail ("Unknown message type: " ++ t)
 
 
-----------------------------------------------------------------------------------------
--- MESSAGES FROM SERVER TO CLIENT
-----------------------------------------------------------------------------------------
+-- * Snapshot and player state
 
--- A summary of one players state, safe to broadcast to other clients.
--- In a private snapshot we can send a player their cards.
+-- | Public representation of a player's state, safe to broadcast to all clients.
+--
+-- A summary of one players state, safe to broadcast to other clients using 'Snapshot' broadcasts.
 data PlayerSnapshot = PlayerSnapshot
     { snapName     :: PlayerName
     , snapChips    :: Bet
@@ -69,25 +95,49 @@ instance ToJSON PlayerSnapshot where
         , "hand"     .= snapHand p    -- JSON null when Nothing
         ]
 
--- All messages the server can send to a client.
--- Each constructor maps to a distinct "type" field in the JSON.
+-- * Messages sent from the server
+
+-- | Every message the server can send to a client.
+--
+-- Each constructor maps to a distinct JSON message identified by a @"type"@ field.
 data ServerMsg
-    = Welcome String                -- sent to a player when they first connect.
-    | ErrorMsg String               -- something that went wrong: invalid action, name already taken etc.
-    | JoinedTable PlayerName        -- broadcast when any player joins
-    | LeftTable PlayerName          -- broadcast when any player leaves
-    | GameEventMsgs [GameEvent]     -- what just happened (players folded, raised, shwodown etc.)
-    | LobbyJoined PlayerName Int    -- Player joins lobby, at position
-    | LobbyUpdate [PlayerName]      -- current lobby queue
-    | PrivateHand [String]          -- Players hand, sent only to player.
-    | ShowdownHands [(PlayerName, [String])] -- List of all players hands at showdown, sent to everyone.
+    -- | Welcome message sent after succesfully joining.
+    = Welcome String
+
+    -- | Error message sent when a request can't be fulfilled.
+    | ErrorMsg String
+
+    -- | Broadcast when a player joins the table.
+    | JoinedTable PlayerName
+
+    -- | Broadcast when a player leaves the table.
+    | LeftTable PlayerName
+
+    -- | Collection of game events that occured as a result of an action or state change.
+    | GameEventMsgs [GameEvent]
+
+    -- | Broadcast when a player joins the lobby, with their position in the queue.
+    | LobbyJoined PlayerName Int
+
+    -- | Updated lobby queue.
+    | LobbyUpdate [PlayerName] 
+
+    -- | A players private hand.
+    | PrivateHand [String]
+
+    -- | Reveals all remaining hands at showdown.
+    | ShowdownHands [(PlayerName, [String])]
+
+    -- | Indicates whose turn it is and what actions they can take.
     | YourTurn
-        { turnPlayer       :: PlayerName  -- add this
+        { turnPlayer       :: PlayerName 
         , availableActions :: [String]
         , toCall           :: Chip
         , yourChips        :: Chip
-        }                     
-    | Snapshot                      -- full public table state, sent after every state change.
+        }
+
+    -- | A full snapshot of the game state ('Table').               
+    | Snapshot
         { snapPlayers :: [PlayerSnapshot]
         , snapPot     :: Chip
         , snapPhase   :: String
@@ -163,7 +213,9 @@ instance ToJSON ServerMsg where
 -- These instances lets us send engine types over JSON without the engine knowing about JSON.
 ----------------------------------------------------------------------------------------
 
--- | Wrapper for Action to handle JSON in a way that promotes SoC and avoids orphan instances.
+-- * Engine JSON wrappers
+
+-- | Wrapper for 'Action' used to provide JSON instances without creating orphan instances on the engine.
 newtype ActionJSON = ActionJSON Action
 
 -- | Encode an Action taken by a player.
@@ -188,18 +240,21 @@ instance FromJSON ActionJSON where
             "raise" -> ActionJSON . Raise <$> o .: "amount"
             _       -> fail ("Unknown action: " ++ t)
 
+-- | Wrapper around 'Card' used for JSON serialisation.
 newtype CardJSON = CardJSON Card
 
 -- | We encode a Card as a simple string which the show instance gives us.
 instance ToJSON CardJSON where
     toJSON (CardJSON c) = toJSON (show c) 
 
+-- | Wrapper around 'GamePhase' used for JSON serialisation.
 newtype GamePhaseJSON = GamePhaseJSON GamePhase
 
 -- | Same for GamePhase as Card
 instance ToJSON GamePhaseJSON where
     toJSON (GamePhaseJSON p) = toJSON (show p)
 
+-- | Wrapper around 'GameEvent' used for JSON serialisation.
 newtype GameEventJSON = GameEventJSON GameEvent
 
 -- | Encode what happened during a round.
