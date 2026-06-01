@@ -7,7 +7,7 @@ The suite is roughly devided in stateful (stateful adjacent) functions
 and pure logical functions. 
 
 The purose of the test suite is to make sure that the game functions as expected. 
-The test checks for know edge cases
+The test checks for know edge cases, and properties that should always hold. 
 -}
 
 
