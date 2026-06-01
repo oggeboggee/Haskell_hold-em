@@ -1,3 +1,12 @@
+{-|
+Module      : Engine.TexasEngine
+Description : 
+
+This module provides stateful functions that are not classified as events. 
+This includes resetting attributes after betting rounds/ hands are over, 
+moving the dealer around etc. 
+-}
+
 module Engine.TexasEngine 
     ( runShowdown
     , startHand

@@ -1,3 +1,12 @@
+{-|
+Module      : Engine.Actions
+Description : Applying events and handle player actions
+
+This module handle events, progressing the state when players make an actions,
+when a hand is over or a player is eliminate. It also contains some helper functions
+to update certain parts of the state.
+-}
+
 {-# LANGUAGE TupleSections #-}
 
 module Engine.Actions where

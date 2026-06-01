@@ -1,3 +1,11 @@
+{-|
+This module contains:
+
+* Helper functions
+* Random generators
+* Fixed Game state for testing
+-}
+
 module TestHelpers where
 
 import Control.Exception
@@ -20,7 +28,8 @@ import Engine.HandEvaluation()
 --------------------------------------------------
 ---------- Generate random game state -----------
 
--- OBS! Some of these generators can still produce duplicates
+-- OBS! Some of these generators can still produce duplicates, 
+-- make sure to check for duplicates when generating
 
 ---------------
 -- | Helper to generate random hands
@@ -56,25 +65,19 @@ randomiseCardsAtTable table x = do
 
 
 --------------------------------------------------------------------
-noDuplicatCards :: Table -> Bool
-noDuplicatCards table = 
-    let allHands = [hand p | p <- players table]
-        allCards = board table ++ (concat allHands)
-    
-    in noDups allCards
-
-
+-- | Helper function to check so that there are no duplicate cards at a table
 noDups :: [Card] -> Bool
 noDups []     = True
 noDups (x:xs) = if x `elem` xs then False else noDups xs
 
+-- | Helper function to get the winners from a ShowdownHappend GameEvent
 unPackWinners :: GameEvent -> [PlayerName]
 unPackWinners (ShowdownHappened pl) = pl
 unPackWinners _                     = []
 
 
--- Helper functions for checking so there is no negative values for chips, pot etc.
--- | Checks all player chips and table pot for negative
+-- | Helper functions for checking so there is no negative values for chips, pot etc.
+-- Checks all player chips and table pot for negative
 noNegativeChips :: Table -> Bool
 noNegativeChips table = let allChipValues = (map chips (players table)) ++ [pot table]
                         in and (map (>=0) allChipValues)
@@ -84,6 +87,7 @@ noNegativeChips table = let allChipValues = (map chips (players table)) ++ [pot 
 -- =========================================================== --  
    ----------------------- Error handler ------------------------
 
+-- | Helper function to run a funtcion that can possibly return an error
 assertThrows :: IO a -> String -> Assertion
 assertThrows action expectedMessage = do
     result <- try action
@@ -100,8 +104,8 @@ assertThrows action expectedMessage = do
 -- =========================================================== --  
    ----------------------- Test Cases ------------------------
 
---  Default state 1: 
--- In preflop, Sb -> Bob, Bb -> Sam
+-- | Default state 1: 
+-- | In preflop, Sb -> Bob, Bb -> Sam
 players1 :: [Player]
 players1 = [Player "Bob" [] 950 50 False False,
             Player "Sam" [] 900 100 False False,
@@ -124,7 +128,6 @@ table1 = Table
 
 ----------
 -- | Default state 2
--- | For showdown testing
 players2 :: [Player]
 players2 = [Player "Bob" [] 500 50 False False,
             Player "Sam" [] 500 100 False False,
@@ -146,8 +149,7 @@ table2 = Table
             }
 
 
--- This faild in "Winners win correct amount of chips"
--- DO NOT CHANGE, is used to test runShowdown in unit tests
+-- | Default state 3
 players3 :: [Player]
 players3 = [Player "Bob" [Card Queen Diamonds, Card Jack Spades] 500 50 False False,
             Player "Sam" [Card Two Spades, Card Three Hearts] 500 100 False False,

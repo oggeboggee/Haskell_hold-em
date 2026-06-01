@@ -1,3 +1,16 @@
+{-|
+This module contains all tests for the stateful functions, 
+plus some of the adjacent helper functions.
+
+The tests are divided in two parts, 
+Unit tests (HUnit) and property test(QuickCheck). 
+
+For the stateful test we use partialy randomised table states to test.
+We start by using a predetermend state and then randomise the parts 
+that we are interested in. The predetermend states and the functions
+randomising parts of the state can be found in TestHelpers.hs
+-}
+
 module StateTest where
 
 import Control.Exception
@@ -17,7 +30,7 @@ import Engine.HandEvaluation
 import TestHelpers
 -- =========================================================== --  
    ----------------------- Unit Tests ------------------------
--- | Group all unit tests
+-- | Group all unit tests in StateTest
 unitTests :: TestTree
 unitTests = testGroup "Unit tests State"
     [ 
@@ -30,6 +43,7 @@ unitTests = testGroup "Unit tests State"
      unitUpdatePlayerAtIndex
     ]
 
+-- | Group all property tests in StateTest
 propertyTests :: TestTree
 propertyTests = testGroup "Property tests State"
     [
@@ -42,6 +56,7 @@ propertyTests = testGroup "Property tests State"
 
 -----------------------------------------------------
 -----------------------------------------------------
+-- This function was used in the Terminal version of the game, but are no longer used
 -- | Convert action unit tests
 -- unitConvertAction :: TestTree
 -- unitConvertAction = testGroup "converAction Unit tests"
@@ -73,18 +88,17 @@ propertyTests = testGroup "Property tests State"
 
 
 -----------------------------------------------------
--- | ApplyEvents Unit tests
+-- | Unit tests for ApplyEvent
+-- These test are using a predetermed state
 unitApllyEventPlayerEvent :: TestTree
 unitApllyEventPlayerEvent = testGroup "applyEvent Unit tests"
     [ 
-    -- These test are using a predetermed state, see table1 at the bottom of the file under test cases
-
     ------------ Testing PlayerEvent Fold ------
-    -- Player at index 0 in table1 is Bob, a fold should return a GameEvent, PlayerFolded "Bob"
+    -- | Player at index 0 in table1 is Bob, a fold should return a GameEvent, PlayerFolded "Bob"
     testCase "First player at table fold -> PlayerFolded 'name'"
         $ (evalState (applyEvent (PlayerEvent 0 Fold)) table1) @?= Right [PlayerFolded "Bob"]
 
-    , -- Compare how many have folded after one player have chooses to fold
+    , -- | Compare how many have folded after one player have chooses to fold
     testCase "Number of folded players increase by one when folding" 
         $ do
             let oldFoldedPlayers = filter folded (players table1)
@@ -94,7 +108,7 @@ unitApllyEventPlayerEvent = testGroup "applyEvent Unit tests"
             length newFoldedPlayers @?= length oldFoldedPlayers + 1
 
     --------------- Testing PlayerEvent Check -------
-    , -- Player checking while not not matching highBet, should not be possible
+    , -- | Player checking while not not matching highBet, should not be possible
     testCase "Player unable to check when behind highBet" 
         $ do
             let lastPlayerIndex = length (players table1) - 1
@@ -108,8 +122,8 @@ unitApllyEventPlayerEvent = testGroup "applyEvent Unit tests"
     
 
     --------------- Testing PlayerEvent Raise -------
-    , -- Testing so that the bet transfer properly, testing with Jonathan at index 2 who currently are 100 behind highBet
-        -- Raising should place the differens between his commited chips and the highBet + the amount to raise
+    , -- | Testing so that the bet transfer properly, testing with Jonathan at index 2 who currently are 100 behind highBet
+      -- Raising should place the differens between his commited chips and the highBet + the amount to raise
     testCase "Player chips decrease correctly after raising"
         $ do
             let chipsBefore = chips (players table1!!2) -- The amount of chips before raising
@@ -121,19 +135,19 @@ unitApllyEventPlayerEvent = testGroup "applyEvent Unit tests"
             chipsAfter @?= (chipsBefore - highBetDif - bet)
 
 
-    -- Add a pot incease test
+      -- | Add a pot incease test
     , -- Player raising invalid/negative amount 
     testCase "Negative raise amount"
         $ (evalState (applyEvent (PlayerEvent 2 (Raise (-100)))) table1) 
             @?= Left "Raise amount must be larger than 0 and smaller then the amount of chips you have"
 
-    , -- Player raise with more chips than they currently have
+    , -- | Player raise with more chips than they currently have
     testCase "Rasie amount to high"
         $ (evalState (applyEvent (PlayerEvent 2 (Raise 100000000))) table1)
             @?= Left "Raise amount must be larger than 0 and smaller then the amount of chips you have"
 
     --------------- Testing PlayerEvent Call ---------
-    , -- Call should place a bet so thatt the player match highBet
+    , -- | Call should place a bet so thatt the player match highBet
     testCase  "Call correct amount"
         $ do
             let chipsBefore    = chips (players table1!!2)
@@ -146,12 +160,12 @@ unitApllyEventPlayerEvent = testGroup "applyEvent Unit tests"
     ]
 -----------------------------------------------------
 
+
 -----------------------------------------------------
--- | placePureBet Unit tests
+-- | placePureBet Unit tests using predetermend States
 unitPlacePureBet :: TestTree
 unitPlacePureBet = testGroup "placePureBet Unit tests"
-    [ -- placePureBet :: Table -> PlayerIndex -> Bet -> Table
-        -- Using Jonathan at index 2 at table1 for exampel
+    [ -- | Using 'Jonathan' at index 2 at table1 for exampel
     testCase "Player chips decrease when betting"
         $ let chipsBefore = chips (players table1!!2)
               bet         = 100
@@ -159,7 +173,7 @@ unitPlacePureBet = testGroup "placePureBet Unit tests"
               chipsAfter  = chips (players table!!2)
 
           in chipsAfter @?= (chipsBefore - bet)
-    ,
+    , -- | Testing that the pot at the table increase correctly when betting
     testCase "Table pot increase when a player bets"
         $ let potBefore = pot table1
               bet       = 100
@@ -168,8 +182,8 @@ unitPlacePureBet = testGroup "placePureBet Unit tests"
 
           in potAfter @?= (potBefore + bet)
 
-    ,
-    testCase "Table higbet is uppdated when a player raise"
+    , -- | Testing that the highBet at the table is updated correctly when a player raise
+    testCase "Table higbet is updated when a player raise"
         $ let --highBetBefore  = highBet table1
               bet            = 500
               table          = placePureBet table1 2 bet
@@ -178,7 +192,7 @@ unitPlacePureBet = testGroup "placePureBet Unit tests"
 
           in highBetAfter @?= expectedHigbet
 
-    ,
+    , -- | Testing that the highBet stays the same when a player calls
     testCase "Table higbet is NOT uppdated when a player call"
         $ let --highBetBefore  = highBet table1
               bet            = 100
@@ -198,11 +212,11 @@ unitPureFold =
 
         in
             testGroup "pureFold Unit tests" 
-            [ -- When a aplyer ahve acted, acted should always be true untill a reset has happend
+            [ -- | When a aplyer have acted, acted should always be true untill a reset has happend
             testCase "Player folded bool change correctly"
                 $ folded playerAfter @?= True
             
-            , -- Check so that no other players acted state changes
+            , -- | Check so that no other players acted state changes
             testCase "No other player have change their folded state"
                 $   
                 let otherPlayersBefore = (take 2 (players table1) ++ drop 3 (players table1))
@@ -213,7 +227,7 @@ unitPureFold =
                         a <- otherPlayersAfter] 
                         @?= True
             ]
-
+-----------------------------------------------------
 
 -----------------------------------------------------
 -- | pureCheck Unit tests
@@ -224,11 +238,11 @@ unitPureCheck =
 
         in
             testGroup "pureCheck Unit tests" 
-            [ -- Correctly change the acted state when checking
+            [ -- | Correctly change the acted state when checking
             testCase "Player acted bool change correctly"
                 $ acted playerAfter @?= True
             
-            , -- Checking should not effect a players chips
+            , -- | Checking should not effect a players chips
             testCase "Player chips is unchanged when checking"
                 $ 
                 let chipsBefore = chips (players table1!!2)
@@ -236,7 +250,7 @@ unitPureCheck =
 
                 in chipsBefore @?= chipsAfter
 
-            , -- Check that only one players acted state is changed
+            , -- | Check that only one players acted state is changed
             testCase "No other player have change their acted state"
                 $   
                 let otherPlayersBefore = (take 2 (players table1) ++ drop 3 (players table1))
@@ -248,23 +262,21 @@ unitPureCheck =
                         @?= True
             ]
     
-
+-----------------------------------------------------
 
 -----------------------------------------------------
 -- | runShowdown Unit tests
 
--- Testing with a fixed state, using table3 --> winners should be Sam and Jonathan,
-    -- They should split the pot evenly --> Gaining 300 chips each
 unitRunShowdown :: TestTree
 unitRunShowdown = testGroup "Unit test runShowdown"
-    [ -- Calculate winners
+    [ -- | Calculate winners, using table3 winners should be Sam and Jonathan
     testCase "Correct winners"
         $   let showdownHappend = (evalState (runShowdown) table3)
                 winnersName     = unPackWinners (showdownHappend!!0)
 
             in winnersName @?= ["Sam", "Jonathan"]
     
-    , -- Both players should get 300 chips
+    , -- | Both players should get 300 chips
     testCase "Correct dealout of chips to winners first"
         $   let finalState          = (execState (runShowdown) table3)
                 samChipsBefore      = chips (players table3!!1)
@@ -275,7 +287,7 @@ unitRunShowdown = testGroup "Unit test runShowdown"
             
             in samChipsAfter @?= (samChipsBefore + 300)
     
-    , -- Both players should get 300 chips
+    , -- | Both players should get 300 chips
     testCase "Correct dealout of chips to winners second"
         $   let finalState          = (execState (runShowdown) table3)
                 jonathanChipsBefore = chips (players table3!!2)
@@ -283,7 +295,7 @@ unitRunShowdown = testGroup "Unit test runShowdown"
             
             in jonathanChipsAfter @?= (jonathanChipsBefore + 300)
 
-    , -- Pot is set to 0
+    , -- | Pot is set to 0
     testCase "Pot is set to zero"
         $   let finalState = (execState (runShowdown) table3)
 
@@ -296,21 +308,21 @@ unitRunShowdown = testGroup "Unit test runShowdown"
 
 unitUpdatePlayerAtIndex :: TestTree
 unitUpdatePlayerAtIndex = testGroup "Unit test updatePlayerAtIndex"
-    [ -- 10 is a invalid index 
+    [ -- | 10 is a invalid index 
     testCase "Index of out range give error"
         $   assertThrows 
             (evaluate 
                 (updatePlayerAtIndex 100 (\p -> p { acted = True }) table1)) 
                 "Invalid index in updatePlayerAtIndex"
 
-    ,
+    , -- | updatePlayerAtIndex should not be able to take a negative index
     testCase "Negative index should give an error"
         $   assertThrows 
             (evaluate 
                 (updatePlayerAtIndex (-1) (\p -> p { acted = True }) table1)) 
                 "Invalid index in updatePlayerAtIndex"
         
-    , 
+    , -- | Testing that all the other players are still the same
     testCase "Only one player should change their state (first player in list)"
         $   let playerBefore = tail (players table1)
                 finalState   = updatePlayerAtIndex 0 (\p -> p { acted = True }) table1
@@ -318,7 +330,7 @@ unitUpdatePlayerAtIndex = testGroup "Unit test updatePlayerAtIndex"
             
             in playerBefore @?= playersAfter
 
-    , -- 
+    , -- | Testing that all the other players are still the same
     testCase "Only one player should change their state (last player in list)"
         $   let playerBefore = (tail . reverse) (players table1)
                 index        = (length (players table1) - 1)
@@ -336,14 +348,16 @@ unitUpdatePlayerAtIndex = testGroup "Unit test updatePlayerAtIndex"
 -- =========================================================== --  
    --------------------- Property Tests ----------------------
 
+-- | Property test for Apply Event
+
 propertyTestsApplyEvent :: TestTree
 propertyTestsApplyEvent = testGroup "Property tests applyEvent"
     [ -- =================== Testing ApplyEvent ========================= --
 
 
     -- | A valid bet is bigger than zero and lower/equal than the amount of chips a player have 
-        -- minus the amount they have to bet to match the current highBet
-        -- An invalid bet should result in the left case and a valid in the right
+    -- minus the amount they have to bet to match the current highBet
+    -- An invalid bet should result in the left case and a valid in the right
     QC.testProperty "Valid/invalid raise amount" 
         $ QC.forAll (QC.choose(-1000, 3000))
             $ \r ->
@@ -355,9 +369,9 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
                     -> r > 0 && r <= ((chips (players table1!!2)) - (lowestBet table1 (players table1!!2)))
 
 
-    , -- Simulating a bettingphase where one player raise and set the highBet to a random amount 
-        -- and the next player have a random amount of chips. The next player tries to check 
-        -- -> should only work if higbBet != 0 and The player have enough chips to match the higBet
+    , -- | Simulating a bettingphase where one player raise and set the highBet to a random amount 
+      -- and the next player have a random amount of chips. The next player tries to check 
+      -- -> should only work if higbBet != 0 and The player have enough chips to match the higBet
     QC.testProperty "Call when highBet is possibly bigger than a players amount of chips"
         $ QC.forAll (QC.choose(0, 900)) $ \ x -> -- The amount of chips Lewis have
           QC.forAll (QC.choose(100, 900)) $ \ y -> -- y is the highBet set by Jonathan
@@ -390,14 +404,14 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
                         -> highBet finalState > 0  && x >= highBet finalState
 
 
-    , -- Testing so that a player dont have negative chips after raising
+    , -- | Testing so that a player dont have negative chips after raising
     QC.testProperty "Players should never have negative chips after raising"
         $ QC.forAll (QC.choose(0, 1000000)) $ \x -> -- Amount to bet
             let finalState = execState (applyEvent (PlayerEvent 2 (Raise x))) table1
                 
             in ((chips (players finalState!!2)) >= 0) && (noNegativeChips finalState)
             
-    , -- Testing so that a player 
+    , -- | Testing so that a player have zero chips after going all in
     QC.testProperty "After AllIn a players chips should always be 0"
         $ QC.forAll (QC.choose(0, 1000000)) $ \x -> -- Amount to bet
             let state1     = updatePlayerAtIndex 2 (\p -> p {chips = x}) table1
@@ -414,7 +428,7 @@ propertyTestsApplyEvent = testGroup "Property tests applyEvent"
 
 propertyTestsRunShowdown :: TestTree
 propertyTestsRunShowdown = testGroup "Property tests runShowdown"
-    [ -- Calculate the correct winners and compare to runShowdown calculation
+    [ -- | Calculate the correct winners and compare to runShowdown calculation
     QC.testProperty "Calculate the correct winners" $
         QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
 
@@ -427,7 +441,7 @@ propertyTestsRunShowdown = testGroup "Property tests runShowdown"
 
             in winnerNames == (unPackWinners ((evalState (runShowdown) table)!!0))
 
-    , -- Check so that the correct amount of money is dealt out to the correct players
+    , -- | Check so that the correct amount of money is dealt out to the correct players
     QC.testProperty "The winners chips increase after winning" $
         QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
             
@@ -440,7 +454,7 @@ propertyTestsRunShowdown = testGroup "Property tests runShowdown"
             
             in and [chips pa > chips pb | pa <- winnersAfter, pb <- winnersBefore]
     
-    ,
+    , -- | Testing that runShowdown returns the correct winners
     QC.testProperty "The winners wins the correct amount of chips" $
         QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
         QC.forAll (QC.choose (0, 100000)) $ \x ->
@@ -456,7 +470,7 @@ propertyTestsRunShowdown = testGroup "Property tests runShowdown"
 
             in and [chips pa == (chips pb + chipsWon) | pa <- winnersAfter, pb <- winnersBefore]
 
-    ,
+    , -- | Testing so there are no negative chips after showdown happend
     QC.testProperty "No negative chips after runShowdown" $
         QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
         QC.forAll (QC.choose (0, 100000)) $ \x -> 
@@ -466,7 +480,7 @@ propertyTestsRunShowdown = testGroup "Property tests runShowdown"
 
             in noNegativeChips finalState
 
-    ,
+    , -- | The pot should be emptied after showdown happend.
     QC.testProperty "Pot should be emptyt after showdown happend" $
         QC.forAll (randomiseCardsAtTable table2 5) $ \table ->
         QC.forAll (QC.choose (0, 100000)) $ \x -> 
@@ -489,7 +503,7 @@ propertyTestsPureFold :: TestTree
 propertyTestsPureFold = testGroup "Property tests pureFold"
     [  -- =================== Testing pureFold ========================= --
     QC.testProperty "When a player fold their fold bool should be True"
-        -- Take a random player at the table and folds that player
+        -- | Take a random player at the table and folds that player
         $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
             let table            = pureFold table1 x
                 foldedplayer     = players table!!x
@@ -497,7 +511,7 @@ propertyTestsPureFold = testGroup "Property tests pureFold"
             in
                 (folded foldedplayer) == True
     
-    ,
+    , -- | Chips are uneffected by folding
     QC.testProperty "When a player fold their chips should remain the same"
         $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
             let beforeFold = players table1!!x
@@ -507,7 +521,8 @@ propertyTestsPureFold = testGroup "Property tests pureFold"
             in
                 (chips beforeFold) == (chips afterFold)
 
-    , -- This function should never be called on a player that have already folded
+    , -- | When a player folds the number of folded players incease by one
+      -- Note! This function should never be called on a player that have already folded
     QC.testProperty "When a player fold the number of folded players increase by one" 
         $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
             let table  = pureFold table1 x
@@ -528,7 +543,7 @@ propertyTestsPureCheck :: TestTree
 propertyTestsPureCheck = testGroup "Property tests pureCheck"
     [  -- =================== Testing pureFold ========================= --
     QC.testProperty "When a player check their acted state should update"
-        -- Take a random player at the table and checks, should mean acted is true
+        -- | Take a random player at the table and checks, should mean acted is true
         -- Note that a player should only be able to check i certain situations but pureCheck dont care about that
         $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
             let table            = pureCheck table1 x
@@ -537,7 +552,7 @@ propertyTestsPureCheck = testGroup "Property tests pureCheck"
             in
                 (acted checkdPlayer) == True
 
-    , -- Checking means no bet is placed, meaning a players chips should remain the same
+    , -- | Checking means no bet is placed, meaning a players chips should remain the same
     QC.testProperty "When a player fold their chips should remain the same"
         $ QC.forAll (QC.choose(0, (length (players table1) - 1))) $ \ x ->
             let beforeCheck = players table1!!x

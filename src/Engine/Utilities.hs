@@ -1,3 +1,11 @@
+{-|
+Module      : Engine.Utilites
+Description : Utility and helper functions 
+
+This module provides a set of utility and helper functions 
+that are commonly used in different parts of the engine. 
+-}
+
 module Engine.Utilities where
 
 import Engine.EngineTypes

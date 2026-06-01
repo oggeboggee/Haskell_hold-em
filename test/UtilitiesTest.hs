@@ -1,3 +1,8 @@
+{-|
+This module contains contains test for some of the functions
+that handle the cards being passed around in the game state.
+-}
+
 module UtilitiesTest where
 
 import Test.Tasty.QuickCheck as QC
