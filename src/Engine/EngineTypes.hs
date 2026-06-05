@@ -1,6 +1,9 @@
 {-|
 Module      : Engine.EngineTypes
 Description : All types used in the engine is defined here
+
+This module contains all the definitions for shared types
+that is used within the game engine. 
 -}
 
 module Engine.EngineTypes where

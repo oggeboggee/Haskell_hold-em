@@ -9,6 +9,7 @@ Built as part of the Functional Programming Project course (DIT216).
 - [Installation](#installation)
 - [Usage](#usage)
 - [Testing](#testing)
+- [Haddock](#haddock)
 - [What's next?](#whats-next)
 - [Contributors](#contributors)
 - [License](#license)
@@ -145,6 +146,21 @@ cabal test
 The test cover:
 * **Hand evaluation** - to verify that the handEvaluation module correctly identifies all hand combinations, including edge cases like ace-low straights.
 * **Stateful computations** - Verifies that functions that change the Game State (table), using the State Monad, functions as expected and don't produce undesirable game states. 
+
+---
+
+## Haddock
+To generate and open Haddock documentation
+
+To generate Haddock html:
+```bash
+cabal haddock
+```
+
+To open Haddock documentation in the browser
+```bash
+cabal haddock --open
+```
 
 ---
 

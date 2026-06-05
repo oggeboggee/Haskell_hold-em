@@ -1,6 +1,6 @@
 {-|
 Module      : Engine.TexasEngine
-Description : 
+Description : Stateful functions progressing the game state
 
 This module provides stateful functions that are not classified as events. 
 This includes resetting attributes after betting rounds/ hands are over, 
