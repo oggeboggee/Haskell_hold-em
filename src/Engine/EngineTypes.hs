@@ -1,3 +1,8 @@
+{-|
+Module      : Engine.EngineTypes
+Description : All types used in the engine is defined here
+-}
+
 module Engine.EngineTypes where
 
 --import Control.Monad.State
