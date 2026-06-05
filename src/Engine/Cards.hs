@@ -2,11 +2,8 @@
 Module      : Engine.Cards
 Description : Helper functions for parts that handle card.
 
-This module contains helper functions for:
-
-* Creating a full 52 card deck
-* Shuffeling a deck to to get a random order
-* Alternetive rank for Ace 
+This module contains functions for creating new full decks,
+shuffeling a deck, and other card related functions. 
 -}
 
 module Engine.Cards 
