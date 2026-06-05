@@ -2,8 +2,14 @@
 Module      : Engine.Cards
 Description : Helper functions for parts that handle card.
 
-This module contains functions for creating new full decks,
-shuffeling a deck, and other card related functions. 
+This moudle holds functions that handle cards. These funtions are
+used in different parts of the game engine. 
+
+Summerised responsibilities:
+
+* Creating a new deck with 52 cards
+* Shuffeling a deck, creating a random order
+* Two alternative ways of ranking cards (Ace high and ace low)
 -}
 
 module Engine.Cards 

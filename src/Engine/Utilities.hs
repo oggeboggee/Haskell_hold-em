@@ -2,8 +2,15 @@
 Module      : Engine.Utilites
 Description : Utility and helper functions 
 
-This module provides a set of utility and helper functions 
-that are commonly used in different parts of the engine. 
+This module provides a set of pure utility and helper functions 
+that are commonly used in different parts of the game engine. 
+
+Functions in thihs module handle:
+* Retriving information about the current game state such as
+    * Which player is next to act
+    * If a betting round is over
+* Adding/ removing players from the table
+* Increasing/decreasing chips at different parts of the table
 -}
 
 module Engine.Utilities where

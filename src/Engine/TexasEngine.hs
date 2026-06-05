@@ -3,8 +3,15 @@ Module      : Engine.TexasEngine
 Description : Stateful functions progressing the game state
 
 This module provides stateful functions that are not classified as events. 
-This includes resetting attributes after betting rounds/ hands are over, 
-moving the dealer around etc. 
+These are smaller statefull functions that are not made by a player and are not 
+nessecarily something thatt a player need to be noted about.
+
+Summerised responsibilities:
+
+* Starting a new hand 
+* Dealing out cards
+* Resetting Folded and Acted flags after betting round/hand is over
+* Advance to next phase
 -}
 
 module Engine.TexasEngine 

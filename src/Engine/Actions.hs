@@ -2,9 +2,17 @@
 Module      : Engine.Actions
 Description : Applying events and handle player actions
 
-This module handle events, progressing the state when players make an actions,
-when a hand is over or a player is eliminate. It also contains some helper functions
-to update certain parts of the state.
+This module handle events, progressing the game state when players make an actions,
+when a hand is over or a player is eliminate. The two main function is applyEvent and runShodown
+
+Summerised responsibilities:
+
+* Checking if a player action is valid.
+* Applying valid player actions.
+* Running showdown, determening the winner, after last betting round.
+* Removing eliminated players(players with no chips left) from the table. 
+
+The module also include some pure helper functions to help change the state correctly.
 -}
 
 {-# LANGUAGE TupleSections #-}
