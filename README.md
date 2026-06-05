@@ -144,7 +144,7 @@ cabal test
 
 The test cover:
 * **Hand evaluation** - to verify that the handEvaluation module correctly identifies all hand combinations, including edge cases like ace-low straights.
-*  **Stateful computations** - 
+* **Stateful computations** - Verifies that functions that change the Game State (table), using the State Monad, functions as expected and don't produce undesirable game states. 
 
 ---
 
